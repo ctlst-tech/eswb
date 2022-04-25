@@ -1,0 +1,84 @@
+cmake_minimum_required(VERSION 3.6)
+
+set(ESWB_LIB_SRC
+        api.c
+        topic_proclaiming_tree.c
+        event_queue.c
+        bridge.c
+        registry.c
+        domain_switching.c
+        local_buses.c
+        topic_io.c
+        topic_mem.c
+        misc/errors.c
+        misc/misc.c
+        include/public/eswb/api.h
+        include/public/eswb/types.h
+        include/public/eswb/event_queue.h
+        include/public/eswb/bridge.h
+        include/registry.h
+        include/topic_mem.h
+        include/local_buses.h
+        include/domain_switching.h
+        include/topic_io.h
+        include/sync.h
+        include/ids_map.h)
+
+add_library(eswb-static STATIC ${ESWB_LIB_SRC})
+
+target_include_directories(eswb-static PUBLIC
+        include/public
+        )
+target_include_directories(eswb-static PRIVATE
+        include
+        )
+
+
+
+set(ESWB_UTIL_EQRB_SRC
+        utils/eqrb/eqrb_core.c
+        utils/eqrb/eqrb_core.h
+        utils/eqrb/framing.c
+        utils/eqrb/framing.h
+        utils/eqrb/crc16-ccitt.c
+        utils/eqrb/crc16-ccitt.h
+        utils/eqrb/drivers/mem_bypass.c
+        utils/eqrb/drivers/tcp.c
+        utils/eqrb/drivers/file.c
+        utils/eqrb/drivers/serial.c
+        include/public/eswb/eqrb.h
+        )
+
+
+add_library(eswb-eqrb-static STATIC ${ESWB_UTIL_EQRB_SRC})
+
+
+target_include_directories(eswb-eqrb-static PUBLIC
+        include/public
+        )
+target_include_directories(eswb-eqrb-static PRIVATE
+        include
+        )
+
+add_library(eswb SHARED ${ESWB_LIB_SRC} ${ESWB_UTIL_EQRB_SRC} platformic/posix/posix_sync.c)
+
+target_include_directories(eswb PUBLIC
+        include/public
+        )
+target_include_directories(eswb PRIVATE
+        include
+        )
+
+#
+#add_library(eswb-static-cov STATIC ${ESWB_LIB_SRC})
+#
+#target_include_directories(eswb-static-cov PUBLIC
+#        include/public
+#        )
+#
+#target_include_directories(eswb-static-cov PRIVATE
+#        include
+#        )
+#
+#
+#target_compile_options(eswb-static-cov PUBLIC --coverage)
