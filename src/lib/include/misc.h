@@ -11,7 +11,4 @@
 
 char *indent(int depth);
 
-
-
-
 #endif //ESWB_MISC_H

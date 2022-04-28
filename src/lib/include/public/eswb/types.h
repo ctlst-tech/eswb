@@ -1,7 +1,3 @@
-//
-// Created by Ivan Makarov on 30/10/21.
-//
-
 #ifndef ESWB_TYPES_H
 #define ESWB_TYPES_H
 

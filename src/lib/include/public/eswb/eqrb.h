@@ -1,7 +1,3 @@
-//
-// Created by Ivan Makarov on 17/3/22.
-//
-
 #ifndef ESWB_PUBLIC_EQRB_H
 #define ESWB_PUBLIC_EQRB_H
 

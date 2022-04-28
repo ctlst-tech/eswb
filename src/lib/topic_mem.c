@@ -1,7 +1,3 @@
-//
-// Created by Ivan Makarov on 28/10/21.
-//
-
 #include <string.h>
 #include "topic_mem.h"
 #include "eswb/event_queue.h"

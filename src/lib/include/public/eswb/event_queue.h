@@ -1,7 +1,3 @@
-//
-// Created by Ivan Makarov on 12/12/21.
-//
-
 #ifndef ESWB_EVENT_QUEUE_H
 #define ESWB_EVENT_QUEUE_H
 

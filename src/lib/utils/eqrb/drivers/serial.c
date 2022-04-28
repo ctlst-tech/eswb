@@ -1,6 +1,3 @@
-//
-// Created by Ivan Makarov on 15/3/22.
-//
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>

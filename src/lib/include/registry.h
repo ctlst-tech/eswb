@@ -1,7 +1,3 @@
-//
-// Created by Ivan Makarov on 28/10/21.
-//
-
 #ifndef ESWB_REGISTRY_H
 #define ESWB_REGISTRY_H
 

@@ -1,7 +1,3 @@
-//
-// Created by Ivan Makarov on 7/12/21.
-//
-
 #ifndef ESWB_BRIDGE_H
 #define ESWB_BRIDGE_H
 

@@ -1,7 +1,3 @@
-//
-// Created by Ivan Makarov on 29/10/21.
-//
-
 #ifndef ESWB_LOCAL_BUSES_H
 #define ESWB_LOCAL_BUSES_H
 

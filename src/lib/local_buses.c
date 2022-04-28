@@ -1,7 +1,3 @@
-//
-// Created by Ivan Makarov on 29/10/21.
-//
-
 #include <string.h>
 
 #include "eswb/errors.h"

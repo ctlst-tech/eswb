@@ -18,8 +18,6 @@
 #include "eswb/bridge.h"
 #include "eswb/event_queue.h"
 
-//#include "misc.h"
-
 
 /**
  *
@@ -164,15 +162,16 @@ static void test_barrier_wait() {
     pthread_mutex_unlock(&test_thread_barrier_mutex);
 }
 
+void eswb_set_thread_name(const char *n);
+
 void *test_thread(void *p) {
     test_thread_param_t *tp = p;
     // printf ("Test thread %s started\n", tp->name);
     int rv = tp->init_handler(tp);
 
-
     char tn[16];
     snprintf(tn, sizeof(tn) - 1, "ec:%s", tp->name);
-    pthread_setname_np(tn);
+    eswb_set_thread_name(tn);
 
     eswb_rv_t erv = eswb_subscribe("itb:/event_bus/start_event", &tp->start_event_d);
     if (erv != eswb_e_ok) {
