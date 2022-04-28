@@ -1,5 +1,9 @@
 cmake_minimum_required(VERSION 3.6)
 
+if (UNIX AND NOT APPLE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+endif()
+
 set(ESWB_LIB_SRC
         api.c
         topic_proclaiming_tree.c
@@ -60,7 +64,11 @@ target_include_directories(eswb-eqrb-static PRIVATE
         include
         )
 
-add_library(eswb SHARED ${ESWB_LIB_SRC} ${ESWB_UTIL_EQRB_SRC} platformic/posix/posix_sync.c)
+target_link_libraries(eswb-eqrb-static PUBLIC)
+
+
+add_library(eswb SHARED ${ESWB_LIB_SRC} ${ESWB_UTIL_EQRB_SRC}  platformic/posix/posix_sync.c)
+target_link_libraries(eswb PUBLIC ${PL_SPECIFIC_LIBS})
 
 target_include_directories(eswb PUBLIC
         include/public

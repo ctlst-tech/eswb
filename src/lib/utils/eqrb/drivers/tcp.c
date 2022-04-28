@@ -4,8 +4,6 @@
 
 #include <pthread.h>
 
-#include "eswb/api.h"
-#include "../eqrb_core.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -17,6 +15,9 @@
 #include <string.h>
 
 #include <signal.h>
+
+#include "eswb/api.h"
+#include "../eqrb_core.h"
 
 void ignore_sigpipe() {
     signal(SIGPIPE, SIG_IGN);
@@ -234,7 +235,7 @@ eqrb_rv_t eqrb_tcp_server(uint16_t port) {
 static void* eqrb_tcp_server_thread(void *p) {
     uint16_t port = *((uint16_t *) p);
 
-    pthread_setname_np("tcp_server");
+    eswb_set_thread_name("tcp_server");
 
     static eqrb_rv_t rv;
     rv = eqrb_tcp_server(port);

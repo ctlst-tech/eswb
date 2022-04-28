@@ -2,7 +2,7 @@
 // Created by goofy on 1/6/22.
 //
 
-
+#include <string.h>
 #include "tooling.h"
 
 #include "../src/lib/utils/eqrb/framing.h"
@@ -289,7 +289,7 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
 
     eswb_local_init(1);
 
-    pthread_setname_np("main");
+    eswb_set_thread_name("main");
 
     std::string src_bus = "src";
     std::string src_bus_full_path = "itb:/" + src_bus;
@@ -466,7 +466,7 @@ PseudoTopic *create_bus_and_arbitrary_hierarchy(eswb_type_t bus_type, const std:
 TEST_CASE("EQRB bus state sync") {
 
     eswb_local_init(1);
-    pthread_setname_np("main");
+    eswb_set_thread_name("main");
 
     eswb_rv_t erv;
     eqrb_rv_t rbrv;

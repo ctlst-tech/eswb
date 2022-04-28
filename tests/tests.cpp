@@ -4,6 +4,7 @@
 
 #include <catch2/catch.hpp>
 #include <iostream>
+#include <string.h>
 #include "tooling.h"
 
 #include "eswb/api.h"

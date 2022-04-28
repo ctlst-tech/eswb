@@ -86,6 +86,8 @@ eswb_rv_t eswb_path_split(const char *full_path, char *path, char *topic_name);
 
 void eswb_print(const char *bus_name);
 
+void eswb_set_thread_name(const char *n);
+
 #ifdef __cplusplus
 }
 #endif

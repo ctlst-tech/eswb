@@ -4,6 +4,8 @@
 
 #include <string.h>
 
+#include <pthread.h>
+
 #include "misc.h"
 
 char *indent(int depth) {
@@ -15,4 +17,15 @@ char *indent(int depth) {
     }
 
     return rv;
+}
+
+
+void eswb_set_thread_name(const char *n) {
+#if __APPLE__
+    pthread_setname_np(n);
+#elif __linux__
+    pthread_setname_np(pthread_self(), n);
+#else
+#   error "Unknown platform"
+#endif
 }

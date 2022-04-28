@@ -4,9 +4,12 @@
 #include <string.h>
 #include <stdio.h>
 #include <printf.h>
+#include <pthread.h>
+
 #include "eqrb_core.h"
 
 #include "framing.h"
+#include "misc.h"
 
 
 eqrb_rv_t
@@ -306,7 +309,7 @@ eqrb_rv_t eqrb_generic_rx_thread(eqrb_handle_common_t *p,
 void *eqrb_server_tx_thread_call(void *p) {
     static eqrb_rv_t rv;
 
-    pthread_setname_np("eqbr_server_tx");
+    eswb_set_thread_name("eqbr_server_tx");
 
     rv = eqrb_server_tx_thread((eqrb_server_handle_t *)p);
     return &rv;
@@ -375,7 +378,7 @@ void *eqrb_server_rx_thread_call(void *p) {
 
     eswb_rv_t erv = eswb_proclaim_tree(h->h.cmd_bus_root_td, fifo_root, cntx->t_num, &h->cmd_bus_publisher_td);
 
-    pthread_setname_np("eqbr_server_rx");
+    eswb_set_thread_name("eqbr_server_rx");
 
     if (erv != eswb_e_ok) {
         rv = eqrb_rv_rx_eswb_fatal_err;
@@ -475,7 +478,7 @@ void *eqrb_client_rx_thread_call(void *p) {
     static eqrb_rv_t rv;
     eqrb_client_handle_t *h = (eqrb_client_handle_t *)p;
 
-    pthread_setname_np("eqbr_client_rx");
+    eswb_set_thread_name("eqbr_client_rx");
 
 //    rv = h->h.driver->connect(NULL, &h->dr_tx_handle);
 //    if (rv != eqrb_rv_ok) {

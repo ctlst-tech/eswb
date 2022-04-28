@@ -2,13 +2,16 @@ cmake_minimum_required(VERSION 3.6)
 project(eswb)
 set(CMAKE_CXX_STANDARD 14)
 
+if (UNIX AND NOT APPLE)
+    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread -D_GNU_SOURCE")
+endif()
+
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
 find_package(Catch2 REQUIRED)
 
 add_subdirectory(src/lib)
 add_subdirectory(src/lib/platformic/posix)
-
 
 add_executable(eswb_catch2_test tests/test-main.cpp tests/tests.cpp tests/tests.h tests/event_chain.c tests/eqrb.cpp tests/tooling.cpp tests/tooling.h)
 
