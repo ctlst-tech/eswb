@@ -2,9 +2,13 @@
 // Created by goofy on 1/9/22.
 //
 
+
+#include "eswb/api.h"
+#include "../eqrb_core.h"
+
+#ifndef ESWB_NO_SOCKET
+
 #include <pthread.h>
-
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/socket.h>
@@ -15,9 +19,6 @@
 #include <string.h>
 
 #include <signal.h>
-
-#include "eswb/api.h"
-#include "../eqrb_core.h"
 
 void ignore_sigpipe() {
     signal(SIGPIPE, SIG_IGN);
@@ -351,3 +352,11 @@ eqrb_rv_t eqrb_tcp_client_close(eqrb_client_handle_t *ch) {
     close(ch->h.dd);
     return rv;
 }
+
+#else
+
+eqrb_rv_t eqrb_tcp_server_start(uint16_t p) {
+    return eqrb_notsup;
+}
+
+#endif

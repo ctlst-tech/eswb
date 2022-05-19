@@ -7,6 +7,8 @@
 #include "eswb/api.h"
 #include "../eqrb_core.h"
 
+#ifndef ESWB_NO_SERIAL
+
 eqrb_rv_t serial_connect (const char *param, device_descr_t *dh) {
     eqrb_rv_t rv;
     eswb_rv_t erv;
@@ -113,6 +115,8 @@ eqrb_rv_t eqrb_serial_server_start(const char *path, uint32_t baudrate, const ch
     return eqrb_server_start(sh, bus2replicate, 0xffffffff, NULL);
 }
 
+
+
 eqrb_rv_t
 eqrb_serial_client_connect(const char *path, uint32_t baudrate,
                         const char *mount_point, uint32_t repl_map_size) {
@@ -133,3 +137,22 @@ eqrb_serial_client_connect(const char *path, uint32_t baudrate,
 
     return eqrb_client_start(ch, mount_point, repl_map_size);
 }
+
+#else
+
+eqrb_rv_t eqrb_serial_server_start(const char *path, uint32_t baudrate, const char *bus2replicate) {
+
+    return eqrb_notsup;
+
+}
+
+
+
+eqrb_rv_t
+eqrb_serial_client_connect(const char *path, uint32_t baudrate,
+                        const char *mount_point, uint32_t repl_map_size) {
+    return eqrb_notsup;
+}
+
+#endif
+

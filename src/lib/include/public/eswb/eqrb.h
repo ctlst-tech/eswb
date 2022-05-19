@@ -12,6 +12,7 @@ typedef enum {
     eqrb_small_buf,
     eqrb_inv_code,
     eqrb_rv_nomem,
+    eqrb_notsup,
 
     eqrb_os_based_err,
     eqrb_media_err,
