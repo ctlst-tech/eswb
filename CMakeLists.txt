@@ -2,10 +2,11 @@ cmake_minimum_required(VERSION 3.6)
 project(eswb)
 set(CMAKE_CXX_STANDARD 14)
 
-if (UNIX AND NOT APPLE)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread -D_GNU_SOURCE")
+if (NOT FAKE_PTHREAD)
+    if (UNIX AND NOT APPLE)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread -D_GNU_SOURCE")
+    endif()
 endif()
-
 #set(CMAKE_VERBOSE_MAKEFILE ON)
 
 find_package(Catch2 REQUIRED)

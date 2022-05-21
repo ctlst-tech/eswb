@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.6)
 
-if (UNIX AND NOT APPLE)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+if (NOT FAKE_PTHREAD)
+    if (UNIX AND NOT APPLE)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+    endif()
 endif()
 
 set(ESWB_LIB_SRC
@@ -66,6 +68,13 @@ target_include_directories(eswb-eqrb-static PRIVATE
 
 target_link_libraries(eswb-eqrb-static PUBLIC)
 
+if (ESWB_EQRB_NO_SOCKET)
+    target_compile_definitions(eswb-eqrb-static PUBLIC ESWB_NO_SOCKET=1)
+endif()
+
+if (ESWB_EQRB_NO_SERIAL)
+    target_compile_definitions(eswb-eqrb-static PUBLIC ESWB_NO_SERIAL=1)
+endif()
 
 add_library(eswb SHARED ${ESWB_LIB_SRC} ${ESWB_UTIL_EQRB_SRC}  platformic/posix/posix_sync.c)
 target_link_libraries(eswb PUBLIC ${PL_SPECIFIC_LIBS})

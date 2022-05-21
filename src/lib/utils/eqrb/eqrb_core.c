@@ -3,7 +3,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
-#include <printf.h>
+//#include <printf.h>
 #include <pthread.h>
 
 #include "eqrb_core.h"

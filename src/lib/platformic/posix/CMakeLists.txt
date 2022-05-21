@@ -12,4 +12,6 @@ target_include_directories(eswb-sync-static  PRIVATE
         ../../include/public
         )
 
-target_link_libraries(eswb-sync-static pthread)
+if (NOT FAKE_PTHREAD)
+    target_link_libraries(eswb-sync-static pthread)
+endif()
