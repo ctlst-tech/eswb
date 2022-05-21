@@ -5,6 +5,9 @@
 #ifndef ESWB_ERRORS_H
 #define ESWB_ERRORS_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef enum {
     eswb_e_ok = 0,
@@ -45,5 +48,9 @@ typedef enum {
 } eswb_rv_t;
 
 const char *eswb_strerror(eswb_rv_t e);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //ESWB_ERRORS_H

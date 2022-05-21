@@ -47,8 +47,6 @@ typedef struct {
     topic_proclaiming_tree_t info;
 } topic_extract_t;
 
-const char *type_name(topic_data_type_t t);
-
 
 typedef struct {
     eswb_index_t t_num;

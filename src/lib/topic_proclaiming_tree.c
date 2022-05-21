@@ -138,7 +138,7 @@ eswb_rv_t usr_topic_add_sibling_to_last(topic_tree_context_t *context, const cha
 
 
 
-const char *type_name(topic_data_type_t t) {
+const char *eswb_type_name(topic_data_type_t t) {
     switch (t) {
         case tt_float: return "float";
         case tt_double: return "double";
@@ -158,7 +158,7 @@ const char *type_name(topic_data_type_t t) {
 #include "misc.h"
 
 void print_topic_params(topic_proclaiming_tree_t *t, int depth) {
-    printf("%s", indent(depth)); printf (" Topic params: Type=%s data_size=%d\n", type_name(t->type), t->data_size);
+    printf("%s", indent(depth)); printf (" Topic params: Type=%s data_size=%d\n", eswb_type_name(t->type), t->data_size);
 }
 
 static char *render_path (topic_proclaiming_tree_t *t) {
