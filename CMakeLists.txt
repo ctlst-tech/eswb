@@ -28,8 +28,11 @@ target_link_libraries(eswb_catch2_test PUBLIC eswb-static eswb-sync-static eswb-
 add_library(eswb-if INTERFACE)
 target_link_libraries(eswb-if INTERFACE eswb-static eswb-sync-static eswb-eqrb-static)
 
+add_library(eswb-cpp cpp/eswb.hpp cpp/eswb.cpp)
+target_link_libraries(eswb-cpp eswb-if)
+
+add_executable(eswbutil cpp/main.cpp)
+target_link_libraries(eswbutil eswb-cpp)
+
 
 #target_compile_options(eswb_catch2_test PUBLIC -DESWB_UNIT_TESTS=1)
-
-
-

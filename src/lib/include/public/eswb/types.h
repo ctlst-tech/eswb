@@ -5,13 +5,17 @@
 
 #define ESWB_FIFO_INDEX_OVERFLOW UINT16_MAX
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef uint32_t eswb_index_t;
 typedef uint16_t eswb_fifo_index_t;
 typedef uint32_t eswb_size_t;
 typedef uint32_t eswb_topic_id_t;
 typedef uint32_t eswb_event_queue_mask_t;
 
-typedef enum  {
+typedef enum {
     tt_none = 0,
     tt_float,
     tt_double,
@@ -69,5 +73,11 @@ typedef struct {
     topic_data_type_t type;
     eswb_size_t size;
 } topic_params_t;
+
+const char *eswb_type_name(topic_data_type_t t);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //ESWB_TYPES_H

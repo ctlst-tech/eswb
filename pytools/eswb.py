@@ -74,7 +74,8 @@ class Topic:
                 n = n.next_sibling
 
             n.next_sibling = t
-            t.parent = self.parent
+
+        t.parent = self.parent
 
     # def iterator(self, call, n = None):
 
