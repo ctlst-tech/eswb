@@ -44,5 +44,6 @@ const char *eswb_strerror(eswb_rv_t e) {
         case eswb_e_map_key_exists:         return "Replication map key is alredy exists";
         case eswb_e_map_no_mem:             return "Replication map allocation failed";
         case eswb_e_map_no_match:           return "Replication map have no match";
+        default:                            return "Unknown!";
     }
 }
