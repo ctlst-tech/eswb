@@ -86,6 +86,16 @@ target_include_directories(eswb PRIVATE
         include
         )
 
+include(GNUInstallDirs)
+
+install(TARGETS eswb LIBRARY)
+install(DIRECTORY include/public/eswb
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+#set_target_properties(eswb PROPERTIES PUBLIC_HEADER "include/public/eswb")
+
+
 #
 #add_library(eswb-static-cov STATIC ${ESWB_LIB_SRC})
 #
