@@ -107,8 +107,8 @@ eqrb_rv_t mem_bypass_connect (const char *param, device_descr_t *dh) {
 eqrb_rv_t mem_bypass_send (device_descr_t dh, void *data, size_t bts, size_t *bs) {
     eqrb_rv_t rv = eqrb_rv_ok;
     eswb_rv_t erv;
-    int bw;
-    int bw_total;
+    uint32_t bw;
+    uint32_t bw_total;
     bypass_queue_pkt_t pkt;
 
 #define MIN(a,b) ((a) < (b) ? (a) : (b))

@@ -89,7 +89,7 @@ eswb_rv_t eswb_bridge_connect_vector(eswb_bridge_t *b, const char *dest_mnt) {
 
     // TODO if there is no structure at the dst - then post w/o structure?
 
-    int i;
+    uint32_t i;
 
     b->buffer2post = alloc_buffer(b->buffer2post_size);
 
@@ -158,7 +158,7 @@ eswb_rv_t eswb_bridge_connect_scalar(eswb_bridge_t *b, eswb_topic_descr_t mtd_td
 
 eswb_rv_t eswb_bridge_read(eswb_bridge_t *b, void *data) {
     eswb_size_t offset = 0;
-    for (int i = 0; i < b->tds_num; i++) {
+    for (uint32_t i = 0; i < b->tds_num; i++) {
         eswb_read(b->topics[i].td, data + offset);
         offset += b->topics[i].size;
     }

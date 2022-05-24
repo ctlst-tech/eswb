@@ -143,7 +143,7 @@ eswb_rv_t topic_mem_event_queue_write(topic_t *t, const event_queue_record_t *r)
     // push event
     topic_mem_write_fifo(t, &rts);
     void *buffer_tail = data_buf_topic->data + data_buf_topic->fifo_ext->state.head;
-    int i = 0;
+    uint32_t i = 0;
 
     // TODO move this check to the receiver's site
     event_queue_record_t *checking_record;
