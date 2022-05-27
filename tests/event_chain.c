@@ -366,11 +366,11 @@ int gen_sin_init_handler(struct test_thread_param *p) {
 }
 
 int gen_sin_cycle_handler(struct test_thread_param *p) {
-    usleep(10000);
+    usleep(1000);
     struct sin_out so;
     static int i = 0;
     i++;
-    so.v = sin(i / 100.0);
+    so.v = sin(i * 0.05);
     eswb_update_topic(p->out_d, &so);
     return 0;
 }
@@ -401,7 +401,7 @@ int gen_saw_cycle_handler(struct test_thread_param *p) {
     struct saw_out so;
     static int i = 0;
     i++;
-    so.v = i * 0.1;
+    so.v = i * 0.05;
     if (i > 1000) {
         i = 0;
     }
@@ -778,6 +778,28 @@ int main2() {
     return 0;
 }
 
+static eswb_rv_t
+enable_event_queue(const char *path, eswb_size_t queue_size, eswb_size_t buffer_size, eswb_topic_descr_t *td_rv) {
+    eswb_rv_t rv;
+
+    eswb_topic_descr_t td = 0;
+    rv = eswb_topic_connect(path, &td);
+    if (rv != eswb_e_ok) {
+        post_err("eswb_topic_connect \"" BUS_CONVERSIONS "\" failed", rv);
+    }
+
+    if (td != 0) {
+        rv = eswb_event_queue_enable(td, queue_size, buffer_size);
+        if (rv != eswb_e_ok) {
+            post_err("eswb_enable_event_queue \"" BUS_CONVERSIONS "\" failed", rv);
+        }
+    }
+
+    *td_rv = td;
+
+    return rv;
+}
+
 int test_event_chain (int verbose, int nonstop) {
 
     verbosity = verbose;
@@ -902,18 +924,10 @@ int test_event_chain (int verbose, int nonstop) {
 
     usleep(200000);
 
-    eswb_topic_descr_t ordering_td = 0;
-    rv = eswb_topic_connect("itb:/" BUS_CONVERSIONS, &ordering_td);
-    if (rv != eswb_e_ok) {
-        post_err("eswb_topic_connect \"" BUS_CONVERSIONS "\" failed", rv);
-    }
-
-    if (ordering_td != 0) {
-        rv = eswb_event_queue_enable(ordering_td, 20, 4000);
-        if (rv != eswb_e_ok) {
-            post_err("eswb_enable_event_queue \"" BUS_CONVERSIONS "\" failed", rv);
-        }
-    }
+    eswb_topic_descr_t ordering_td_conv;
+    eswb_topic_descr_t ordering_td_gen;
+    enable_event_queue("itb:/" BUS_CONVERSIONS, 20, 4000, &ordering_td_conv);
+    enable_event_queue("itb:/" BUS_GENERATORS, 20, 4000, &ordering_td_gen);
 
     start_thread(&evq);
 
@@ -921,30 +935,36 @@ int test_event_chain (int verbose, int nonstop) {
 
     fire_start_event_fire();
 
-
-    if (ordering_td != 0) {
-        rv = eswb_event_queue_order_topic(ordering_td, BUS_CONVERSIONS "/funcs_sum_msg", EVENT_QUEUE_CHAN_ID);
+    if (ordering_td_conv != 0) {
+        rv = eswb_event_queue_order_topic(ordering_td_conv, BUS_CONVERSIONS "/funcs_sum_msg", EVENT_QUEUE_CHAN_ID);
         if (rv != eswb_e_ok) {
             post_err("eswb_event_queue_order_topic \"" BUS_CONVERSIONS "\" failed", rv);
         }
         usleep(200000);
 
-        rv = eswb_event_queue_order_topic(ordering_td, BUS_CONVERSIONS "/lin_freq", EVENT_QUEUE_CHAN_ID);
+        rv = eswb_event_queue_order_topic(ordering_td_conv, BUS_CONVERSIONS "/lin_freq", EVENT_QUEUE_CHAN_ID);
         if (rv != eswb_e_ok) {
             post_err("eswb_event_queue_order_topic \"" BUS_CONVERSIONS "\" failed", rv);
         }
 
-        rv = eswb_event_queue_order_topic(ordering_td, BUS_CONVERSIONS "/funcs2world", EVENT_QUEUE_CHAN_ID);
+        rv = eswb_event_queue_order_topic(ordering_td_conv, BUS_CONVERSIONS "/funcs2world", EVENT_QUEUE_CHAN_ID);
         if (rv != eswb_e_ok) {
             post_err("eswb_event_queue_order_topic \"" BUS_CONVERSIONS "\" failed", rv);
         }
 
-        rv = eswb_event_queue_order_topic(ordering_td, BUS_CONVERSIONS "/plain_msg", EVENT_QUEUE_CHAN_ID);
+        rv = eswb_event_queue_order_topic(ordering_td_conv, BUS_CONVERSIONS "/plain_msg", EVENT_QUEUE_CHAN_ID);
         if (rv != eswb_e_ok) {
             post_err("eswb_event_queue_order_topic \"" BUS_CONVERSIONS "\" failed", rv);
         }
 
-        eswb_disconnect(ordering_td);
+        eswb_disconnect(ordering_td_conv);
+    }
+
+    if (ordering_td_gen != 0) {
+        rv = eswb_event_queue_order_topic(ordering_td_gen, BUS_GENERATORS "/*", EVENT_QUEUE_CHAN_ID);
+        if (rv != eswb_e_ok) {
+            post_err("eswb_event_queue_order_topic \"" BUS_CONVERSIONS "\" failed", rv);
+        }
     }
 
     if (nonstop) {

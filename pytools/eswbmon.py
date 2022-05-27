@@ -5,18 +5,29 @@
 from abc import abstractmethod
 from time import sleep
 from typing import List
+import sys
 
 from PyQt5 import QtWidgets, QtCore
 import pyqtgraph as pg
 from random import randint
 
 import eswb as e
+import os
+
+service_bus_name = 'monitor'
 
 class ewBasic(QtWidgets.QWidget):
-    def __init__(self,name, path, *args, **kwargs):
+    def __init__(self, path, name=None, abs_path=False, *args, **kwargs):
         super(ewBasic, self).__init__(*args, **kwargs)
 
         self.topics = []
+
+        if not abs_path:
+            path = service_bus_name + '/' + path
+
+        if not name:
+            name = os.path.basename(os.path.normpath(path))
+
         self.topics.append(e.TopicHandle(name, path))
 
     @abstractmethod
@@ -43,8 +54,10 @@ class ewChart(ewBasic):
         layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.LeftToRight)
         layout.addWidget(self.graph)
 
-        self.x = list(range(100))
-        self.y = [randint(0, 100) for _ in range(100)]
+        window = 300
+
+        self.x = list(range(window))
+        self.y = [0.0] * window
 
         pen = pg.mkPen(color=(255, 0, 0))
         self.data_line = self.graph.plot(self.x, self.y, pen=pen)
@@ -57,7 +70,7 @@ class ewChart(ewBasic):
         self.x.append(self.x[-1] + 1)
 
         self.y = self.y[1:]
-        self.y.append(int(vals[0]))
+        self.y.append(vals[0])
 
         self.data_line.setData(self.x, self.y)
 
@@ -78,7 +91,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.main_layout = QtWidgets.QVBoxLayout(self.main_widget)
 
         self.timer = QtCore.QTimer()
-        self.timer.setInterval(20)
+        self.timer.setInterval(10)
         self.timer.timeout.connect(self.redraw)
         self.timer.start()
 
@@ -95,29 +108,54 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             w.update()
 
 
+class Monitor():
+    def __init__(self, argv=None):
+        super().__init__()
+        self.app = QtWidgets.QApplication(argv)
+        self.app_window = ApplicationWindow()
+        self.bus = e.Bus(service_bus_name)
+        self.eqrb_clients = []
+        pass
+
+    def connect(self):
+        self.app_window.connect()
+
+    def show(self):
+        self.app_window.show()
+
+    def run(self):
+        self.connect()
+        self.show()
+        sys.exit(self.app.exec_())
+
+    def mkdir(self, dirname):
+        self.bus.mkdir(dirname)
+
+    def bridge(self, *, host='127.0.0.1', bus2replicate: str, replicate_to: str = None):
+        if not replicate_to:
+            bus_name = os.path.basename(bus2replicate)
+            self.mkdir(bus_name)
+            replicate_to = service_bus_name + '/' + bus_name
+
+        c = e.EQRBtcp(bus2replicate, replicate_to)
+        c.connect(host)
+        self.eqrb_clients.append(c)
+
+    def add_widget(self, w):
+        self.app_window.add_ew(w)
+
 if __name__ == "__main__":
     import sys
-    app = QtWidgets.QApplication(sys.argv)
-    eswb_display = ApplicationWindow()
+    mon = Monitor(sys.argv)
 
-    b = e.Bus('service')
-    b.mkdir('vehicle')
+    mon.mkdir('conversions')
+    mon.mkdir('generators')
 
-    client = e.EQRBtcp('itb:/vehicle', f'nsb:/service/vehicle')
-    client.connect('127.0.0.1')
+    mon.bridge(bus2replicate='itb:/conversions')
+    mon.bridge(bus2replicate='itb:/generators')
 
-    eswb_display.add_ew(ewChart(name='rpm', path='nsb:/service/vehicle/engine/rpm'))
-    eswb_display.add_ew(ewChart(name='cht', path='nsb:/service/vehicle/engine/cht'))
-    eswb_display.add_ew(ewChart(name='egt', path='nsb:/service/vehicle/engine/egt'))
-    eswb_display.add_ew(ewChart(name='oil_press', path='nsb:/service/vehicle/engine/oil_press'))
+    mon.add_widget(ewChart(path='generators/sin/out'))
+    mon.add_widget(ewChart(path='generators/saw/out'))
+    mon.add_widget(ewChart(name='lin_freq', path='conversions/lin_freq/out'))
 
-    eswb_display.show()
-
-    sleep(0.2)
-
-    b.update_tree()
-    t = b.get_topics_tree()
-
-    eswb_display.connect()
-
-    sys.exit(app.exec_())
+    mon.run()

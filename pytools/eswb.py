@@ -191,7 +191,7 @@ class Topic:
 
 class Bus:
     def __init__(self, name: str, topics_num: int = 256):
-        rv = eswb.eswb_create(cstr(name), ce.eswb_local_non_synced, topics_num)
+        rv = eswb.eswb_create(cstr(name), ce.eswb_non_synced, topics_num)
         if rv != 0:
             raise eswb_exception("eswb_create failed", rv)
 
@@ -259,7 +259,7 @@ class EQRBtcp:
                                             repl_map_size,
                                             err_msg)
         if rv != 0:
-            raise Exception (f'connect failed ({rv}): {pstr(err_msg.value)}') #pstr(libc.strerror(skt_err))
+            raise Exception (f'connect failed: {ce.eqrb_rv_t__enumvalues[rv]} ({rv}): {pstr(err_msg.value)}') #pstr(libc.strerror(skt_err))
 
     def close(self):
         eswb.eqrb_tcp_client_close(self.client_handler)
