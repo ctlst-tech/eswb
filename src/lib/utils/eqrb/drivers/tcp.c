@@ -267,7 +267,7 @@ eqrb_rv_t eqrb_tcp_server_stop() {
 
     pthread_cancel(eqrb_tcp_server_tid);
     pthread_join(eqrb_tcp_server_tid, NULL);
-//    eqrb_tcp_server_tid = 0;
+    eqrb_tcp_server_tid = 0;
 
     return eqrb_rv_ok;
 }
@@ -296,6 +296,10 @@ eqrb_tcp_client_connect(eqrb_client_handle_t *ch, const char *addr_str, const ch
     int sktd;
 
 #define PASS_SKT_ERR(__err) {if (err_msg != NULL) {strncpy(err_msg, strerror(__err), EQRB_ERR_MSG_MAX_LEN);}}
+
+    if (repl_map_size == 0) {
+        return eqrb_invarg;
+    }
 
     if ( sscanf(addr_str, "%[^:]:%d", host, &port) < 1 ) {
         PASS_SKT_ERR(EINVAL);

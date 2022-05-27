@@ -8,6 +8,110 @@
 #include "../src/lib/utils/eqrb/framing.h"
 #include "../src/lib/utils/eqrb/eqrb_core.h"
 
+
+TEST_CASE("Topics id map", "[unit]") {
+
+    topic_id_map_t map;
+#define MAX_IDS (100)
+    eswb_rv_t rv = map_alloc(&map, MAX_IDS);
+
+#   define LOOKUP(__id) map_find_index(&map, (__id), NULL)
+#   define ADD_ELEM(__e) map_add_pair(&map, (__e), (__e) + 1)
+
+#   define FIRST_SRC_ID 10
+#   define SECOND_SRC_ID 11
+
+    SECTION("Map alloc"){
+        REQUIRE(map.map != NULL);
+    }
+
+    SECTION("Basic container forming and sorting") {
+        ADD_ELEM(FIRST_SRC_ID);
+        ADD_ELEM(SECOND_SRC_ID);
+
+        REQUIRE(map.records_num == 2);
+        REQUIRE(map.map[0].src_topic_id == FIRST_SRC_ID);
+        REQUIRE(map.map[1].src_topic_id == SECOND_SRC_ID);
+    }
+
+    SECTION("Lookup when no elements") {
+        REQUIRE(LOOKUP(123) == eswb_e_map_no_match);
+    }
+
+    ADD_ELEM(FIRST_SRC_ID);
+
+    SECTION("Lookup when 1 element") {
+        REQUIRE(LOOKUP(FIRST_SRC_ID) == eswb_e_ok);
+    }
+
+    ADD_ELEM(SECOND_SRC_ID);
+
+    SECTION("Lookup when 2 elements") {
+        REQUIRE(LOOKUP(SECOND_SRC_ID) == eswb_e_ok);
+    }
+
+    SECTION("Add existing element to container") {
+        rv = ADD_ELEM(FIRST_SRC_ID);
+        REQUIRE(rv == eswb_e_map_key_exists);
+    }
+
+#   define LEFT_ID 1
+    ADD_ELEM(LEFT_ID);
+
+    SECTION("Add element to first index") {
+        REQUIRE(map.map[0].src_topic_id == LEFT_ID);
+    }
+
+#   define RIGHT_ID 20
+
+    ADD_ELEM(RIGHT_ID);
+
+    SECTION("Add element to last index") {
+        REQUIRE(map.map[map.records_num-1].src_topic_id == RIGHT_ID);
+    }
+
+    SECTION("Lookup for left elem") {
+        REQUIRE(LOOKUP(LEFT_ID) == eswb_e_ok);
+    }
+
+    SECTION("Lookup for right elem") {
+        REQUIRE(LOOKUP(RIGHT_ID) == eswb_e_ok);
+    }
+
+    SECTION("Lookup for absent elem") {
+        REQUIRE(LOOKUP(RIGHT_ID-1) == eswb_e_map_no_match);
+    }
+
+    eswb_index_t id = RIGHT_ID + 1;
+
+    SECTION("Container at its full") {
+
+        do {
+            rv = ADD_ELEM(id);
+            id += 2;
+        } while (rv == eswb_e_ok);
+        REQUIRE(map.records_num == map.size);
+
+        SECTION("Add element to full container") {
+            REQUIRE(ADD_ELEM(id+1) == eswb_e_map_full);
+        }
+
+        SECTION("Lookup for arbitrary elem in right half") {
+            REQUIRE(LOOKUP(73) == eswb_e_ok);
+        }
+
+        SECTION("Lookup for arbitrary elem in left half") {
+            REQUIRE(LOOKUP(25) == eswb_e_ok);
+        }
+
+        SECTION("Lookup for absent elem") {
+            REQUIRE(LOOKUP(22) == eswb_e_map_no_match);
+        }
+    }
+
+    map_dealloc(&map);
+}
+
 typedef std::function<bool (eqrb_rx_state_t*, eqrb_rv_t, bool last)> check_lambda_t;
 
 bool rx(int parts, uint8_t *tx_frame_buf, size_t tx_frame_size, check_lambda_t &check_lambda) {
@@ -350,13 +454,18 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
         counter++;
     };
 
-    timed_caller proclaimer(proclaim, 500);
-    timed_caller updater(update, 250);
+    periodic_call_t abort = [&] () mutable {
+//        FAIL("Timed out abort");
+    };
+
+    timed_caller proclaimer(proclaim, 200);
+    timed_caller aborter(abort, 5000);
+    timed_caller updater(update, 200);
 
     proclaimer.start_once(false);
     proclaimer.wait();
 
-    std::this_thread::sleep_for(std::chrono::milliseconds (500));
+    std::this_thread::sleep_for(std::chrono::milliseconds (200));
     updater.start_loop();
 
     //std::this_thread::sleep_for(std::chrono::seconds (2));
@@ -366,6 +475,8 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
 
     uint32_t cnt;
     uint32_t expected_cnt = 0;
+
+    aborter.start_once(true);
 
     do {
         erv = eswb_fifo_pop(replicated_fifo_td, &cnt);
@@ -393,7 +504,7 @@ static eqrb_client_handle_t *repl_factory_ch;
 void repl_factory_tcp_init(std::string &src, std::string &dst) {
     eqrb_rv_t hrv;
 
-    hrv = eqrb_tcp_server_start(0);
+    hrv = eqrb_tcp_server_start(3333);
     REQUIRE(hrv == eqrb_rv_ok);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -402,8 +513,10 @@ void repl_factory_tcp_init(std::string &src, std::string &dst) {
     REQUIRE(hrv == eqrb_rv_ok);
 
     char err_msg[EQRB_ERR_MSG_MAX_LEN + 1];
-    hrv = eqrb_tcp_client_connect(repl_factory_ch, "127.0.0.1", src.c_str(), dst.c_str(), 0, err_msg);
-    REQUIRE(hrv == eqrb_rv_ok);
+    hrv = eqrb_tcp_client_connect(repl_factory_ch, "127.0.0.1:3333", src.c_str(), dst.c_str(), 512, err_msg);
+    if (hrv != eqrb_rv_ok) {
+        FAIL("eqrb_tcp_client_connect failed " + std::to_string(hrv));
+    }
 }
 
 void repl_factory_tcp_deinit() {
@@ -447,18 +560,6 @@ void repl_factory_serial_init(std::string &src, std::string &dst) {
 
 void repl_factory_serial_deinit() {
 
-}
-
-TEST_CASE("EQBR - mem_bypass", "[eqrb]") {
-    replication_test(repl_factory_mem_bypass_init, repl_factory_mem_bypass_deinit);
-}
-
-TEST_CASE("EQBR - tcp", "[eqrb]") {
-    replication_test(repl_factory_tcp_init, repl_factory_tcp_deinit);
-}
-
-TEST_CASE("EQBR - serial", "[eqrb]") {
-    replication_test(repl_factory_serial_init, repl_factory_serial_deinit);
 }
 
 PseudoTopic *create_bus_and_arbitrary_hierarchy(eswb_type_t bus_type, const std::string &bus_name);
@@ -508,11 +609,11 @@ TEST_CASE("EQRB bus state sync") {
 
     char err_msg[EQRB_ERR_MSG_MAX_LEN + 1];
     rbrv = eqrb_tcp_client_connect(client_handle, "127.0.0.1", src_bus->get_full_path().c_str(), mounting_point.c_str(), 100, err_msg);
-    REQUIRE(rbrv == eqrb_rv_ok);
-//    INFO(err_msg);
+    if (rbrv != eqrb_rv_ok) {
+        FAIL("eqrb_tcp_client_connect error " + std::to_string(rbrv));
+    }
 
     eswb_topic_descr_t publisher_td;
-
 
     // wait for bus sync to complete
     eswb_topic_descr_t synced_folder_td;
@@ -554,4 +655,20 @@ TEST_CASE("EQRB bus state sync") {
 
     bool comparison = *src_bus == *extracted_bus;
     REQUIRE(comparison == true);
+
+    eqrb_tcp_server_stop();
+    eqrb_tcp_client_close(client_handle);
+}
+
+
+TEST_CASE("EQBR - mem_bypass", "[eqrb]") {
+    replication_test(repl_factory_mem_bypass_init, repl_factory_mem_bypass_deinit);
+}
+
+TEST_CASE("EQBR - tcp", "[eqrb]") {
+    replication_test(repl_factory_tcp_init, repl_factory_tcp_deinit);
+}
+
+TEST_CASE("EQBR - serial", "[eqrb]") {
+    replication_test(repl_factory_serial_init, repl_factory_serial_deinit);
 }

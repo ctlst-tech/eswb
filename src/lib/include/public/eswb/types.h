@@ -45,9 +45,10 @@ typedef enum {
 
 
 typedef enum {
+    eswb_not_defined,
+    eswb_non_synced,
     eswb_inter_thread,
     eswb_inter_process,
-    eswb_local_non_synced,
 } eswb_type_t;
 
 typedef enum {
@@ -62,7 +63,7 @@ typedef enum {
 
 #define ESWB_BUS_NAME_MAX_LEN 32
 #define ESWB_TOPIC_NAME_MAX_LEN 30
-#define ESWB_TOPIC_MAX_PATH_LEN 300
+#define ESWB_TOPIC_MAX_PATH_LEN 100
 
 
 typedef int eswb_topic_descr_t;

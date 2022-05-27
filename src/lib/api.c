@@ -47,7 +47,7 @@ static eswb_rv_t restore_path_td_std(eswb_topic_descr_t mp_td, const char *topic
     }
 
     if (strlen(path) + strlen(topic_name) + 1 >= ESWB_TOPIC_MAX_PATH_LEN) {
-        return eswb_e_invargs_path_too_long;
+        return eswb_e_path_too_long;
     }
 
     strcat(path, "/");
@@ -286,7 +286,7 @@ const char *eswb_get_bus_prefix(eswb_type_t type) {
     switch (type) {
         case eswb_inter_thread:     return "itb:/";
         case eswb_inter_process:    return "ipb:/";
-        case eswb_local_non_synced: return "nsb:/";
+        case eswb_non_synced: return "nsb:/";
         default:
             return NULL;
     }
@@ -315,7 +315,7 @@ eswb_rv_t eswb_path_split(const char *full_path, char *path, char *topic_name) {
 eswb_rv_t eswb_path_trailing_topic(const char *path, char **result) {
     char *lst_slash;
     if (strnlen(path, ESWB_TOPIC_MAX_PATH_LEN) >= ESWB_TOPIC_MAX_PATH_LEN) {
-        return eswb_e_invargs_path_too_long;
+        return eswb_e_path_too_long;
     }
 
     lst_slash = strrchr(path, '/');
@@ -342,7 +342,7 @@ eswb_rv_t eswb_path_compose(eswb_type_t type, const char *bus_name, const char *
     l += 4; // for type
 
     if (l > ESWB_TOPIC_MAX_PATH_LEN) {
-        return eswb_e_naming;
+        return eswb_e_inv_naming;
     }
 
 

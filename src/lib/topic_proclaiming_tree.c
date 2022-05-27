@@ -15,10 +15,10 @@ static eswb_rv_t check_topic_naming(const char* name) {
     int rv = sscanf(name, "%[a-zA-Z0-9_-.]", nn);
 
     if (rv < 1) {
-        return eswb_e_naming;
+        return eswb_e_inv_naming;
     }
 
-    return (strncmp (name, nn, ESWB_TOPIC_NAME_MAX_LEN) == 0) ? eswb_e_ok : eswb_e_naming;
+    return (strncmp (name, nn, ESWB_TOPIC_NAME_MAX_LEN) == 0) ? eswb_e_ok : eswb_e_inv_naming;
 }
 
 

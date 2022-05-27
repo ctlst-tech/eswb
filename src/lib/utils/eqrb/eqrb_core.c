@@ -442,10 +442,10 @@ eqrb_rv_t eqrb_client_rx_handler_replicator (void *handle, uint8_t cmd_code, uin
                     break;
 
                 case eswb_e_map_full:
-                    eqrb_dbg_msg("ESWB_E_MAP_FULL");
-                    eqrb_dbg_msg("ESWB_E_MAP_FULL");
-                    eqrb_dbg_msg("ESWB_E_MAP_FULL");
-                    eqrb_dbg_msg("ESWB_E_MAP_FULL");
+                    eqrb_dbg_msg("1. ESWB_E_MAP_FULL");
+                    eqrb_dbg_msg("2. ESWB_E_MAP_FULL");
+                    eqrb_dbg_msg("3. ESWB_E_MAP_FULL");
+                    eqrb_dbg_msg("4. ESWB_E_MAP_FULL");
                     break;
 
                 case eswb_e_map_no_match:
@@ -661,11 +661,13 @@ eqrb_rv_t eqrb_client_start(eqrb_client_handle_t *h, const char *mount_point, si
 
     eswb_rv_t erv = map_alloc(&h->ids_map, repl_map_size);
     if (erv != eswb_e_ok) {
-        return eqrb_rv_rx_eswb_fatal_err;
+        eqrb_dbg_msg("map_alloc failed %s", eswb_strerror(erv));
+        return eqrb_nomem;
     }
 
     erv = eswb_topic_connect(mount_point, &h->repl_dst_td);
     if (erv != eswb_e_ok) {
+        eqrb_dbg_msg("eswb_topic_connect to %s failed %s", mount_point, eswb_strerror(erv));
         return eqrb_rv_rx_eswb_fatal_err;
     }
 

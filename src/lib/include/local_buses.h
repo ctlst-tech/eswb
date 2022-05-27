@@ -3,16 +3,6 @@
 
 #include "eswb/types.h"
 #include "topic_mem.h"
-
-typedef enum {
-    _non_synced_bus,
-    _inter_thread,
-    _inter_process,
-
-    _invalid_type
-} eswb_sys_type_t;
-
-
 #include "registry.h"
 
 
@@ -20,6 +10,7 @@ typedef enum {
 typedef enum local_bus_type_e {
     synced,
     nonsynced,
+    synced_or_nonsynced,
 } local_bus_type_t;
 
 typedef struct eswb_bus_handle {
@@ -68,10 +59,11 @@ eswb_rv_t local_get_params(eswb_topic_descr_t td, topic_params_t *params);
 void local_busses_print_registry(eswb_bus_handle_t *bh);
 
 eswb_rv_t local_bus_itb_create(const char *bus_name, eswb_size_t max_topics);
-eswb_rv_t local_itb_lookup(const char *bus_name, eswb_bus_handle_t **b);
+eswb_rv_t local_lookup_itb(const char *bus_name, eswb_bus_handle_t **b);
 
 eswb_rv_t local_bus_nsb_create(const char *bus_name, eswb_size_t max_topics);
-eswb_rv_t local_nsb_lookup(const char *bus_name, eswb_bus_handle_t **b);
+eswb_rv_t local_lookup_nsb(const char *bus_name, eswb_bus_handle_t **b);
+eswb_rv_t local_lookup_any(const char *bus_name, eswb_bus_handle_t **b);
 
 eswb_rv_t local_bus_delete(eswb_bus_handle_t *bh);
 

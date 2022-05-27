@@ -5,12 +5,119 @@
 #include <catch2/catch.hpp>
 #include <iostream>
 #include <string.h>
+#include <regex>
 #include "tooling.h"
 
 #include "eswb/api.h"
 #include "tests.h"
 
 #include "ids_map.h"
+
+extern "C" eswb_rv_t eswb_parse_path_test_handler(const char *connection_point, eswb_type_t *t, char *bus_name, char *local_path);
+
+static eswb_rv_t parse_path_test_wrapper(const char *cp, eswb_type_t &t, std::string &bn, std::string &lp) {
+    eswb_type_t bus_type = eswb_not_defined;
+    char bus_name[ESWB_BUS_NAME_MAX_LEN + 1] = "";
+    char local_path[ESWB_BUS_NAME_MAX_LEN + 1] = "";
+
+    eswb_rv_t rv = eswb_parse_path_test_handler(cp, &bus_type, bus_name, local_path);
+
+    t = bus_type;
+
+    lp = local_path;
+    bn = bus_name;
+
+    return rv;
+}
+
+
+TEST_CASE("Path parsing", "[unit]") {
+    eswb_rv_t rv;
+
+    std::string local_path;
+    std::string bus_name;
+    eswb_type_t bus_type;
+
+    SECTION("No path") {
+        rv = parse_path_test_wrapper("", bus_type, bus_name, local_path);
+        REQUIRE(rv == eswb_e_inv_naming);
+    }
+
+    SECTION("Too long path") {
+        rv = parse_path_test_wrapper("nsb:/qweqweqwe/qweqweqwe/qweqweqwe/qweqweqwe/qweqweqwe/qweqweqwee/"
+                                     "qweqweqwe/qweqweqwe/qweqweqwe/qweqweqwe/qweqweqwee", bus_type, bus_name, local_path);
+        REQUIRE(rv == eswb_e_path_too_long);
+    }
+
+    SECTION("Bus prefix check") {
+#   define BN "bus"
+#   define LP BN "/topic"
+
+#   define CHECK_OUTPUT()              \
+            CHECK(rv == eswb_e_ok);  \
+            CHECK(bus_name == BN);   \
+            CHECK(local_path == LP);
+
+        SECTION("NSB") {
+            rv = parse_path_test_wrapper("nsb:/" LP, bus_type, bus_name, local_path);
+            CHECK_OUTPUT();
+            CHECK(bus_type == eswb_non_synced);
+        }
+        SECTION("ITB") {
+            rv = parse_path_test_wrapper("itb:/" LP, bus_type, bus_name, local_path);
+            CHECK_OUTPUT();
+            CHECK(bus_type == eswb_inter_thread);
+        }
+        SECTION("ITP") {
+            rv = parse_path_test_wrapper("ipb:/" LP, bus_type, bus_name, local_path);
+            CHECK_OUTPUT();
+            CHECK(bus_type == eswb_inter_process);
+        }
+        SECTION("Not valid") {
+            rv = parse_path_test_wrapper("iii:/" LP, bus_type, bus_name, local_path);
+            REQUIRE(rv == eswb_e_inv_bus_spec);
+        }
+        SECTION("No prefix") {
+            rv = parse_path_test_wrapper(LP, bus_type, bus_name, local_path);
+            CHECK_OUTPUT();
+            CHECK(bus_type == eswb_not_defined);
+        }
+    }
+
+    SECTION("Variety symbols in paths") {
+        SECTION("Double colon") {
+            rv = parse_path_test_wrapper("ipb::/" LP, bus_type, bus_name, local_path);
+            REQUIRE(rv == eswb_e_inv_naming);
+        }
+        SECTION("Start with colon") {
+            rv = parse_path_test_wrapper(":/" LP, bus_type, bus_name, local_path);
+            REQUIRE(rv == eswb_e_inv_naming);
+        }
+        SECTION("Start with slash") {
+            rv = parse_path_test_wrapper("/" LP, bus_type, bus_name, local_path);
+            REQUIRE(rv == eswb_e_ok);
+            REQUIRE(local_path == local_path);
+        }
+        SECTION("Colon after slash") {
+            rv = parse_path_test_wrapper("ipb/ipb:/" LP, bus_type, bus_name, local_path);
+            REQUIRE(rv == eswb_e_inv_naming);
+        }
+
+        SECTION("Non alphanum") {
+            rv = parse_path_test_wrapper("ipb:/bus/abc?def/", bus_type, bus_name, local_path);
+            REQUIRE(rv == eswb_e_inv_naming);
+            rv = parse_path_test_wrapper("ipb:/bus/*)(?/", bus_type, bus_name, local_path);
+            REQUIRE(rv == eswb_e_inv_naming);
+        }
+
+        SECTION("Alphanum") {
+            rv = parse_path_test_wrapper("ipb:/bus/123123/", bus_type, bus_name, local_path);
+            REQUIRE(rv == eswb_e_ok);
+            rv = parse_path_test_wrapper("ipb:/bus/asdasdasd/", bus_type, bus_name, local_path);
+            REQUIRE(rv == eswb_e_ok);
+        }
+    }
+}
 
 TEST_CASE("Basic Operations", "[unit]") {
 
@@ -22,128 +129,55 @@ TEST_CASE("Basic Operations", "[unit]") {
     eswb_rv_t rv = eswb_create(bus_name.c_str(), eswb_inter_thread, 20);
     REQUIRE(rv == eswb_e_ok);
 
-    SECTION("Delete bus by path") {
-        rv = eswb_delete(bus_path.c_str());
-        REQUIRE(rv == eswb_e_ok);
+    SECTION("Topic connection") {
+        eswb_topic_descr_t td;
+
+        SECTION("By full path") {
+            rv = eswb_topic_connect(bus_path.c_str(), &td);
+            REQUIRE(rv == eswb_e_ok);
+        }
+
+        SECTION("By path without prefix") {
+            rv = eswb_topic_connect(bus_name.c_str(), &td);
+//            rv = eswb_topic_connect(bus_path.c_str(), &td);
+            REQUIRE(rv == eswb_e_ok);
+        }
+
+        SECTION("By path with duplicated slashes") {
+            std::string slashy_bus_path = std::regex_replace( bus_path, std::regex("/"), "//" );
+            rv = eswb_topic_connect(bus_path.c_str(), &td);
+            REQUIRE(rv == eswb_e_ok);
+        }
+
+        SECTION("By path with trailing slash") {
+            bus_path += "/";
+            rv = eswb_topic_connect(bus_path.c_str(), &td);
+            REQUIRE(rv == eswb_e_ok);
+        }
     }
 
-    eswb_topic_descr_t td;
+    SECTION("Bus deletion") {
+        SECTION("Delete bus by path") {
+            rv = eswb_delete(bus_path.c_str());
+            REQUIRE(rv == eswb_e_ok);
+        }
 
-    SECTION("Delete bus by TD") {
+        eswb_topic_descr_t td;
+
+        SECTION("Delete bus by TD") {
+
+            rv = eswb_topic_connect(bus_path.c_str(), &td);
+            REQUIRE(rv == eswb_e_ok);
+
+            rv = eswb_delete_by_td(td);
+            REQUIRE(rv == eswb_e_ok);
+        }
 
         rv = eswb_topic_connect(bus_path.c_str(), &td);
-        REQUIRE(rv == eswb_e_ok);
-
-        rv = eswb_delete_by_td(td);
-        REQUIRE(rv == eswb_e_ok);
+        REQUIRE(rv == eswb_e_bus_not_exist);
     }
-
-    rv = eswb_topic_connect(bus_path.c_str(), &td);
-    REQUIRE(rv == eswb_e_bus_not_exist);
 }
 
-TEST_CASE("Topics id map", "[unit]") {
-
-    topic_id_map_t map;
-#define MAX_IDS (100)
-    eswb_rv_t rv = map_alloc(&map, MAX_IDS);
-
-#   define LOOKUP(__id) map_find_index(&map, (__id), NULL)
-#   define ADD_ELEM(__e) map_add_pair(&map, (__e), (__e) + 1)
-
-#   define FIRST_SRC_ID 10
-#   define SECOND_SRC_ID 11
-
-    SECTION("Map alloc"){
-        REQUIRE(map.map != NULL);
-    }
-
-    SECTION("Basic container forming and sorting") {
-        ADD_ELEM(FIRST_SRC_ID);
-        ADD_ELEM(SECOND_SRC_ID);
-
-        REQUIRE(map.records_num == 2);
-        REQUIRE(map.map[0].src_topic_id == FIRST_SRC_ID);
-        REQUIRE(map.map[1].src_topic_id == SECOND_SRC_ID);
-    }
-
-    SECTION("Lookup when no elements") {
-        REQUIRE(LOOKUP(123) == eswb_e_map_no_match);
-    }
-
-    ADD_ELEM(FIRST_SRC_ID);
-
-    SECTION("Lookup when 1 element") {
-        REQUIRE(LOOKUP(FIRST_SRC_ID) == eswb_e_ok);
-    }
-
-    ADD_ELEM(SECOND_SRC_ID);
-
-    SECTION("Lookup when 2 elements") {
-        REQUIRE(LOOKUP(SECOND_SRC_ID) == eswb_e_ok);
-    }
-
-    SECTION("Add existing element to container") {
-        rv = ADD_ELEM(FIRST_SRC_ID);
-        REQUIRE(rv == eswb_e_map_key_exists);
-    }
-
-#   define LEFT_ID 1
-    ADD_ELEM(LEFT_ID);
-
-    SECTION("Add element to first index") {
-        REQUIRE(map.map[0].src_topic_id == LEFT_ID);
-    }
-
-#   define RIGHT_ID 20
-
-    ADD_ELEM(RIGHT_ID);
-
-    SECTION("Add element to last index") {
-        REQUIRE(map.map[map.records_num-1].src_topic_id == RIGHT_ID);
-    }
-
-    SECTION("Lookup for left elem") {
-        REQUIRE(LOOKUP(LEFT_ID) == eswb_e_ok);
-    }
-
-    SECTION("Lookup for right elem") {
-        REQUIRE(LOOKUP(RIGHT_ID) == eswb_e_ok);
-    }
-
-    SECTION("Lookup for absent elem") {
-        REQUIRE(LOOKUP(RIGHT_ID-1) == eswb_e_map_no_match);
-    }
-
-    eswb_index_t id = RIGHT_ID + 1;
-
-    SECTION("Container at its full") {
-
-        do {
-            rv = ADD_ELEM(id);
-            id += 2;
-        } while (rv == eswb_e_ok);
-        REQUIRE(map.records_num == map.size);
-
-        SECTION("Add element to full container") {
-            REQUIRE(ADD_ELEM(id+1) == eswb_e_map_full);
-        }
-
-        SECTION("Lookup for arbitrary elem in right half") {
-            REQUIRE(LOOKUP(73) == eswb_e_ok);
-        }
-
-        SECTION("Lookup for arbitrary elem in left half") {
-            REQUIRE(LOOKUP(25) == eswb_e_ok);
-        }
-
-        SECTION("Lookup for absent elem") {
-            REQUIRE(LOOKUP(22) == eswb_e_map_no_match);
-        }
-    }
-
-    map_dealloc(&map);
-}
 
 TEST_CASE("FIFO | nsb", "[unit]") {
 
@@ -152,7 +186,7 @@ TEST_CASE("FIFO | nsb", "[unit]") {
     std::string bus_name("bus");
     std::string bus_path = "nsb:/" + bus_name;
 
-    eswb_rv_t rv = eswb_create(bus_name.c_str(), eswb_local_non_synced, 20);
+    eswb_rv_t rv = eswb_create(bus_name.c_str(), eswb_non_synced, 20);
     REQUIRE(rv == eswb_e_ok);
 
     TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 10);
@@ -338,7 +372,7 @@ TEST_CASE("Event queue io | local bus level", "[unit]") {
     REQUIRE(rv == eswb_e_ok);
 
     eswb_bus_handle_t *bh;
-    rv = local_nsb_lookup(EVQ_TEST_BUS_NAME, &bh);
+    rv = local_lookup_nsb(EVQ_TEST_BUS_NAME, &bh);
     REQUIRE(rv == eswb_e_ok);
 
     rv = local_bus_create_event_queue(bh, EVQ_QUEUE_SIZE, EVQ_DATA_BUF_SIZE);
@@ -465,7 +499,7 @@ TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
 
     // create source bus
     std::string src_bus_name("src_bus");
-    eswb_rv_t rv = eswb_create(src_bus_name.c_str(), eswb_local_non_synced, 20);
+    eswb_rv_t rv = eswb_create(src_bus_name.c_str(), eswb_non_synced, 20);
     REQUIRE(rv == eswb_e_ok);
 
     std::string src_bus_path = "nsb:/" + src_bus_name;
@@ -475,7 +509,7 @@ TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
 
     // create dst bus
     std::string dst_bus_name("dst_bus");
-    rv = eswb_create(dst_bus_name.c_str(), eswb_local_non_synced, 20);
+    rv = eswb_create(dst_bus_name.c_str(), eswb_non_synced, 20);
     REQUIRE(rv == eswb_e_ok);
 
     std::string dst_bus_path = "nsb:/" + dst_bus_name;
@@ -597,37 +631,12 @@ TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
     eswb_local_init(1);
 }
 
-PseudoTopic *create_bus_and_arbitrary_hierarchy(eswb_type_t bus_type, const std::string &bus_name) {
-
-    std::string prefix = eswb_get_bus_prefix(bus_type);
-
-    eswb_rv_t rv = eswb_create(bus_name.c_str(), bus_type, 100);
-    REQUIRE(rv == eswb_e_ok);
-
-    auto *bus = new PseudoTopic(bus_name);
-
-    bus->set_path_prefix(prefix);
-
-    bus->add_subtopic(gen_folder(gen_folder(gen_folder())));
-    bus->add_subtopic(gen_folder(gen_folder(gen_folder())));
-    bus->add_subtopic(gen_folder(gen_folder(gen_folder())));
-
-    auto f = gen_folder();
-    for (int i = 0; i < 6; i++) {
-        f->add_subtopic(gen_folder());
-    }
-    bus->add_subtopic(f);
-    bus->create_as_dirs(false);
-
-    return bus;
-}
-
 TEST_CASE("Retrieve tree struct") {
     eswb_local_init(1);
 
     std::string bus_name("bus");
 
-    PseudoTopic *bus = create_bus_and_arbitrary_hierarchy(eswb_local_non_synced, bus_name);
+    PseudoTopic *bus = create_bus_and_arbitrary_hierarchy(eswb_non_synced, bus_name);
 
     ExtractedTopicsRegistry reg;
     auto regRoot2compare = new PseudoTopic(bus_name);

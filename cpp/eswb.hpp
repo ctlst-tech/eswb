@@ -95,7 +95,7 @@ class Bus {
     eswb_type_t eswb_type(enum BusType bt) {
         switch (bt) {
             default:
-            case non_synced:    return eswb_local_non_synced;
+            case non_synced:    return eswb_non_synced;
             case inter_thread:  return eswb_inter_thread;
             case inter_process: return eswb_inter_process;
         }

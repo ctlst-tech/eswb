@@ -192,7 +192,10 @@ void *test_thread(void *p) {
     eswb_get_update(tp->start_event_d, &event_code);
 
     while(1) {
-        tp->cycle_handler(tp);
+        rv = tp->cycle_handler(tp);
+        if (rv) {
+            return NULL;
+        }
     }
 }
 
@@ -205,6 +208,7 @@ int start_thread(test_thread_param_t *p) {
 
 int stop_thread(test_thread_param_t *p) {
     void *rv_ptr;
+
     pthread_cancel(p->tid);
     pthread_join(p->tid, &rv_ptr);
 
@@ -801,7 +805,7 @@ int test_event_chain (int verbose, int nonstop) {
         post_err("eswb_create \"" BUS_CONVERSIONS "\" failed", rv);
     }
 
-    rv = eswb_create(BUS_FUNCTIONS, eswb_local_non_synced, 20);
+    rv = eswb_create(BUS_FUNCTIONS, eswb_non_synced, 20);
     if (rv != eswb_e_ok) {
         post_err("eswb_create \"" BUS_FUNCTIONS "\" failed", rv);
     }
@@ -982,42 +986,10 @@ int test_event_chain (int verbose, int nonstop) {
     return 1;
 }
 
-#include "eswb/eqrb.h"
 
-int start_eqrb_server() {
-    return eqrb_tcp_server_start(0) == eqrb_rv_ok ? 0 : 1;
-}
 
 /* TODO defensive programming:
  * TODO DP-1. create NSB ownership check. Don't allow to interact with topics from other threads
  *
  */
 
-#ifdef ESWB_C_TEST
-
-
-int main(int argc, char *argv[]) {
-    int non_stop = 0;
-    int tcp_server = 0;
-    int verbose = 0;
-
-    for (int i = 0; i < argc; i++) {
-        if (strcmp(argv[i], "nonstop") == 0) {
-            non_stop = -1;
-        } else if  (strcmp(argv[i], "tcp_server") == 0) {
-            tcp_server = -1;
-        } else if  (strcmp(argv[i], "verbose") == 0) {
-            verbose = -1;
-        }
-    }
-
-    if (tcp_server) {
-        int trv = start_eqrb_server();
-        if (trv) {
-            fprintf(stderr, "start_eqrb_server failed\n");
-        }
-    }
-
-    return test_event_chain(verbose, non_stop);;
-}
-#endif
