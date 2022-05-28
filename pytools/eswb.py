@@ -251,7 +251,7 @@ class EQRBtcp:
         self.client_handler = c_void_p(0)
         eswb.eqrb_tcp_client_create(byref(self.client_handler))
 
-    def connect(self, addr, repl_map_size = 1024):
+    def connect(self, addr, repl_map_size=1024):
         err_msg = create_string_buffer(256)
         rv = eswb.eqrb_tcp_client_connect(self.client_handler, cstr(addr),
                                             cstr(self.bus2replicate),
@@ -263,6 +263,18 @@ class EQRBtcp:
 
     def close(self):
         eswb.eqrb_tcp_client_close(self.client_handler)
+
+class EQRBserial:
+    def __init__(self, replicate_to_path: str):
+        self.replicate_to_path = replicate_to_path
+
+    def connect(self, path, baudrate, repl_map_size=1024):
+        rv = eswb.eqrb_serial_client_connect(cstr(path), baudrate,
+                                                cstr(self.replicate_to_path),
+                                                repl_map_size)
+
+        if rv != 0:
+            raise Exception (f'connect failed: {ce.eqrb_rv_t__enumvalues[rv]} ({rv})') #pstr(libc.strerror(skt_err))
 
 
 def main(command_line=None):
@@ -287,7 +299,7 @@ def main(command_line=None):
 
     parser.add_argument(
         '--path',
-        help='host:port / serial device path / file path',
+        help='host:port / serial_device_path:baudrate / file path',
         dest='path',
         required=True,
     )
@@ -313,12 +325,17 @@ def main(command_line=None):
     service_bus_name = 'service'
     b = Bus(service_bus_name)
 
+    bus2request = args.bus
+    subdir = re.sub('.+:/', '', bus2request)
+    b.mkdir(subdir)
+
     if args.mtype == 'tcp':
-        bus2request = args.bus
-        subdir = re.sub('.+:/', '', bus2request)
-        b.mkdir(subdir)
         client = EQRBtcp(bus2request, f'nsb:/{service_bus_name}/{subdir}')
         client.connect(args.path)
+    elif args.mtype == 'serial':
+        (path, baudrate) = args.path.split(':')
+        serial_client = EQRBserial(f'nsb:/{service_bus_name}/{subdir}')
+        serial_client.connect(path, int(baudrate))
 
     if args.command == 'print':
         show_types = args.wtypes

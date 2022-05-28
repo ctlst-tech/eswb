@@ -16,8 +16,12 @@ int main(int argc, char* argv[]) {
 
     auto p = service_bus.mkdir(bus2request);
 
-    eswb::Bridge br("itb:/" + bus2request, p);
-    br.connect("127.0.0.1");
+//    eswb::Bridge br("itb:/" + bus2request, p);
+//    br.connect("127.0.0.1");
+
+
+    eswb::BridgeSerial br("itb:/ + bus2request");
+    br.connect("/dev/tty.usbserial-0001", 115200);
 
     while(1) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));

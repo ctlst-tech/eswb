@@ -187,6 +187,30 @@ public:
     }
 };
 
+
+class BridgeSerial {
+    std::string replicate_to;
+
+public:
+    BridgeSerial(const std::string &replicate_to_) :
+            replicate_to(replicate_to_) {
+
+    }
+
+    void connect(const std::string &path, int baudrate, int repl_map_size = 1024) {
+        char err_msg[256];
+
+        eqrb_rv_t rv = eqrb_serial_client_connect(path.c_str(), baudrate,
+                                               replicate_to.c_str(),
+                                               repl_map_size);
+
+        if (rv != eqrb_rv_ok) {
+            std::string msg = "eqrb_serial_client_connect (fix code)" + std::string(err_msg);
+            throw Exception(msg, eswb_e_invargs);
+        }
+    }
+};
+
 }
 
 #endif //ESWB_ESWBCPP_H
