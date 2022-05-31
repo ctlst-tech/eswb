@@ -11,6 +11,9 @@
 #include "framing.h"
 #include "misc.h"
 
+void *eqrb_alloc(size_t s) {
+    return malloc(s);
+}
 
 eqrb_rv_t
 eqrb_make_tx_frame_from_event(event_queue_transfer_t *event, uint8_t command_code, uint8_t *frame_buf, size_t frame_buf_size,
@@ -82,8 +85,10 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
     eswb_rv_t erv;
     eqrb_rv_t rv;
 
-    uint8_t event_buf[1024];
-    uint8_t tx_buf[2048];
+#define EVENT_BUF_SIZE 1024
+#define TX_BUF_SIZE 2048
+    uint8_t *event_buf = eqrb_alloc(EVENT_BUF_SIZE);
+    uint8_t *tx_buf = eqrb_alloc(TX_BUF_SIZE);
     event_queue_transfer_t *event = (event_queue_transfer_t*)event_buf;
     topic_extract_t *topic_info = (topic_extract_t *)(event->data - OFFSETOF(topic_extract_t, info)); // Let the info to transfer be mapped directly
 
@@ -190,7 +195,7 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
                                      ((topic_proclaiming_tree_t *)event->data)->topic_id,
                                      event->topic_id);
 
-                        rv = send_event(event, dd, dr, tx_buf, sizeof(tx_buf));
+                        rv = send_event(event, dd, dr, tx_buf, TX_BUF_SIZE);
                         if (rv != eqrb_rv_ok) {
                             eqrb_dbg_msg("send_event regarding bus sync error: %d", rv);
                         }
@@ -506,13 +511,14 @@ eqrb_rv_t eqrb_generic_rx_thread(eqrb_handle_common_t *p,
 
     eqrb_rx_state_t rx_state;
 
-    uint8_t rx_buf[2048];
-
-    uint8_t payload_buf[2048];
+#define PAYLOAD_SIZE 1024
+#define RX_BUF_SIZE 2048
+    uint8_t *rx_buf = eqrb_alloc(RX_BUF_SIZE);
+    uint8_t *payload_buf = eqrb_alloc(PAYLOAD_SIZE);
 
     int loop = 1;
 
-    eqrb_init_state(&rx_state, payload_buf, sizeof(payload_buf));
+    eqrb_init_state(&rx_state, payload_buf, PAYLOAD_SIZE);
 
 
     device_descr_t dd = 0;
@@ -552,7 +558,7 @@ eqrb_rv_t eqrb_generic_rx_thread(eqrb_handle_common_t *p,
 
         do {
             size_t rx_buf_lng;
-            rv = dr->recv(dd, rx_buf, sizeof(rx_buf), &rx_buf_lng);
+            rv = dr->recv(dd, rx_buf, RX_BUF_SIZE, &rx_buf_lng);
             eqrb_dbg_msg("recv | rx_buf_lng == %d rv == %d", rx_buf_lng, rv);
             if (rv == eqrb_rv_ok) {
                 size_t bp = 0;
