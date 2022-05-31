@@ -318,6 +318,11 @@ def main(command_line=None):
         help='show types of topics',
         action='store_true'
     )
+    print_tree.add_argument(
+        '--debug',
+        help='Used for not suppresing EQRB debug info',
+        action='store_true'
+    )
 
     args = parser.parse_args(command_line)
 
@@ -337,12 +342,16 @@ def main(command_line=None):
         serial_client = EQRBserial(f'nsb:/{service_bus_name}/{subdir}')
         serial_client.connect(path, int(baudrate))
 
+
+
     if args.command == 'print':
         show_types = args.wtypes
+        period = 2.0 if args.debug else 0.2
         while True:
-            time.sleep(0.2)
+            time.sleep(period)
             b.update_tree()
-            print(chr(27) + "[2J")
+            if not args.debug:
+                print(chr(27) + "[2J")
             b.topic_tree.print(show_types=show_types)
 
 
