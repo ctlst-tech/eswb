@@ -151,7 +151,8 @@ eqrb_rv_t eqrb_rx_frame_iteration(eqrb_rx_state_t *s, const uint8_t *rx_buf, siz
                 }
             }
         }
-    } while ((i++ < rx_buf_l) && (rv == eqrb_rv_ok));
+        i++;
+    } while ((i < rx_buf_l) && (rv == eqrb_rv_ok));
 
     *byte_processed = i;
 
