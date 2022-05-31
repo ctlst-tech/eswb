@@ -118,6 +118,7 @@ bool rx(int parts, uint8_t *tx_frame_buf, size_t tx_frame_size, check_lambda_t &
     eqrb_rx_state_t rx_state;
 #       define RX_PAYLOAD_BUFF_SIZE 512
     uint8_t rx_payload_buf[RX_PAYLOAD_BUFF_SIZE];
+    uint8_t pkt_buf[tx_frame_size];
     eqrb_init_state(&rx_state, rx_payload_buf, RX_PAYLOAD_BUFF_SIZE);
     size_t bytes_processed;
     eqrb_rv_t rv;
@@ -127,8 +128,11 @@ bool rx(int parts, uint8_t *tx_frame_buf, size_t tx_frame_size, check_lambda_t &
 
     bool loop;
     do {
-        rv = eqrb_rx_frame_iteration(&rx_state, tx_frame_buf + offset,
-                                     std::min<size_t>(bytes_to_process, tx_frame_size - offset), &bytes_processed);
+        memset(pkt_buf, 0, sizeof(pkt_buf));
+        auto pkt_size = std::min<size_t>(bytes_to_process, tx_frame_size - offset);
+        memcpy(pkt_buf, tx_frame_buf + offset, pkt_size);
+
+        rv = eqrb_rx_frame_iteration(&rx_state, pkt_buf, pkt_size, &bytes_processed);
 
         // terminate loop if necessary
         loop = check_lambda(&rx_state, rv, false);
@@ -166,7 +170,7 @@ TEST_CASE("EQBR framing", "[eqrb][unit]") {
     }
 
     for (unsigned char & i : tx_payload) {
-        i = 123;
+        i = rand();
     }
 
     eqrb_rv_t rv;
@@ -193,6 +197,30 @@ TEST_CASE("EQBR framing", "[eqrb][unit]") {
         return true;
     };
 
+    SECTION("Check processed bytes num") {
+        uint8_t pkt[99];
+        for (uint8_t i : pkt) {
+            i = rand();
+        }
+
+        rv = eqrb_make_tx_frame(0x10, pkt, sizeof(pkt), tx_frame_buf, FRAME_BUF_SIZE, &tx_frame_size);
+        REQUIRE(rv == eqrb_rv_ok);
+
+        for (auto &bts : {64, 51, 33, 13, 45}) {
+            SECTION(std::string("First part size ") + std::to_string(bts) + std::string(" bytes")) {
+
+                size_t bytes_processed;
+                rv = eqrb_rx_frame_iteration(&rx_state, tx_frame_buf, bts, &bytes_processed);
+                REQUIRE(rv == eqrb_rv_ok);
+                CHECK(bytes_processed == bts);
+
+                rv = eqrb_rx_frame_iteration(&rx_state, &tx_frame_buf[bytes_processed], tx_frame_size - bts, &bytes_processed);
+                REQUIRE(rv == eqrb_rv_rx_got_frame);
+                CHECK(bytes_processed == tx_frame_size - bts);
+            }
+        }
+    }
+
     for (auto &parts : {1, 3, 5, 10, 33}) {
         SECTION(std::string("Frame RX tests | by ") + std::to_string(parts) + std::string(" parts")) {
             SECTION("Simple") {
@@ -203,7 +231,8 @@ TEST_CASE("EQBR framing", "[eqrb][unit]") {
                 buf_to_compare = tx_payload;
                 expected_code = COMMAND_CODE;
 
-                REQUIRE(rx(parts, tx_frame_buf, tx_frame_size, check_lambda_simple) == true);
+                auto trv = rx(parts, tx_frame_buf, tx_frame_size, check_lambda_simple);
+                REQUIRE(trv == true);
             }
 
             SECTION("With B-s and E-s") {
