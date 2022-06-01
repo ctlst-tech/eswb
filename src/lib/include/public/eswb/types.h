@@ -16,24 +16,32 @@ typedef uint32_t eswb_topic_id_t;
 typedef uint32_t eswb_event_queue_mask_t;
 
 typedef enum {
-    tt_none = 0,
-    tt_float,
-    tt_double,
-    tt_uint8,
-    tt_int8,
-    tt_uint16,
-    tt_int16,
-    tt_uint32,
-    tt_int32,
-    tt_uint64,
-    tt_int64,
-    tt_string,
-    tt_struct,
-    tt_fifo,
-    tt_byte_buffer,
-    tt_dir,
-    tt_event_queue
+    tt_none         = 0x00,
+
+    tt_dir          = 0x01,
+
+    tt_struct       = 0x02,
+    tt_fifo         = 0x03,
+
+    tt_uint8        = 0x10,
+    tt_int8         = 0x11,
+    tt_uint16       = 0x12,
+    tt_int16        = 0x13,
+    tt_uint32       = 0x14,
+    tt_int32        = 0x15,
+    tt_uint64       = 0x16,
+    tt_int64        = 0x17,
+
+    tt_float        = 0x20,
+    tt_double       = 0x21,
+
+    tt_string       = 0x30,
+    tt_byte_buffer  = 0x31,
+
+    tt_event_queue  = 0xF0
 } topic_data_type_t;
+
+typedef uint8_t topic_data_type_s_t;
 
 typedef enum {
     upd_proclaim_topic,

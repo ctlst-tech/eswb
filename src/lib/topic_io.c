@@ -120,7 +120,7 @@ eswb_rv_t topic_io_event_queue_pop (topic_t *t, eswb_event_queue_mask_t mask, fi
         eqt->size = event.size;
         eqt->topic_id = event.topic_id;
         eqt->type = event.type;
-        rv = topic_mem_event_queue_get_data(t, &event, eqt->data);
+        rv = topic_mem_event_queue_get_data(t, &event, EVENT_QUEUE_TRANSFER_DATA(eqt));
     }
 
     if (synced) sync_give(t->sync);

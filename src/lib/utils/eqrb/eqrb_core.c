@@ -90,7 +90,7 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
     uint8_t *event_buf = eqrb_alloc(EVENT_BUF_SIZE);
     uint8_t *tx_buf = eqrb_alloc(TX_BUF_SIZE);
     event_queue_transfer_t *event = (event_queue_transfer_t*)event_buf;
-    topic_extract_t *topic_info = (topic_extract_t *)(event->data - OFFSETOF(topic_extract_t, info)); // Let the info to transfer be mapped directly
+    topic_extract_t *topic_info = (topic_extract_t *)(EVENT_QUEUE_TRANSFER_DATA(event) - OFFSETOF(topic_extract_t, info)); // Let the info to transfer be mapped directly
 
     device_descr_t dd = 0;
     int have_initial_dd = 0;
@@ -216,8 +216,10 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
             case stream_bus_events_wack:
             case sync_bus_wack:
                 // TODO process timeout
-                wait_command_blocked = -1;
+//                wait_command_blocked = -1;
 //  server_state = sync_bus_state_process;
+//                usleep(500000);
+                sleep(1);
                 break;
 
             case stream_bus_events:
@@ -297,6 +299,10 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
                 case stop_service:
                     loop = 0;
                     break;
+            }
+        } else if (erv == eswb_e_no_update) {
+            if (server_state == sync_bus_wack) {
+                rv = send_event(event, dd, dr, tx_buf, TX_BUF_SIZE);
             }
         }
     } while(loop);

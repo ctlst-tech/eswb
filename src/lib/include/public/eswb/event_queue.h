@@ -6,25 +6,29 @@
 
 typedef enum {
     eqr_none = 0,
-    eqr_topic_proclaim,
-    eqr_topic_update,
-    eqr_fifo_push
+    eqr_topic_proclaim = 1,
+    eqr_topic_update = 2,
+    eqr_fifo_push = 3
 } event_queue_record_type_t;
+
+typedef uint8_t event_queue_record_type_s_t;
 
 typedef struct {
     eswb_size_t size;
     eswb_topic_id_t topic_id;
     eswb_event_queue_mask_t ch_mask;
-    event_queue_record_type_t type;
+    event_queue_record_type_s_t type;
     void *data;
 } event_queue_record_t;
 
 typedef struct  __attribute__((packed)) event_queue_transfer {
     uint32_t size;
     uint32_t topic_id;
-    event_queue_record_type_t type;
-    uint8_t  data[0];
+    uint8_t  type;
+ /* uint8_t  data[size]; */
 } event_queue_transfer_t;
+
+#define EVENT_QUEUE_TRANSFER_DATA(__etp) ((uint8_t*) (((void*)(__etp)) + sizeof(event_queue_transfer_t)))
 
 typedef struct {
     eswb_index_t subch_ind;
