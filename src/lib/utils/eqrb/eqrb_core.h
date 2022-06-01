@@ -115,7 +115,6 @@ void eqrb_debug_msg(const char *fn, const char *txt, ...);
 //#define EQRB_DEBUG
 
 #ifdef EQRB_DEBUG
-//#error EQRB_DEBUG
 #define eqrb_dbg_msg(txt,...) eqrb_debug_msg(__func__, txt, ##__VA_ARGS__)
 #else
 #define eqrb_dbg_msg(txt,...) {}

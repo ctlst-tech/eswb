@@ -158,7 +158,7 @@ const char *eswb_type_name(topic_data_type_t t) {
 #include "misc.h"
 
 void print_topic_params(topic_proclaiming_tree_t *t, int depth) {
-    printf("%s", indent(depth)); printf (" Topic params: Type=%s data_size=%ld\n", eswb_type_name(t->type), t->data_size);
+    printf("%s", indent(depth)); printf (" Topic params: Type=%s data_size=%d\n", eswb_type_name(t->type), t->data_size);
 }
 
 static char *render_path (topic_proclaiming_tree_t *t) {

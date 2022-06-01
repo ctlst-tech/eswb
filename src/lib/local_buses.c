@@ -234,7 +234,7 @@ eswb_rv_t  local_bus_alloc_topic_descr(eswb_bus_handle_t *bh, topic_t *t, eswb_t
 #include <stdio.h>
 
 static void print_event(event_queue_record_t *e) {
-    printf("Event: event_type = %d, id = %lu, data_size = %lu\n", e->type, e->topic_id, e->size );
+    printf("Event: event_type = %d, id = %u, data_size = %u\n", e->type, e->topic_id, e->size );
 }
 
 /**

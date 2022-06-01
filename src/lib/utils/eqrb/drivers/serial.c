@@ -80,22 +80,36 @@ const driver_t serial_driver = {
 static eqrb_rv_t open_serial(const char *path, uint32_t baudrate, int *fd_rv) {
     int fd;
     struct termios 	termios_p;
+    eqrb_rv_t rv = eqrb_rv_ok;
+    do {
+        fd = open(path, O_RDWR);
+        if (fd == -1) {
+            eqrb_dbg_msg("Failed to connect to \"%s\": %s", path, strerror(errno));
+            rv = eqrb_media_err;
+            break;
+        }
 
-    fd = open(path, O_RDWR);
-    if (fd == -1) {
-        eqrb_dbg_msg("Failed to connect to \"%s\": %s", path, strerror(errno));
-        return eqrb_media_err;
-    }
+        int rv = tcgetattr(fd, &termios_p);
+        if (rv) {
+            eqrb_dbg_msg("tcgetattr failed: %s", path, strerror(errno));
+            rv = eqrb_media_err;
+            break;
+        }
+        cfsetispeed(&termios_p, baudrate);
+        cfsetospeed(&termios_p, baudrate);
+        rv = tcsetattr(fd, TCSANOW, &termios_p);
+        if (rv) {
+            eqrb_dbg_msg("tcsetattr failed: %s", path, strerror(errno));
+            rv = eqrb_media_err;
+            break;
+        }
 
-    tcgetattr(fd, &termios_p);
-    cfsetispeed(&termios_p, baudrate);
-    cfsetospeed(&termios_p, baudrate);
-    tcsetattr(fd, TCSANOW, &termios_p);
-    tcflush(fd, TCIOFLUSH);
+        tcflush(fd, TCIOFLUSH);
 
-    *fd_rv = fd;
+        *fd_rv = fd;
+    } while (0);
 
-    return eqrb_rv_ok;
+    return rv;
 }
 
 eqrb_rv_t eqrb_serial_server_start(const char *path, uint32_t baudrate, const char *bus2replicate) {
