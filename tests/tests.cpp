@@ -337,13 +337,13 @@ int compare_event_queue_transfer(event_queue_record_t *evqr, event_queue_transfe
     if (evqt->type == evqr->type) {
         if (evqt->topic_id == evqr->topic_id) {
             if (evqt->size == evqr->size) {
-                int rv = memcmp(evqr->data, &evqt->data[0], evqt->size);
+                int rv = memcmp(evqr->data, EVENT_QUEUE_TRANSFER_DATA(evqt), evqt->size);
                 if (rv != 0) {
                     uint8_t bufR[200];
                     uint8_t bufT[200];
                     for(int i = 0; i < evqt->size; i++) {
                         bufR[i] = ((uint8_t*)evqr->data)[i];
-                        bufT[i] = evqt->data[i];
+                        bufT[i] = EVENT_QUEUE_TRANSFER_DATA(evqt)[i];
                     }
                     return rv;
                 }
@@ -440,11 +440,11 @@ TEST_CASE("Event queue io | local bus level", "[unit]") {
                     rv = local_fifo_pop(event_queue_td, eqt);
                     if ((rv == eswb_e_ok) || (rv == eswb_e_fifo_rcvr_underrun)) {
                         if (pushes_num > EVQ_QUEUE_SIZE) {
-                            CHECK(eqt->data[0] == pops + pushes_num - EVQ_QUEUE_SIZE);
+                            CHECK(EVENT_QUEUE_TRANSFER_DATA(eqt)[0] == pops + pushes_num - EVQ_QUEUE_SIZE);
                         } else {
-                            CHECK(eqt->data[0] == pops);
+                            CHECK(EVENT_QUEUE_TRANSFER_DATA(eqt)[0] == pops);
                         }
-                        eqt->data[0] = ((uint8_t *) evqr.data)[0] = 0;// resetting expected difference
+                        EVENT_QUEUE_TRANSFER_DATA(eqt)[0] = ((uint8_t *) evqr.data)[0] = 0;// resetting expected difference
                         CHECK(compare_event_queue_transfer(&evqr, eqt) == 0);
                         pops++;
                         rv = eswb_e_ok;
@@ -470,7 +470,7 @@ TEST_CASE("Event queue io | local bus level", "[unit]") {
             do {
                 rv = local_fifo_pop(event_queue_td, eqt);
                 if ((rv == eswb_e_ok) || (rv == eswb_e_fifo_rcvr_underrun)) {
-                    eqt->data[0] = ((uint8_t *) evqr.data)[0] = 0;// resetting expected difference
+                    EVENT_QUEUE_TRANSFER_DATA(eqt)[0] = ((uint8_t *) evqr.data)[0] = 0;// resetting expected difference
                     CHECK(compare_event_queue_transfer(&evqr, eqt) == 0);
                     pops++;
                     rv = eswb_e_ok;

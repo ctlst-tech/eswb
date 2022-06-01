@@ -28,7 +28,7 @@ typedef struct  __attribute__((packed)) event_queue_transfer {
  /* uint8_t  data[size]; */
 } event_queue_transfer_t;
 
-#define EVENT_QUEUE_TRANSFER_DATA(__etp) ((uint8_t*) (((void*)(__etp)) + sizeof(event_queue_transfer_t)))
+#define EVENT_QUEUE_TRANSFER_DATA(__etp) ((uint8_t*) (((uint8_t*)(__etp)) + sizeof(event_queue_transfer_t)))
 
 typedef struct {
     eswb_index_t subch_ind;
