@@ -53,7 +53,7 @@ eswb_rv_t local_get_update(eswb_topic_descr_t td, void *data);
 eswb_rv_t local_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int size);
 
 eswb_rv_t local_init_fifo_receiver(eswb_topic_descr_t td);
-eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data);
+eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait);
 
 eswb_rv_t local_get_params(eswb_topic_descr_t td, topic_params_t *params);
 void local_busses_print_registry(eswb_bus_handle_t *bh);

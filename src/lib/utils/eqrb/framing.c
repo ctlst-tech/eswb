@@ -88,6 +88,9 @@ void eqrb_init_state(eqrb_rx_state_t *s, uint8_t *buffer_origin, size_t buffer_s
     eqrb_reset_state(s);
 }
 
+#ifdef EQRB_DEBUG
+#include <stdio.h>
+#endif
 
 eqrb_rv_t eqrb_rx_frame_iteration(eqrb_rx_state_t *s, const uint8_t *rx_buf, size_t rx_buf_l, size_t *byte_processed) {
     eqrb_rv_t rv = eqrb_rv_ok; // nothing happened, need next frame
@@ -114,6 +117,7 @@ eqrb_rv_t eqrb_rx_frame_iteration(eqrb_rx_state_t *s, const uint8_t *rx_buf, siz
                         if (s->crc == frame_crc) {
                             rv = eqrb_rv_rx_got_frame;
                         } else {
+                            eqrb_dbg_msg("invalid crc 0x%04X != 0x%04X", s->crc, frame_crc);
                             rv = eqrb_rv_rx_inv_crc;
                         }
                     } else {

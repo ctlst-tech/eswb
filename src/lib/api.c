@@ -240,11 +240,11 @@ eswb_rv_t eswb_fifo_push(eswb_topic_descr_t td, void *data) {
 }
 
 eswb_rv_t eswb_fifo_pop(eswb_topic_descr_t td, void *data) {
-    return ds_fifo_pop(td, data);
+    return ds_fifo_pop(td, data, 1);
 }
 
 eswb_rv_t eswb_fifo_try_pop(eswb_topic_descr_t td, void *data) {
-    return eswb_e_no_update;
+    return ds_fifo_pop(td, data, 0);
 }
 
 void smartcat(char *dst, const char *tcat, int trailing_sl) {

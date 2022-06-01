@@ -295,12 +295,12 @@ eswb_rv_t ds_get_update (eswb_topic_descr_t td, void *data) {
 }
 
 
-eswb_rv_t ds_fifo_pop (eswb_topic_descr_t td, void *data) {
+eswb_rv_t ds_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
     SWITCH_FLOW_TO_DOMAIN(td,
                           local_fifo_pop,
                           not_supported_stub,
-
-                          data);
+                          data,
+                          do_wait);
 }
 
 
