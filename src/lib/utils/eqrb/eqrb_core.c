@@ -116,6 +116,8 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
 
     eqrb_bus_sync_state_t bus_sync_state;
 
+    int wack_cnt = 0;
+
     erv = eswb_wait_connect_nested(h->h.cmd_bus_root_td, EQRV_SERVER_COMMAND_FIFO "/" EQRB_COMMAND_TOPIC, &cmd_td, 200);
     if (erv != eswb_e_ok) {
         // TODO
@@ -203,6 +205,7 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
 
                         // TODO add counter to control ack
                         server_state = sync_bus_wack;
+                        wack_cnt = 0;
                     } else {
                         eqrb_dbg_msg("Done sending bus state");
                         server_state = stream_bus_events;
@@ -219,8 +222,9 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
                 // TODO process timeout
 //                wait_command_blocked = -1;
 //  server_state = sync_bus_state_process;
-//                usleep(500000);
-                sleep(1);
+                usleep(100000);
+//                sleep(1);
+                wack_cnt++;
                 break;
 
             case stream_bus_events:
@@ -302,8 +306,9 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
                     break;
             }
         } else if (erv == eswb_e_no_update) {
-            if (server_state == sync_bus_wack) {
+            if ((server_state == sync_bus_wack) && wack_cnt > 10) {
                 rv = send_event(event, dd, dr, tx_buf, TX_BUF_SIZE);
+                wack_cnt = 0;
             }
         }
     } while(loop);

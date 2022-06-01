@@ -56,13 +56,9 @@ set(ESWB_UTIL_EQRB_SRC
         )
 
 add_library(eswb-eqrb-static STATIC ${ESWB_UTIL_EQRB_SRC})
-add_library(eswb-eqrb-d-static STATIC ${ESWB_UTIL_EQRB_SRC})
 
 target_include_directories(eswb-eqrb-static PUBLIC include/public)
 target_include_directories(eswb-eqrb-static PRIVATE include)
-target_include_directories(eswb-eqrb-d-static PUBLIC include/public)
-target_include_directories(eswb-eqrb-d-static PRIVATE include)
-target_compile_options(eswb-eqrb-d-static PUBLIC -DEQRB_DEBUG)
 
 target_link_libraries(eswb-eqrb-static PUBLIC)
 
@@ -85,6 +81,7 @@ target_include_directories(eswb PRIVATE
         )
 
 if (ESWB_DEBUG)
+    message("ESWB_DEBUG activated")
     target_compile_definitions(eswb-eqrb-static PUBLIC EQRB_DEBUG)
     target_compile_definitions(eswb PUBLIC EQRB_DEBUG)
 endif()

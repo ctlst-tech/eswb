@@ -27,7 +27,7 @@ target_include_directories(eswb_test_basic PRIVATE src/lib/include)
 target_link_libraries(eswb_test_basic PUBLIC eswb-static eswb-sync-static Catch2::Catch2)
 
 target_include_directories(eswb_test_eqrb PRIVATE src/lib/include)
-target_link_libraries(eswb_test_eqrb PUBLIC eswb-static eswb-sync-static eswb-eqrb-d-static Catch2::Catch2)
+target_link_libraries(eswb_test_eqrb PUBLIC eswb-static eswb-sync-static Catch2::Catch2)
 
 
 add_executable(eswb_test_dummy tests/eswb_test_dummy.c tests/event_chain.c)
@@ -45,5 +45,3 @@ add_executable(eswbutil cpp/main.cpp)
 target_link_libraries(eswbutil eswb-cpp)
 
 install(TARGETS eswb_test_dummy RUNTIME)
-
-#target_compile_options(eswb_catch2_test PUBLIC -DESWB_UNIT_TESTS=1)
