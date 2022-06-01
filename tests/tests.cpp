@@ -400,7 +400,7 @@ TEST_CASE("Event queue io | local bus level", "[unit]") {
 
             rv = local_event_queue_update(bh, &evqr);
             REQUIRE(rv == eswb_e_ok);
-            rv = local_fifo_pop(event_queue_td, eqt);
+            rv = local_fifo_pop(event_queue_td, eqt, 1);
             REQUIRE(rv == eswb_e_ok);
 
             REQUIRE(compare_event_queue_transfer(&evqr, eqt) == 0);
@@ -411,7 +411,7 @@ TEST_CASE("Event queue io | local bus level", "[unit]") {
 
             rv = local_event_queue_update(bh, &evqr);
             REQUIRE(rv == eswb_e_ok);
-            rv = local_fifo_pop(event_queue_td, eqt);
+            rv = local_fifo_pop(event_queue_td, eqt, 1);
             REQUIRE(rv == eswb_e_ok);
 
             REQUIRE(compare_event_queue_transfer(&evqr, eqt) == 0);
@@ -437,7 +437,7 @@ TEST_CASE("Event queue io | local bus level", "[unit]") {
                 }
 
                 do {
-                    rv = local_fifo_pop(event_queue_td, eqt);
+                    rv = local_fifo_pop(event_queue_td, eqt, 1);
                     if ((rv == eswb_e_ok) || (rv == eswb_e_fifo_rcvr_underrun)) {
                         if (pushes_num > EVQ_QUEUE_SIZE) {
                             CHECK(EVENT_QUEUE_TRANSFER_DATA(eqt)[0] == pops + pushes_num - EVQ_QUEUE_SIZE);
@@ -468,7 +468,7 @@ TEST_CASE("Event queue io | local bus level", "[unit]") {
 
             int pops = 0;
             do {
-                rv = local_fifo_pop(event_queue_td, eqt);
+                rv = local_fifo_pop(event_queue_td, eqt, 1);
                 if ((rv == eswb_e_ok) || (rv == eswb_e_fifo_rcvr_underrun)) {
                     EVENT_QUEUE_TRANSFER_DATA(eqt)[0] = ((uint8_t *) evqr.data)[0] = 0;// resetting expected difference
                     CHECK(compare_event_queue_transfer(&evqr, eqt) == 0);

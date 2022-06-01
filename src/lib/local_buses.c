@@ -341,7 +341,7 @@ eswb_rv_t local_get_mounting_point(eswb_topic_descr_t td, char *mp) {
     return eswb_e_ok;
 }
 
-eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data) {
+eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
     topic_local_index_t *li = &local_td_index[td];
 
     switch(li->t->parent->type) {
@@ -349,7 +349,7 @@ eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data) {
             return topic_io_event_queue_pop(li->t, li->event_queue_mask, &li->rcvr_state, data, bus_is_synced(li->bh));
 
         case tt_fifo:
-            return topic_io_fifo_pop(li->t, &li->rcvr_state, data, bus_is_synced(li->bh));
+            return topic_io_fifo_pop(li->t, &li->rcvr_state, data, bus_is_synced(li->bh), do_wait);
 
         default:
             return eswb_e_not_fifo;

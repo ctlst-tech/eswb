@@ -252,6 +252,7 @@ eswb_rv_t eswb_event_queue_replicate(eswb_topic_descr_t mount_point_td, struct t
 
         default:
             rv = eswb_e_invargs;
+            break;
     }
 
 
