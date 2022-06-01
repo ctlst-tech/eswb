@@ -1,5 +1,6 @@
 
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
@@ -191,8 +192,8 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
                         bus_sync_state.current_tid = topic_info->info.topic_id;
 
                         eqrb_dbg_msg("---- send proclaim info for topic \"%s\" tid == %d parent_tid == %d ----",
-                                     ((topic_proclaiming_tree_t *)event->data)->name,
-                                     ((topic_proclaiming_tree_t *)event->data)->topic_id,
+                                     ((topic_proclaiming_tree_t *)EVENT_QUEUE_TRANSFER_DATA(event))->name,
+                                     ((topic_proclaiming_tree_t *)EVENT_QUEUE_TRANSFER_DATA(event))->topic_id,
                                      event->topic_id);
 
                         rv = send_event(event, dd, dr, tx_buf, TX_BUF_SIZE);
@@ -431,6 +432,11 @@ eqrb_rv_t eqrb_client_rx_handler_replicator (void *handle, uint8_t cmd_code, uin
         case EQRB_DOWNSTREAM_CODE_BUS_DATA:
             ;
             event_queue_transfer_t *event =  (event_queue_transfer_t *) data;
+            if (data_len != (sizeof(*event) + event->size)) {
+                eqrb_dbg_msg("Event size is different from accepted packet size");
+                rv = eqrb_inv_size;
+                break;
+            }
             if (event->type == eqr_topic_proclaim) {
                 rv = send_ack(h->h.driver, h->h.dd, 0);
             }
@@ -566,6 +572,18 @@ eqrb_rv_t eqrb_generic_rx_thread(eqrb_handle_common_t *p,
             size_t rx_buf_lng;
             rv = dr->recv(dd, rx_buf, RX_BUF_SIZE, &rx_buf_lng);
             eqrb_dbg_msg("recv | rx_buf_lng == %d rv == %d", rx_buf_lng, rv);
+
+#           ifdef EQRB_DEBUG
+            char dbg_data[rx_buf_lng * 4];
+            char ss[4];
+            dbg_data[0] = 0;
+            for (int i = 0; i < rx_buf_lng; i++) {
+                sprintf(ss, "%02X ", rx_buf[i]);
+                strcat(dbg_data, ss);
+            }
+            eqrb_dbg_msg("recv | data | %s", dbg_data);
+#           endif
+
             if (rv == eqrb_rv_ok) {
                 size_t bp = 0;
                 size_t total_br = 0;
@@ -581,7 +599,7 @@ eqrb_rv_t eqrb_generic_rx_thread(eqrb_handle_common_t *p,
                         case eqrb_rv_rx_inv_crc:
                         case eqrb_rv_rx_got_empty_frame:
                             eqrb_reset_state(&rx_state);
-                            eqrb_dbg_msg("eqrb_reset_state");
+                            eqrb_dbg_msg("eqrb_reset_state (%d)", rv);
                             break;
 
                         case eqrb_rv_rx_got_frame:

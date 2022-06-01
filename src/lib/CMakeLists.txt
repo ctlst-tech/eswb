@@ -84,6 +84,11 @@ target_include_directories(eswb PRIVATE
         include
         )
 
+if (ESWB_DEBUG)
+    target_compile_definitions(eswb-eqrb-static PUBLIC EQRB_DEBUG)
+    target_compile_definitions(eswb PUBLIC EQRB_DEBUG)
+endif()
+
 include(GNUInstallDirs)
 
 install(TARGETS eswb LIBRARY)

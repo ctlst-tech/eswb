@@ -15,6 +15,7 @@ typedef enum {
     eqrb_notsup,
     eqrb_invarg,
     eqrb_nomem,
+    eqrb_inv_size,
 
     eqrb_os_based_err,
     eqrb_media_err,
