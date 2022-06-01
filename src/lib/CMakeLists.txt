@@ -60,7 +60,7 @@ add_library(eswb-eqrb-static STATIC ${ESWB_UTIL_EQRB_SRC})
 target_include_directories(eswb-eqrb-static PUBLIC include/public)
 target_include_directories(eswb-eqrb-static PRIVATE include)
 
-target_link_libraries(eswb-eqrb-static PUBLIC)
+target_link_libraries(eswb-eqrb-static PRIVATE eswb-static)
 
 if (ESWB_EQRB_NO_SOCKET)
     target_compile_definitions(eswb-eqrb-static PUBLIC ESWB_NO_SOCKET=1)
