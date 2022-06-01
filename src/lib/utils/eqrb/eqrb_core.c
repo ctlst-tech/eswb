@@ -231,7 +231,7 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
                     break;
                 }
 
-                rv = send_event(event, dd, dr, tx_buf, sizeof(tx_buf));
+                rv = send_event(event, dd, dr, tx_buf, TX_BUF_SIZE);
                 switch (rv) {
                     case eqrb_rv_ok:
                         break;
