@@ -44,4 +44,5 @@ target_link_libraries(eswb-cpp PUBLIC eswb-static eswb-sync-static eswb-eqrb-sta
 add_executable(eswbutil cpp/main.cpp)
 target_link_libraries(eswbutil eswb-cpp eswb-static eswb-sync-static eswb-eqrb-static)
 
-install(TARGETS eswb_test_dummy RUNTIME)
+install(TARGETS eswbutil RUNTIME)
+install(TARGETS eswb-cpp LIBRARY)
