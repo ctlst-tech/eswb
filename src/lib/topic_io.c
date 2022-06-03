@@ -52,7 +52,7 @@ static int32_t fifo_index_delta(eswb_fifo_index_t i1, eswb_fifo_index_t i2, eswb
     return rv;
 }
 
-static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int synced) {
+static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int synced, int do_wait) {
     eswb_rv_t rv = eswb_e_ok;
 
     do {
@@ -64,7 +64,7 @@ static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, v
             rcvr_state->lap = t->fifo_ext->state.lap_num-1;
             rcvr_state->tail = t->fifo_ext->state.head;
         } else if (t->fifo_ext->state.head == rcvr_state->tail) {
-            if (synced) {
+            if (do_wait && synced) {
                 rv = sync_wait(t->sync);
                 if (rv != eswb_e_ok) {
                     break;
@@ -82,22 +82,16 @@ static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, v
             rcvr_state->tail = 0;
             rcvr_state->lap++;
         }
-
-
     } while (0);
 
     return rv;
 }
 
 
-eswb_rv_t topic_io_fifo_pop (topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int synced) {
-
+eswb_rv_t topic_io_fifo_pop(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int synced, int do_wait) {
     if (synced) sync_take(t->sync);
-
-    eswb_rv_t rv = fifo_wait_and_read(t, rcvr_state, data, synced);
-
+    eswb_rv_t rv = fifo_wait_and_read(t, rcvr_state, data, synced, do_wait);
     if (synced) sync_give(t->sync);
-
     return rv;
 }
 
@@ -110,7 +104,7 @@ eswb_rv_t topic_io_event_queue_pop (topic_t *t, eswb_event_queue_mask_t mask, fi
     if (synced) sync_take(t->sync);
 
     do {
-        rv = fifo_wait_and_read(t, rcvr_state, &event, synced);
+        rv = fifo_wait_and_read(t, rcvr_state, &event, synced, 1);
         if ((rv == eswb_e_ok) || (rv == eswb_e_fifo_rcvr_underrun) && (event.type == eqr_none)) {
             continue;
         }
@@ -120,7 +114,7 @@ eswb_rv_t topic_io_event_queue_pop (topic_t *t, eswb_event_queue_mask_t mask, fi
         eqt->size = event.size;
         eqt->topic_id = event.topic_id;
         eqt->type = event.type;
-        rv = topic_mem_event_queue_get_data(t, &event, eqt->data);
+        rv = topic_mem_event_queue_get_data(t, &event, EVENT_QUEUE_TRANSFER_DATA(eqt));
     }
 
     if (synced) sync_give(t->sync);

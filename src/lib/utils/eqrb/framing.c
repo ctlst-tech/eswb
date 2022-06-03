@@ -36,7 +36,7 @@ eqrb_make_tx_frame(uint8_t command_code, void *payload, size_t payload_size, uin
 
 #   define IS_FRAME_SYNC_SYMB(__s) (((__s) == EQRB_FRAME_BEGIN_CHAR) || ((__s) == EQRB_FRAME_END_CHAR))
 
-    for (int i = 0; i < payload_size; i++) {
+    for (uint32_t i = 0; i < payload_size; i++) {
         *fb = *eb;
         crc16_ccitt_update(&crc, *fb);
         if( IS_FRAME_SYNC_SYMB(*fb) ) {
@@ -50,7 +50,7 @@ eqrb_make_tx_frame(uint8_t command_code, void *payload, size_t payload_size, uin
     crc16_ccitt_finalize(&crc);
 
     uint8_t *pcrc = (uint8_t *) &crc;
-    for (int i = 0; i < sizeof(crc); i++) {
+    for (uint32_t i = 0; i < sizeof(crc); i++) {
         *fb = pcrc[i];
         if (IS_FRAME_SYNC_SYMB(*fb)) {
             fb++;
@@ -88,11 +88,14 @@ void eqrb_init_state(eqrb_rx_state_t *s, uint8_t *buffer_origin, size_t buffer_s
     eqrb_reset_state(s);
 }
 
+#ifdef EQRB_DEBUG
+#include <stdio.h>
+#endif
 
 eqrb_rv_t eqrb_rx_frame_iteration(eqrb_rx_state_t *s, const uint8_t *rx_buf, size_t rx_buf_l, size_t *byte_processed) {
     eqrb_rv_t rv = eqrb_rv_ok; // nothing happened, need next frame
 
-    int i = 0;
+    uint32_t i = 0;
     do {
         uint8_t b = rx_buf[i];
 
@@ -114,6 +117,7 @@ eqrb_rv_t eqrb_rx_frame_iteration(eqrb_rx_state_t *s, const uint8_t *rx_buf, siz
                         if (s->crc == frame_crc) {
                             rv = eqrb_rv_rx_got_frame;
                         } else {
+                            eqrb_dbg_msg("invalid crc 0x%04X != 0x%04X", s->crc, frame_crc);
                             rv = eqrb_rv_rx_inv_crc;
                         }
                     } else {
@@ -151,7 +155,8 @@ eqrb_rv_t eqrb_rx_frame_iteration(eqrb_rx_state_t *s, const uint8_t *rx_buf, siz
                 }
             }
         }
-    } while ((i++ < rx_buf_l) && (rv == eqrb_rv_ok));
+        i++;
+    } while ((i < rx_buf_l) && (rv == eqrb_rv_ok));
 
     *byte_processed = i;
 

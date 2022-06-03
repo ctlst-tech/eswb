@@ -61,7 +61,7 @@ eswb_rv_t topic_dealloc_resources(topic_t *t) {
 }
 
 eswb_rv_t reg_destroy(registry_t *reg) {
-    for (int i = 0; i < reg->topics_num; i++) {
+    for (uint32_t i = 0; i < reg->topics_num; i++) {
         topic_dealloc_resources(&reg->topics[i]);
     }
     free(reg);
@@ -162,7 +162,7 @@ static topic_t *find_topic(topic_t *root, const char *find_path) {
 static eswb_rv_t parse_path(char *path, eswb_size_t max_lev, char *ptrs[]) {
 
     char *rest;
-    int i = 0;
+    uint32_t i = 0;
 
 #define DELIM "/"
     ptrs[i++] = strtok_r(path, DELIM, &rest);

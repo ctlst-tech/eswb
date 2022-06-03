@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include "eswb/event_queue.h"
+#include "eswb_ctl.h"
+
 
 eswb_rv_t eswb_event_queue_order_topic(eswb_topic_descr_t td, const char *topics_path_mask, eswb_index_t subch_ind) {
 
@@ -189,7 +191,7 @@ eswb_rv_t eswb_event_queue_replicate(eswb_topic_descr_t mount_point_td, struct t
                 break;
             }
 
-            topic_proclaiming_tree_t *root = (topic_proclaiming_tree_t *)event->data;
+            topic_proclaiming_tree_t *root = (topic_proclaiming_tree_t *)EVENT_QUEUE_TRANSFER_DATA(event);
 
             lookup_rv = map_find(map_handle, root->topic_id, NULL);
             if (lookup_rv == eswb_e_ok) {
@@ -231,7 +233,7 @@ eswb_rv_t eswb_event_queue_replicate(eswb_topic_descr_t mount_point_td, struct t
             eswb_topic_descr_t td;
             lookup_rv = map_find(map_handle, event->topic_id, &td);
             if (lookup_rv == eswb_e_ok) {
-                rv = eswb_update_topic(td, event->data);
+                rv = eswb_update_topic(td, EVENT_QUEUE_TRANSFER_DATA(event));
             } else {
                 rv = lookup_rv;
             }
@@ -243,7 +245,7 @@ eswb_rv_t eswb_event_queue_replicate(eswb_topic_descr_t mount_point_td, struct t
             lookup_rv = map_find(map_handle, event->topic_id, &td);
             if (lookup_rv == eswb_e_ok) {
                 // TODO lame convention regarding the writing td (fifo or struct inside) likely will raise here:
-                rv = eswb_fifo_push(td, event->data);
+                rv = eswb_fifo_push(td, EVENT_QUEUE_TRANSFER_DATA(event));
             } else {
                 rv = lookup_rv;
             }
@@ -252,6 +254,7 @@ eswb_rv_t eswb_event_queue_replicate(eswb_topic_descr_t mount_point_td, struct t
 
         default:
             rv = eswb_e_invargs;
+            break;
     }
 
 

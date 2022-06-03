@@ -10,6 +10,8 @@ LIB_ROOT="../src/lib"
 
 TARGET=c_eswb.py
 
+# TODO use path to system's include dirs (after removing non API topics readings)
+
 $(TARGET):
 	clang2py --clang-args="-I $(LIB_ROOT)/include/public" \
 			$(LIB_ROOT)/include/public/eswb/types.h \

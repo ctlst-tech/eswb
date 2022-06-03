@@ -1,9 +1,20 @@
 #ifndef ESWB_TYPES_H
 #define ESWB_TYPES_H
 
+/** @page proclaiming
+ * Check types.h for calls descriptions
+ */
+
+
+/** @file */
+
 #include <stdint.h>
 
 #define ESWB_FIFO_INDEX_OVERFLOW UINT16_MAX
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef uint32_t eswb_index_t;
 typedef uint16_t eswb_fifo_index_t;
@@ -11,25 +22,33 @@ typedef uint32_t eswb_size_t;
 typedef uint32_t eswb_topic_id_t;
 typedef uint32_t eswb_event_queue_mask_t;
 
-typedef enum  {
-    tt_none = 0,
-    tt_float,
-    tt_double,
-    tt_uint8,
-    tt_int8,
-    tt_uint16,
-    tt_int16,
-    tt_uint32,
-    tt_int32,
-    tt_uint64,
-    tt_int64,
-    tt_string,
-    tt_struct,
-    tt_fifo,
-    tt_byte_buffer,
-    tt_dir,
-    tt_event_queue
+typedef enum {
+    tt_none         = 0x00,
+
+    tt_dir          = 0x01,
+
+    tt_struct       = 0x02,
+    tt_fifo         = 0x03,
+
+    tt_uint8        = 0x10,
+    tt_int8         = 0x11,
+    tt_uint16       = 0x12,
+    tt_int16        = 0x13,
+    tt_uint32       = 0x14,
+    tt_int32        = 0x15,
+    tt_uint64       = 0x16,
+    tt_int64        = 0x17,
+
+    tt_float        = 0x20,
+    tt_double       = 0x21,
+
+    tt_string       = 0x30,
+    tt_byte_buffer  = 0x31,
+
+    tt_event_queue  = 0xF0
 } topic_data_type_t;
+
+typedef uint8_t topic_data_type_s_t;
 
 typedef enum {
     upd_proclaim_topic,
@@ -41,9 +60,10 @@ typedef enum {
 
 
 typedef enum {
+    eswb_not_defined,
+    eswb_non_synced,
     eswb_inter_thread,
     eswb_inter_process,
-    eswb_local_non_synced,
 } eswb_type_t;
 
 typedef enum {
@@ -58,7 +78,7 @@ typedef enum {
 
 #define ESWB_BUS_NAME_MAX_LEN 32
 #define ESWB_TOPIC_NAME_MAX_LEN 30
-#define ESWB_TOPIC_MAX_PATH_LEN 300
+#define ESWB_TOPIC_MAX_PATH_LEN 100
 
 
 typedef int eswb_topic_descr_t;
@@ -69,5 +89,11 @@ typedef struct {
     topic_data_type_t type;
     eswb_size_t size;
 } topic_params_t;
+
+const char *eswb_type_name(topic_data_type_t t);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //ESWB_TYPES_H

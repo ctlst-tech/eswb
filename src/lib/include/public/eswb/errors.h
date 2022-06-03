@@ -1,15 +1,20 @@
-//
-// Created by goofy on 27.11.2020.
-//
-
 #ifndef ESWB_ERRORS_H
 #define ESWB_ERRORS_H
 
+/** @page errors
+ *
+ */
+
+/** @file */
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 typedef enum {
     eswb_e_ok = 0,
     eswb_e_invargs,
-    eswb_e_invargs_path_too_long,
+    eswb_e_path_too_long,
     eswb_e_timedout,
     eswb_e_sync_init,
     eswb_e_sync_take,
@@ -23,7 +28,8 @@ typedef enum {
     eswb_e_mem_sync_na,
     eswb_e_mem_data_na,
     eswb_e_mem_static_exceeded,
-    eswb_e_naming,
+    eswb_e_inv_naming,
+    eswb_e_inv_bus_spec,
     eswb_e_no_topic,
     eswb_e_topic_exist,
     eswb_e_topic_is_not_dir,
@@ -45,5 +51,9 @@ typedef enum {
 } eswb_rv_t;
 
 const char *eswb_strerror(eswb_rv_t e);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //ESWB_ERRORS_H

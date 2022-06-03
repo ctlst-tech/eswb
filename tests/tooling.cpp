@@ -30,3 +30,29 @@ PseudoTopic *gen_folder(PseudoTopic *f) {
     return rv;
 }
 
+
+
+PseudoTopic *create_bus_and_arbitrary_hierarchy(eswb_type_t bus_type, const std::string &bus_name) {
+
+    std::string prefix = eswb_get_bus_prefix(bus_type);
+
+    eswb_rv_t rv = eswb_create(bus_name.c_str(), bus_type, 100);
+    REQUIRE(rv == eswb_e_ok);
+
+    auto *bus = new PseudoTopic(bus_name);
+
+    bus->set_path_prefix(prefix);
+
+    bus->add_subtopic(gen_folder(gen_folder(gen_folder())));
+    bus->add_subtopic(gen_folder(gen_folder(gen_folder())));
+    bus->add_subtopic(gen_folder(gen_folder(gen_folder())));
+
+    auto f = gen_folder();
+    for (int i = 0; i < 6; i++) {
+        f->add_subtopic(gen_folder());
+    }
+    bus->add_subtopic(f);
+    bus->create_as_dirs(false);
+
+    return bus;
+}

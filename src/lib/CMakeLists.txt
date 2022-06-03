@@ -1,7 +1,9 @@
 cmake_minimum_required(VERSION 3.6)
 
-if (UNIX AND NOT APPLE)
-    set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+if (NOT FAKE_PTHREAD)
+    if (UNIX AND NOT APPLE)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -pthread")
+    endif()
 endif()
 
 set(ESWB_LIB_SRC
@@ -53,19 +55,20 @@ set(ESWB_UTIL_EQRB_SRC
         include/public/eswb/eqrb.h
         )
 
-
 add_library(eswb-eqrb-static STATIC ${ESWB_UTIL_EQRB_SRC})
 
+target_include_directories(eswb-eqrb-static PUBLIC include/public)
+target_include_directories(eswb-eqrb-static PRIVATE include)
 
-target_include_directories(eswb-eqrb-static PUBLIC
-        include/public
-        )
-target_include_directories(eswb-eqrb-static PRIVATE
-        include
-        )
+target_link_libraries(eswb-eqrb-static PRIVATE eswb-static)
 
-target_link_libraries(eswb-eqrb-static PUBLIC)
+if (ESWB_EQRB_NO_SOCKET)
+    target_compile_definitions(eswb-eqrb-static PUBLIC ESWB_NO_SOCKET=1)
+endif()
 
+if (ESWB_EQRB_NO_SERIAL)
+    target_compile_definitions(eswb-eqrb-static PUBLIC ESWB_NO_SERIAL=1)
+endif()
 
 add_library(eswb SHARED ${ESWB_LIB_SRC} ${ESWB_UTIL_EQRB_SRC}  platformic/posix/posix_sync.c)
 target_link_libraries(eswb PUBLIC ${PL_SPECIFIC_LIBS})
@@ -76,6 +79,22 @@ target_include_directories(eswb PUBLIC
 target_include_directories(eswb PRIVATE
         include
         )
+
+if (ESWB_DEBUG)
+    message("ESWB_DEBUG activated")
+    target_compile_definitions(eswb-eqrb-static PUBLIC EQRB_DEBUG)
+    target_compile_definitions(eswb PUBLIC EQRB_DEBUG)
+endif()
+
+include(GNUInstallDirs)
+
+install(TARGETS eswb LIBRARY)
+install(DIRECTORY include/public/eswb
+        DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+
+#set_target_properties(eswb PROPERTIES PUBLIC_HEADER "include/public/eswb")
+
 
 #
 #add_library(eswb-static-cov STATIC ${ESWB_LIB_SRC})

@@ -16,8 +16,8 @@ static topic_local_index_t local_td_index[ITB_TD_MAX];
 static int local_index_num = LOCAL_INDEX_INIT; // omit first for having no zero td-s
 
 #include <pthread.h>
-static pthread_mutex_t local_topic_index_mutex = PTHREAD_MUTEX_INITIALIZER; // TODO platform independent?
-static pthread_mutex_t local_buses_mutex = PTHREAD_MUTEX_INITIALIZER; // TODO platform independent?
+static pthread_mutex_t local_topic_index_mutex = PTHREAD_MUTEX_INITIALIZER;
+static pthread_mutex_t local_buses_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 #define LOCAL_BUSSES_MAX 16
 static eswb_bus_handle_t local_buses[LOCAL_BUSSES_MAX];
@@ -54,20 +54,18 @@ eswb_rv_t local_bus_lookup(const char *bus_name, local_bus_type_t type, eswb_bus
     eswb_rv_t rv = eswb_e_bus_not_exist;
     pthread_mutex_lock(&local_buses_mutex);
 
-    do {
-        for (int i = 0; i < LOCAL_BUSSES_MAX; i++) {
-            if (local_bus_is_inited(&local_buses[i])) {
-                if ((local_buses[i].local_type == type) &&
-                    (strncmp(local_buses[i].name, bus_name, ESWB_BUS_NAME_MAX_LEN) == 0)) {
-                    if (b != NULL) {
-                        *b = &local_buses[i];
-                    }
-                    rv = eswb_e_ok;
-                    break;
+    for (int i = 0; i < LOCAL_BUSSES_MAX; i++) {
+        if (local_bus_is_inited(&local_buses[i])) {
+            if (((type == synced_or_nonsynced) || (local_buses[i].local_type == type)) &&
+                (strncmp(local_buses[i].name, bus_name, ESWB_BUS_NAME_MAX_LEN) == 0)) {
+                if (b != NULL) {
+                    *b = &local_buses[i];
                 }
+                rv = eswb_e_ok;
+                break;
             }
         }
-    } while (0);
+    }
 
     pthread_mutex_unlock(&local_buses_mutex);
 
@@ -75,12 +73,16 @@ eswb_rv_t local_bus_lookup(const char *bus_name, local_bus_type_t type, eswb_bus
 }
 
 
-eswb_rv_t local_itb_lookup(const char *bus_name, eswb_bus_handle_t **b) {
+eswb_rv_t local_lookup_itb(const char *bus_name, eswb_bus_handle_t **b) {
     return local_bus_lookup(bus_name, synced, b);
 }
 
-eswb_rv_t local_nsb_lookup(const char *bus_name, eswb_bus_handle_t **b) {
+eswb_rv_t local_lookup_nsb(const char *bus_name, eswb_bus_handle_t **b) {
     return local_bus_lookup(bus_name, nonsynced, b);
+}
+
+eswb_rv_t local_lookup_any(const char *bus_name, eswb_bus_handle_t **b) {
+    return local_bus_lookup(bus_name, synced_or_nonsynced, b);
 }
 
 static int bus_is_synced(eswb_bus_handle_t *bh) {
@@ -154,8 +156,10 @@ eswb_rv_t local_bus_create(const char *bus_name, local_bus_type_t type, eswb_siz
         for (int i = 0; i < LOCAL_BUSSES_MAX; i++) {
             if (!local_bus_is_inited(&local_buses[i])) {
                 new = &local_buses[i];
+                break;
             }
         }
+
         if (new == NULL) {
             rv = eswb_e_max_busses_reached;
             break;
@@ -230,7 +234,7 @@ eswb_rv_t  local_bus_alloc_topic_descr(eswb_bus_handle_t *bh, topic_t *t, eswb_t
 #include <stdio.h>
 
 static void print_event(event_queue_record_t *e) {
-    printf("Event: event_type = %d, id = %d, data_size = %d\n", e->type, e->topic_id, e->size );
+    printf("Event: event_type = %d, id = %u, data_size = %u\n", e->type, e->topic_id, e->size );
 }
 
 /**
@@ -337,7 +341,7 @@ eswb_rv_t local_get_mounting_point(eswb_topic_descr_t td, char *mp) {
     return eswb_e_ok;
 }
 
-eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data) {
+eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
     topic_local_index_t *li = &local_td_index[td];
 
     switch(li->t->parent->type) {
@@ -345,7 +349,7 @@ eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data) {
             return topic_io_event_queue_pop(li->t, li->event_queue_mask, &li->rcvr_state, data, bus_is_synced(li->bh));
 
         case tt_fifo:
-            return topic_io_fifo_pop(li->t, &li->rcvr_state, data, bus_is_synced(li->bh));
+            return topic_io_fifo_pop(li->t, &li->rcvr_state, data, bus_is_synced(li->bh), do_wait);
 
         default:
             return eswb_e_not_fifo;

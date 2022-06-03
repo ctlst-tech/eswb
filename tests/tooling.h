@@ -5,7 +5,7 @@
 #ifndef ESWB_TOOLING_H
 #define ESWB_TOOLING_H
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include "eswb/types.h"
 #include "eswb/api.h"
 #include <fcntl.h>
@@ -219,5 +219,6 @@ public:
 
 std::string gen_name();
 PseudoTopic *gen_folder(PseudoTopic *f = nullptr);
+PseudoTopic *create_bus_and_arbitrary_hierarchy(eswb_type_t bus_type, const std::string &bus_name);
 
 #endif //ESWB_TOOLING_H

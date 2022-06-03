@@ -21,6 +21,6 @@ eswb_rv_t ds_get_update (eswb_topic_descr_t td, void *data);
 eswb_rv_t ds_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int size);
 
 //TODO reuse ds_read instead?
-eswb_rv_t ds_fifo_pop (eswb_topic_descr_t td, void *data);
+eswb_rv_t ds_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait);
 
 #endif //ESWB_DOMAIN_SWITCHING_H

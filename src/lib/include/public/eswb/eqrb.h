@@ -1,6 +1,12 @@
 #ifndef ESWB_PUBLIC_EQRB_H
 #define ESWB_PUBLIC_EQRB_H
 
+/** @page eqrb
+ * Check eqrb.h for calls descriptions
+ */
+
+/** @file */
+
 #include "eswb/types.h"
 
 #ifdef __cplusplus
@@ -12,6 +18,10 @@ typedef enum {
     eqrb_small_buf,
     eqrb_inv_code,
     eqrb_rv_nomem,
+    eqrb_notsup,
+    eqrb_invarg,
+    eqrb_nomem,
+    eqrb_inv_size,
 
     eqrb_os_based_err,
     eqrb_media_err,

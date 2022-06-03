@@ -1,9 +1,10 @@
 
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
 #include <stdio.h>
-#include <printf.h>
+#include <stdarg.h>
 #include <pthread.h>
 
 #include "eqrb_core.h"
@@ -11,6 +12,9 @@
 #include "framing.h"
 #include "misc.h"
 
+void *eqrb_alloc(size_t s) {
+    return malloc(s);
+}
 
 eqrb_rv_t
 eqrb_make_tx_frame_from_event(event_queue_transfer_t *event, uint8_t command_code, uint8_t *frame_buf, size_t frame_buf_size,
@@ -82,10 +86,12 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
     eswb_rv_t erv;
     eqrb_rv_t rv;
 
-    uint8_t event_buf[1024];
-    uint8_t tx_buf[2048];
+#define EVENT_BUF_SIZE 1024
+#define TX_BUF_SIZE 2048
+    uint8_t *event_buf = eqrb_alloc(EVENT_BUF_SIZE);
+    uint8_t *tx_buf = eqrb_alloc(TX_BUF_SIZE);
     event_queue_transfer_t *event = (event_queue_transfer_t*)event_buf;
-    topic_extract_t *topic_info = (topic_extract_t *)(event->data - OFFSETOF(topic_extract_t, info)); // Let the info to transfer be mapped directly
+    topic_extract_t *topic_info = (topic_extract_t *)(EVENT_QUEUE_TRANSFER_DATA(event) - OFFSETOF(topic_extract_t, info)); // Let the info to transfer be mapped directly
 
     device_descr_t dd = 0;
     int have_initial_dd = 0;
@@ -109,6 +115,8 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
     eswb_topic_descr_t cmd_td;
 
     eqrb_bus_sync_state_t bus_sync_state;
+
+    int wack_cnt = 0;
 
     erv = eswb_wait_connect_nested(h->h.cmd_bus_root_td, EQRV_SERVER_COMMAND_FIFO "/" EQRB_COMMAND_TOPIC, &cmd_td, 200);
     if (erv != eswb_e_ok) {
@@ -186,17 +194,18 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
                         bus_sync_state.current_tid = topic_info->info.topic_id;
 
                         eqrb_dbg_msg("---- send proclaim info for topic \"%s\" tid == %d parent_tid == %d ----",
-                                     ((topic_proclaiming_tree_t *)event->data)->name,
-                                     ((topic_proclaiming_tree_t *)event->data)->topic_id,
+                                     ((topic_proclaiming_tree_t *)EVENT_QUEUE_TRANSFER_DATA(event))->name,
+                                     ((topic_proclaiming_tree_t *)EVENT_QUEUE_TRANSFER_DATA(event))->topic_id,
                                      event->topic_id);
 
-                        rv = send_event(event, dd, dr, tx_buf, sizeof(tx_buf));
+                        rv = send_event(event, dd, dr, tx_buf, TX_BUF_SIZE);
                         if (rv != eqrb_rv_ok) {
                             eqrb_dbg_msg("send_event regarding bus sync error: %d", rv);
                         }
 
                         // TODO add counter to control ack
                         server_state = sync_bus_wack;
+                        wack_cnt = 0;
                     } else {
                         eqrb_dbg_msg("Done sending bus state");
                         server_state = stream_bus_events;
@@ -211,8 +220,11 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
             case stream_bus_events_wack:
             case sync_bus_wack:
                 // TODO process timeout
-                wait_command_blocked = -1;
+//                wait_command_blocked = -1;
 //  server_state = sync_bus_state_process;
+                usleep(100000);
+//                sleep(1);
+                wack_cnt++;
                 break;
 
             case stream_bus_events:
@@ -223,7 +235,7 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
                     break;
                 }
 
-                rv = send_event(event, dd, dr, tx_buf, sizeof(tx_buf));
+                rv = send_event(event, dd, dr, tx_buf, TX_BUF_SIZE);
                 switch (rv) {
                     case eqrb_rv_ok:
                         break;
@@ -292,6 +304,11 @@ eqrb_rv_t eqrb_server_tx_thread(eqrb_server_handle_t *p) {
                 case stop_service:
                     loop = 0;
                     break;
+            }
+        } else if (erv == eswb_e_no_update) {
+            if ((server_state == sync_bus_wack) && wack_cnt > 10) {
+                rv = send_event(event, dd, dr, tx_buf, TX_BUF_SIZE);
+                wack_cnt = 0;
             }
         }
     } while(loop);
@@ -420,6 +437,11 @@ eqrb_rv_t eqrb_client_rx_handler_replicator (void *handle, uint8_t cmd_code, uin
         case EQRB_DOWNSTREAM_CODE_BUS_DATA:
             ;
             event_queue_transfer_t *event =  (event_queue_transfer_t *) data;
+            if (data_len != (sizeof(*event) + event->size)) {
+                eqrb_dbg_msg("Event size is different from accepted packet size");
+                rv = eqrb_inv_size;
+                break;
+            }
             if (event->type == eqr_topic_proclaim) {
                 rv = send_ack(h->h.driver, h->h.dd, 0);
             }
@@ -442,10 +464,10 @@ eqrb_rv_t eqrb_client_rx_handler_replicator (void *handle, uint8_t cmd_code, uin
                     break;
 
                 case eswb_e_map_full:
-                    eqrb_dbg_msg("ESWB_E_MAP_FULL");
-                    eqrb_dbg_msg("ESWB_E_MAP_FULL");
-                    eqrb_dbg_msg("ESWB_E_MAP_FULL");
-                    eqrb_dbg_msg("ESWB_E_MAP_FULL");
+                    eqrb_dbg_msg("1. ESWB_E_MAP_FULL");
+                    eqrb_dbg_msg("2. ESWB_E_MAP_FULL");
+                    eqrb_dbg_msg("3. ESWB_E_MAP_FULL");
+                    eqrb_dbg_msg("4. ESWB_E_MAP_FULL");
                     break;
 
                 case eswb_e_map_no_match:
@@ -506,13 +528,14 @@ eqrb_rv_t eqrb_generic_rx_thread(eqrb_handle_common_t *p,
 
     eqrb_rx_state_t rx_state;
 
-    uint8_t rx_buf[2048];
-
-    uint8_t payload_buf[2048];
+#define PAYLOAD_SIZE 1024
+#define RX_BUF_SIZE 2048
+    uint8_t *rx_buf = eqrb_alloc(RX_BUF_SIZE);
+    uint8_t *payload_buf = eqrb_alloc(PAYLOAD_SIZE);
 
     int loop = 1;
 
-    eqrb_init_state(&rx_state, payload_buf, sizeof(payload_buf));
+    eqrb_init_state(&rx_state, payload_buf, PAYLOAD_SIZE);
 
 
     device_descr_t dd = 0;
@@ -552,8 +575,20 @@ eqrb_rv_t eqrb_generic_rx_thread(eqrb_handle_common_t *p,
 
         do {
             size_t rx_buf_lng;
-            rv = dr->recv(dd, rx_buf, sizeof(rx_buf), &rx_buf_lng);
+            rv = dr->recv(dd, rx_buf, RX_BUF_SIZE, &rx_buf_lng);
             eqrb_dbg_msg("recv | rx_buf_lng == %d rv == %d", rx_buf_lng, rv);
+
+#           ifdef EQRB_DEBUG
+            char dbg_data[rx_buf_lng * 4];
+            char ss[4];
+            dbg_data[0] = 0;
+            for (int i = 0; i < rx_buf_lng; i++) {
+                sprintf(ss, "%02X ", rx_buf[i]);
+                strcat(dbg_data, ss);
+            }
+            eqrb_dbg_msg("recv | data | %s", dbg_data);
+#           endif
+
             if (rv == eqrb_rv_ok) {
                 size_t bp = 0;
                 size_t total_br = 0;
@@ -569,7 +604,7 @@ eqrb_rv_t eqrb_generic_rx_thread(eqrb_handle_common_t *p,
                         case eqrb_rv_rx_inv_crc:
                         case eqrb_rv_rx_got_empty_frame:
                             eqrb_reset_state(&rx_state);
-                            eqrb_dbg_msg("eqrb_reset_state");
+                            eqrb_dbg_msg("eqrb_reset_state (%d)", rv);
                             break;
 
                         case eqrb_rv_rx_got_frame:
@@ -618,7 +653,7 @@ static eqrb_rv_t cmd_bus_init(const char *bus_name, eswb_topic_descr_t *root_td)
     char root_path[ESWB_TOPIC_NAME_MAX_LEN + 1] = "itb:/";
     strncat(root_path, bus_name, ESWB_TOPIC_NAME_MAX_LEN - strlen(root_path));
 
-    erv = eswb_topic_connect(root_path, root_td);
+    erv = eswb_connect(root_path, root_td);
     if (erv != eswb_e_ok) {
         return eqrb_rv_rx_eswb_fatal_err;
     }
@@ -661,11 +696,13 @@ eqrb_rv_t eqrb_client_start(eqrb_client_handle_t *h, const char *mount_point, si
 
     eswb_rv_t erv = map_alloc(&h->ids_map, repl_map_size);
     if (erv != eswb_e_ok) {
-        return eqrb_rv_rx_eswb_fatal_err;
+        eqrb_dbg_msg("map_alloc failed %s", eswb_strerror(erv));
+        return eqrb_nomem;
     }
 
-    erv = eswb_topic_connect(mount_point, &h->repl_dst_td);
+    erv = eswb_connect(mount_point, &h->repl_dst_td);
     if (erv != eswb_e_ok) {
+        eqrb_dbg_msg("eswb_connect to %s failed %s", mount_point, eswb_strerror(erv));
         return eqrb_rv_rx_eswb_fatal_err;
     }
 
@@ -708,12 +745,12 @@ eqrb_server_start(eqrb_server_handle_t *h, const char *bus_to_replicate, uint32_
         return eqrb_rv_rx_eswb_fatal_err;
     }
 
-    erv = eswb_topic_connect(bus_to_replicate, &h->repl_root);
+    erv = eswb_connect(bus_to_replicate, &h->repl_root);
     if (erv != eswb_e_ok) {
         if (err_msg != NULL) {
             *err_msg = eswb_strerror(erv);
         }
-        eqrb_dbg_msg("eswb_topic_connect failed: %s", eswb_strerror(erv));
+        eqrb_dbg_msg("eswb_connect failed: %s", eswb_strerror(erv));
         return eqrb_rv_rx_eswb_fatal_err;
     }
 

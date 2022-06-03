@@ -1,11 +1,12 @@
-//
-// Created by goofy on 29.11.2020.
-//
-
 #ifndef ESWB_TOPIC_PROCLAIMING_TREE_H
 #define ESWB_TOPIC_PROCLAIMING_TREE_H
 
+/** @page proclaiming
+ * Check topic_proclaiming_tree.h for calls descriptions
+ */
+
 /** @file */
+
 
 #include <stdint.h>
 #include <stddef.h>
@@ -29,25 +30,23 @@ typedef struct __attribute__((packed)) {
 
     int32_t            abs_ind;
 
-    topic_data_type_t  type;
-    uint32_t           data_offset;
-    uint32_t           data_size;
+    topic_data_type_s_t  type;
+    uint16_t           data_offset;
+    uint16_t           data_size;
 
-    uint32_t           flags;
+    uint16_t           flags;
 
-    uint32_t           topic_id; // assigned at first proclaiming
+    uint16_t           topic_id; // assigned at first proclaiming
 
-    int32_t            parent_ind; // also used as parent Topic ID in
-    int32_t            first_child_ind;
-    int32_t            next_sibling_ind;
+    int16_t            parent_ind; // also used as parent Topic ID in
+    int16_t            first_child_ind;
+    int16_t            next_sibling_ind;
 } topic_proclaiming_tree_t;
 
 typedef struct {
     eswb_topic_id_t          parent_id;
     topic_proclaiming_tree_t info;
 } topic_extract_t;
-
-const char *type_name(topic_data_type_t t);
 
 
 typedef struct {

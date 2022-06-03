@@ -14,17 +14,20 @@ if sys == 'Linux':
 elif sys == 'Darwin':
     libname += '.dylib'
 else:
+
     raise "Not supported platform"
 
-libpath = '../cmake-build-debug/src/lib'
-fullpath = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + libpath + os.path.sep + libname
+# libpath = '../cmake-build-debug/src/lib'
+# fullpath = os.path.dirname(os.path.abspath(__file__)) + os.path.sep + libpath + os.path.sep + libname
 
 try:
-    eswb = CDLL(fullpath)
-    libc = CDLL('libc.so')
+    eswb = CDLL(libname)
+    # eswb = CDLL(fullpath)
+    # libc = CDLL('libc.so')
     print("Successfully loaded ", eswb)
 except Exception as e:
     print(e)
+    print('Make sure lib is installed')
 
 
 eswb.eswb_strerror.restype = c_char_p
@@ -47,6 +50,86 @@ def eswb_exception(text, errcode = 0):
 
 def eswb_index(i: int):
     return c_uint32(i)
+
+
+def get_value_from_buf(topic_type, data_ref):
+    def castNvalue(ref, p_c_type):
+        if p_c_type:
+            return cast(ref, POINTER(p_c_type)).contents.value
+            # return 'commented out'
+        else:
+            return 'invalid'
+
+    none_stub = None
+
+    if topic_type == ce.tt_none:
+        return none_stub
+    elif topic_type == ce.tt_float:
+        return castNvalue(data_ref, c_float)
+    elif topic_type == ce.tt_double:
+        return castNvalue(data_ref, c_double)
+    elif topic_type == ce.tt_uint64:
+        return castNvalue(data_ref, c_uint64)
+    elif topic_type == ce.tt_int64:
+        return castNvalue(data_ref, c_int64)
+    elif topic_type == ce.tt_uint32:
+        return castNvalue(data_ref, c_uint32)
+    elif topic_type == ce.tt_int32:
+        return castNvalue(data_ref, c_int32)
+    elif topic_type == ce.tt_uint16:
+        return castNvalue(data_ref, c_uint16)
+    elif topic_type == ce.tt_int16:
+        return castNvalue(data_ref, c_int16)
+    elif topic_type == ce.tt_uint8:
+        return castNvalue(data_ref, c_uint8)
+    elif topic_type == ce.tt_int8:
+        return castNvalue(data_ref, c_int8)
+    elif topic_type == ce.tt_string:
+        return pstr(cast(data_ref, c_char_p).value)
+    elif topic_type == ce.tt_struct:
+        return none_stub
+    elif topic_type == ce.tt_fifo:
+        return none_stub
+    elif topic_type == ce.tt_byte_buffer:
+        return none_stub
+    elif topic_type == ce.tt_dir:
+        return none_stub
+    elif topic_type == ce.tt_event_queue:
+        return none_stub
+
+class TopicHandle:
+    def __init__(self, name: str, path: str):
+        self.name = name
+        self.path = path
+        self.td = c_int(0)
+        self.type = ce.tt_none
+        self.data_ref = pointer(c_int(20)) # FIXME
+
+    def connect(self):
+        c_td = c_int(0)
+        rv = eswb.eswb_connect(cstr(self.path), byref(c_td))
+        if rv != 0:
+            raise eswb_exception(f'eswb_connect to {self.path} failed', rv)
+        self.td = c_td
+
+        # eswb_rv_t
+        # eswb_get_topic_params(eswb_topic_descr_t td, topic_params_t * params);
+        topic_params = ce.topic_params_t()
+
+        rv = eswb.eswb_get_topic_params(self.td, byref(topic_params))
+        if rv != 0:
+            raise eswb_exception(f'eswb_get_topic_params failed', rv)
+
+        self.type = topic_params.type
+
+    def value(self):
+        rv = eswb.eswb_read(self.td, self.data_ref)
+        if rv != 0:
+            raise eswb_exception("eswb_read failed", rv)
+
+        return get_value_from_buf(self.type, self.data_ref)
+
+
 
 class Topic:
     def __init__(self, topic: POINTER(ce.topic_t)):
@@ -74,51 +157,13 @@ class Topic:
                 n = n.next_sibling
 
             n.next_sibling = t
-            t.parent = self.parent
+
+        t.parent = self.parent
 
     # def iterator(self, call, n = None):
 
     def raw_value(self):
-        def castNvalue(ref, p_c_type):
-            return cast(ref, POINTER(p_c_type)).contents.value
-
-        none_stub = None
-
-        if self.type == ce.tt_none:
-            return none_stub
-        elif self.type == ce.tt_float:
-            return castNvalue(self.data_ref, c_float)
-        elif self.type == ce.tt_double:
-            return castNvalue(self.data_ref, c_double)
-        elif self.type == ce.tt_uint64:
-            return castNvalue(self.data_ref, c_uint64)
-        elif self.type == ce.tt_int64:
-            return castNvalue(self.data_ref, c_int64)
-        elif self.type == ce.tt_uint32:
-            return castNvalue(self.data_ref, c_uint32)
-        elif self.type == ce.tt_int32:
-            return castNvalue(self.data_ref, c_int32)
-        elif self.type == ce.tt_uint16:
-            return castNvalue(self.data_ref, c_uint16)
-        elif self.type == ce.tt_int16:
-            return castNvalue(self.data_ref, c_int16)
-        elif self.type == ce.tt_uint8:
-            return castNvalue(self.data_ref, c_uint8)
-        elif self.type == ce.tt_int8:
-            return castNvalue(self.data_ref, c_int8)
-        elif self.type == ce.tt_string:
-            return pstr(cast(self.data_ref, c_char_p).value)
-        elif self.type == ce.tt_struct:
-            return none_stub
-        elif self.type == ce.tt_fifo:
-            return none_stub
-        elif self.type == ce.tt_byte_buffer:
-            return none_stub
-        elif self.type == ce.tt_dir:
-            return none_stub
-        elif self.type == ce.tt_event_queue:
-            return none_stub
-
+        return get_value_from_buf(self.type, self.data_ref)
 
     def print(self, show_types = False):
         def print_node(t, indent = 0):
@@ -150,15 +195,15 @@ class Topic:
 
 class Bus:
     def __init__(self, name: str, topics_num: int = 256):
-        rv = eswb.eswb_create(cstr(name), ce.eswb_local_non_synced, topics_num)
+        rv = eswb.eswb_create(cstr(name), ce.eswb_non_synced, topics_num)
         if rv != 0:
             raise eswb_exception("eswb_create failed", rv)
 
         self.bus_path = 'nsb:/' + name + '/'
         c_td = c_int(0)
-        rv = eswb.eswb_subscribe(cstr(self.bus_path), byref(c_td))
+        rv = eswb.eswb_connect(cstr(self.bus_path), byref(c_td))
         if rv != 0:
-            raise eswb_exception("eswb_subscribe failed", rv)
+            raise eswb_exception("eswb_connect failed", rv)
         self.root_td = c_td
         self.topic_tree = None
 
@@ -210,7 +255,7 @@ class EQRBtcp:
         self.client_handler = c_void_p(0)
         eswb.eqrb_tcp_client_create(byref(self.client_handler))
 
-    def connect(self, addr, repl_map_size = 1024):
+    def connect(self, addr, repl_map_size=1024):
         err_msg = create_string_buffer(256)
         rv = eswb.eqrb_tcp_client_connect(self.client_handler, cstr(addr),
                                             cstr(self.bus2replicate),
@@ -218,10 +263,22 @@ class EQRBtcp:
                                             repl_map_size,
                                             err_msg)
         if rv != 0:
-            raise Exception (f'connect failed ({rv}): {pstr(err_msg.value)}') #pstr(libc.strerror(skt_err))
+            raise Exception (f'connect failed: {ce.eqrb_rv_t__enumvalues[rv]} ({rv}): {pstr(err_msg.value)}') #pstr(libc.strerror(skt_err))
 
     def close(self):
         eswb.eqrb_tcp_client_close(self.client_handler)
+
+class EQRBserial:
+    def __init__(self, replicate_to_path: str):
+        self.replicate_to_path = replicate_to_path
+
+    def connect(self, path, baudrate, repl_map_size=1024):
+        rv = eswb.eqrb_serial_client_connect(cstr(path), baudrate,
+                                                cstr(self.replicate_to_path),
+                                                repl_map_size)
+
+        if rv != 0:
+            raise Exception (f'connect failed: {ce.eqrb_rv_t__enumvalues[rv]} ({rv})') #pstr(libc.strerror(skt_err))
 
 
 def main(command_line=None):
@@ -246,7 +303,7 @@ def main(command_line=None):
 
     parser.add_argument(
         '--path',
-        help='host:port / serial device path / file path',
+        help='host:port / serial_device_path:baudrate / file path',
         dest='path',
         required=True,
     )
@@ -265,6 +322,11 @@ def main(command_line=None):
         help='show types of topics',
         action='store_true'
     )
+    print_tree.add_argument(
+        '--debug',
+        help='Used for not suppresing EQRB debug info',
+        action='store_true'
+    )
 
     args = parser.parse_args(command_line)
 
@@ -272,19 +334,28 @@ def main(command_line=None):
     service_bus_name = 'service'
     b = Bus(service_bus_name)
 
+    bus2request = args.bus
+    subdir = re.sub('.+:/', '', bus2request)
+    b.mkdir(subdir)
+
     if args.mtype == 'tcp':
-        bus2request = args.bus
-        subdir = re.sub('.+:/', '', bus2request)
-        b.mkdir(subdir)
         client = EQRBtcp(bus2request, f'nsb:/{service_bus_name}/{subdir}')
         client.connect(args.path)
+    elif args.mtype == 'serial':
+        (path, baudrate) = args.path.split(':')
+        serial_client = EQRBserial(f'nsb:/{service_bus_name}/{subdir}')
+        serial_client.connect(path, int(baudrate))
+
+
 
     if args.command == 'print':
         show_types = args.wtypes
+        period = 2.0 if args.debug else 0.2
         while True:
-            time.sleep(0.2)
+            time.sleep(period)
             b.update_tree()
-            print(chr(27) + "[2J")
+            if not args.debug:
+                print(chr(27) + "[2J")
             b.topic_tree.print(show_types=show_types)
 
 
