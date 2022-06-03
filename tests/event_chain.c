@@ -18,6 +18,7 @@
 #include "eswb/bridge.h"
 #include "eswb/event_queue.h"
 
+void eswb_print(const char *bus_name);
 
 /**
  *
@@ -173,7 +174,7 @@ void *test_thread(void *p) {
     snprintf(tn, sizeof(tn) - 1, "ec:%s", tp->name);
     eswb_set_thread_name(tn);
 
-    eswb_rv_t erv = eswb_subscribe("itb:/event_bus/start_event", &tp->start_event_d);
+    eswb_rv_t erv = eswb_connect("itb:/event_bus/start_event", &tp->start_event_d);
     if (erv != eswb_e_ok) {
         post_err("eswb_fifo_subscribe for start event failed", erv);
     }
@@ -426,15 +427,15 @@ int lin_freq_init_handler(struct test_thread_param *p) {
         return 1;
     }
 
-    rv = eswb_subscribe("itb:/generators/sin/out", &p->in1_d);
+    rv = eswb_connect("itb:/generators/sin/out", &p->in1_d);
     if (rv != eswb_e_ok) {
-        post_err("eswb_subscribe failed", rv);
+        post_err("eswb_connect failed", rv);
         return 1;
     }
 
-    rv = eswb_subscribe("itb:/generators/saw/out", &p->in2_d);
+    rv = eswb_connect("itb:/generators/saw/out", &p->in2_d);
     if (rv != eswb_e_ok) {
-        post_err("eswb_subscribe failed", rv);
+        post_err("eswb_connect failed", rv);
         return 1;
     }
 
@@ -473,9 +474,9 @@ int lin_freq_print_init_handler(struct test_thread_param *p) {
 
     eswb_rv_t rv;
 
-    rv = eswb_subscribe("itb:/conversions/lin_freq/out", &p->in1_d);
+    rv = eswb_connect("itb:/conversions/lin_freq/out", &p->in1_d);
     if (rv != eswb_e_ok) {
-        post_err("eswb_subscribe failed", rv);
+        post_err("eswb_connect failed", rv);
         return 1;
     }
 
@@ -594,9 +595,9 @@ int event_print_cycle_handler(struct test_thread_param *p) {
 
 int funcs_sum_init_handler(struct test_thread_param *p) {
 
-    eswb_rv_t rv = eswb_subscribe("itb:/conversions/funcs2world", &p->in1_d);
+    eswb_rv_t rv = eswb_connect("itb:/conversions/funcs2world", &p->in1_d);
     if (rv != eswb_e_ok) {
-        post_err("eswb_subscribe failed", rv);
+        post_err("eswb_connect failed", rv);
         return 1;
     }
 
@@ -783,9 +784,9 @@ enable_event_queue(const char *path, eswb_size_t queue_size, eswb_size_t buffer_
     eswb_rv_t rv;
 
     eswb_topic_descr_t td = 0;
-    rv = eswb_topic_connect(path, &td);
+    rv = eswb_connect(path, &td);
     if (rv != eswb_e_ok) {
-        post_err("eswb_topic_connect \"" BUS_CONVERSIONS "\" failed", rv);
+        post_err("eswb_connect \"" BUS_CONVERSIONS "\" failed", rv);
     }
 
     if (td != 0) {
@@ -810,17 +811,6 @@ int test_event_chain (int verbose, int nonstop) {
     if (rv != eswb_e_ok) {
         post_err("eswb_create \"" BUS_GENERATORS "\" failed", rv);
     }
-
-//    eswb_topic_descr_t eq_td = 0;
-//    rv = eswb_topic_connect("itb:/" BUS_GENERATORS, &eq_td);
-//    if (rv != eswb_e_ok) {
-//        post_err("eswb_topic_connect \"" BUS_GENERATORS "\" failed", rv);
-//    }
-//
-//    rv = eswb_event_queue_enable(eq_td, 40, 800);
-//    if (rv != eswb_e_ok) {
-//        post_err("eswb_event_queue_enable \"" BUS_CONVERSIONS "\" failed", rv);
-//    }
 
     rv = eswb_create(BUS_CONVERSIONS, eswb_inter_thread, 20);
     if (rv != eswb_e_ok) {

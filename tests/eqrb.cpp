@@ -440,10 +440,10 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
     eswb_topic_descr_t src_bus_td;
     eswb_topic_descr_t dst_bus_td;
 
-    erv = eswb_topic_connect(src_bus_full_path.c_str(), &src_bus_td);
+    erv = eswb_connect(src_bus_full_path.c_str(), &src_bus_td);
     REQUIRE(erv == eswb_e_ok);
 
-    erv = eswb_topic_connect(dst_bus_full_path.c_str(), &dst_bus_td);
+    erv = eswb_connect(dst_bus_full_path.c_str(), &dst_bus_td);
     REQUIRE(erv == eswb_e_ok);
 
     erv = eswb_event_queue_enable(src_bus_td, 40, 1024);
@@ -611,7 +611,7 @@ TEST_CASE("EQRB bus state sync") {
 
     eswb_topic_descr_t src_bus_td;
 
-    erv = eswb_topic_connect(src_bus->get_full_path().c_str(), &src_bus_td);
+    erv = eswb_connect(src_bus->get_full_path().c_str(), &src_bus_td);
     REQUIRE(erv == eswb_e_ok);
 
     erv = eswb_event_queue_enable(src_bus_td, 40, 1024);
@@ -622,7 +622,7 @@ TEST_CASE("EQRB bus state sync") {
     REQUIRE(erv == eswb_e_ok);
     auto mounting_point = dst_bus_full_path + "/" + src_bus_name;
     eswb_topic_descr_t dst_bus_mp_td;
-    erv = eswb_topic_connect(mounting_point.c_str(), &dst_bus_mp_td);
+    erv = eswb_connect(mounting_point.c_str(), &dst_bus_mp_td);
     REQUIRE(erv == eswb_e_ok);
 
 
@@ -662,7 +662,7 @@ TEST_CASE("EQRB bus state sync") {
     eswb_topic_descr_t td;
 
     eswb_rv_t rv;
-    rv = eswb_subscribe(mounting_point.c_str(), &td);
+    rv = eswb_connect(mounting_point.c_str(), &td);
 
     do {
         topic_extract_t e;

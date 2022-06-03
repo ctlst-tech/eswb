@@ -110,9 +110,9 @@ public:
             throw Exception("eswb_create", rv);
         }
 
-        rv = eswb_subscribe(bus_path.c_str(), &root_td);
+        rv = eswb_connect(bus_path.c_str(), &root_td);
         if (rv != eswb_e_ok) {
-            throw Exception("eswb_subscribe", rv);
+            throw Exception("eswb_connect", rv);
         }
 
         topic_tree = nullptr;

@@ -133,25 +133,24 @@ TEST_CASE("Basic Operations", "[unit]") {
         eswb_topic_descr_t td;
 
         SECTION("By full path") {
-            rv = eswb_topic_connect(bus_path.c_str(), &td);
+            rv = eswb_connect(bus_path.c_str(), &td);
             REQUIRE(rv == eswb_e_ok);
         }
 
         SECTION("By path without prefix") {
-            rv = eswb_topic_connect(bus_name.c_str(), &td);
-//            rv = eswb_topic_connect(bus_path.c_str(), &td);
+            rv = eswb_connect(bus_name.c_str(), &td);
             REQUIRE(rv == eswb_e_ok);
         }
 
         SECTION("By path with duplicated slashes") {
             std::string slashy_bus_path = std::regex_replace( bus_path, std::regex("/"), "//" );
-            rv = eswb_topic_connect(bus_path.c_str(), &td);
+            rv = eswb_connect(bus_path.c_str(), &td);
             REQUIRE(rv == eswb_e_ok);
         }
 
         SECTION("By path with trailing slash") {
             bus_path += "/";
-            rv = eswb_topic_connect(bus_path.c_str(), &td);
+            rv = eswb_connect(bus_path.c_str(), &td);
             REQUIRE(rv == eswb_e_ok);
         }
     }
@@ -166,14 +165,14 @@ TEST_CASE("Basic Operations", "[unit]") {
 
         SECTION("Delete bus by TD") {
 
-            rv = eswb_topic_connect(bus_path.c_str(), &td);
+            rv = eswb_connect(bus_path.c_str(), &td);
             REQUIRE(rv == eswb_e_ok);
 
             rv = eswb_delete_by_td(td);
             REQUIRE(rv == eswb_e_ok);
         }
 
-        rv = eswb_topic_connect(bus_path.c_str(), &td);
+        rv = eswb_connect(bus_path.c_str(), &td);
         REQUIRE(rv == eswb_e_bus_not_exist);
     }
 }
@@ -504,7 +503,7 @@ TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
 
     std::string src_bus_path = "nsb:/" + src_bus_name;
     eswb_topic_descr_t src_td;
-    rv = eswb_topic_connect(src_bus_path.c_str(), &src_td);
+    rv = eswb_connect(src_bus_path.c_str(), &src_td);
     REQUIRE(rv == eswb_e_ok);
 
     // create dst bus
@@ -514,7 +513,7 @@ TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
 
     std::string dst_bus_path = "nsb:/" + dst_bus_name;
     eswb_topic_descr_t dst_td;
-    rv = eswb_topic_connect(dst_bus_path.c_str(), &dst_td);
+    rv = eswb_connect(dst_bus_path.c_str(), &dst_td);
     REQUIRE(rv == eswb_e_ok);
 
     // enable event queue
@@ -587,11 +586,11 @@ TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
     eswb_topic_descr_t td_a;
     eswb_topic_descr_t td_b;
     eswb_topic_descr_t td_c;
-    rv = eswb_subscribe((dst_bus_path+"/st/a").c_str(), &td_a);
+    rv = eswb_connect((dst_bus_path + "/st/a").c_str(), &td_a);
     REQUIRE(rv == eswb_e_ok);
-    rv = eswb_subscribe((dst_bus_path+"/st/b").c_str(), &td_b);
+    rv = eswb_connect((dst_bus_path + "/st/b").c_str(), &td_b);
     REQUIRE(rv == eswb_e_ok);
-    rv = eswb_subscribe((dst_bus_path+"/st/c").c_str(), &td_c);
+    rv = eswb_connect((dst_bus_path + "/st/c").c_str(), &td_c);
     REQUIRE(rv == eswb_e_ok);
 
 
@@ -648,7 +647,7 @@ TEST_CASE("Retrieve tree struct") {
     eswb_topic_descr_t td;
 
     eswb_rv_t rv;
-    rv = eswb_subscribe(bus->get_full_path().c_str(), &td);
+    rv = eswb_connect(bus->get_full_path().c_str(), &td);
 
     do {
         topic_extract_t e;

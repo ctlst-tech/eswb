@@ -5,6 +5,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include "eswb/event_queue.h"
+#include "eswb_ctl.h"
+
 
 eswb_rv_t eswb_event_queue_order_topic(eswb_topic_descr_t td, const char *topics_path_mask, eswb_index_t subch_ind) {
 

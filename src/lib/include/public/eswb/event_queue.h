@@ -1,6 +1,12 @@
 #ifndef ESWB_EVENT_QUEUE_H
 #define ESWB_EVENT_QUEUE_H
 
+/** @page event_queue
+ * Check event_queue.h for calls descriptions
+ */
+
+/** @file */
+
 #include "eswb/api.h"
 #include "types.h"
 

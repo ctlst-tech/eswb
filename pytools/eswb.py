@@ -54,7 +54,11 @@ def eswb_index(i: int):
 
 def get_value_from_buf(topic_type, data_ref):
     def castNvalue(ref, p_c_type):
-        return cast(ref, POINTER(p_c_type)).contents.value
+        if p_c_type:
+            return cast(ref, POINTER(p_c_type)).contents.value
+            # return 'commented out'
+        else:
+            return 'invalid'
 
     none_stub = None
 
@@ -103,9 +107,9 @@ class TopicHandle:
 
     def connect(self):
         c_td = c_int(0)
-        rv = eswb.eswb_subscribe(cstr(self.path), byref(c_td))
+        rv = eswb.eswb_connect(cstr(self.path), byref(c_td))
         if rv != 0:
-            raise eswb_exception(f'eswb_subscribe to {self.path} failed', rv)
+            raise eswb_exception(f'eswb_connect to {self.path} failed', rv)
         self.td = c_td
 
         # eswb_rv_t
@@ -197,9 +201,9 @@ class Bus:
 
         self.bus_path = 'nsb:/' + name + '/'
         c_td = c_int(0)
-        rv = eswb.eswb_subscribe(cstr(self.bus_path), byref(c_td))
+        rv = eswb.eswb_connect(cstr(self.bus_path), byref(c_td))
         if rv != 0:
-            raise eswb_exception("eswb_subscribe failed", rv)
+            raise eswb_exception("eswb_connect failed", rv)
         self.root_td = c_td
         self.topic_tree = None
 

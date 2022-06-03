@@ -1,6 +1,13 @@
 #ifndef ESWB_TYPES_H
 #define ESWB_TYPES_H
 
+/** @page proclaiming
+ * Check types.h for calls descriptions
+ */
+
+
+/** @file */
+
 #include <stdint.h>
 
 #define ESWB_FIFO_INDEX_OVERFLOW UINT16_MAX

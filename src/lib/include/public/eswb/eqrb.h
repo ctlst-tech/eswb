@@ -1,6 +1,12 @@
 #ifndef ESWB_PUBLIC_EQRB_H
 #define ESWB_PUBLIC_EQRB_H
 
+/** @page eqrb
+ * Check eqrb.h for calls descriptions
+ */
+
+/** @file */
+
 #include "eswb/types.h"
 
 #ifdef __cplusplus

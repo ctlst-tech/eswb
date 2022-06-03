@@ -653,7 +653,7 @@ static eqrb_rv_t cmd_bus_init(const char *bus_name, eswb_topic_descr_t *root_td)
     char root_path[ESWB_TOPIC_NAME_MAX_LEN + 1] = "itb:/";
     strncat(root_path, bus_name, ESWB_TOPIC_NAME_MAX_LEN - strlen(root_path));
 
-    erv = eswb_topic_connect(root_path, root_td);
+    erv = eswb_connect(root_path, root_td);
     if (erv != eswb_e_ok) {
         return eqrb_rv_rx_eswb_fatal_err;
     }
@@ -700,9 +700,9 @@ eqrb_rv_t eqrb_client_start(eqrb_client_handle_t *h, const char *mount_point, si
         return eqrb_nomem;
     }
 
-    erv = eswb_topic_connect(mount_point, &h->repl_dst_td);
+    erv = eswb_connect(mount_point, &h->repl_dst_td);
     if (erv != eswb_e_ok) {
-        eqrb_dbg_msg("eswb_topic_connect to %s failed %s", mount_point, eswb_strerror(erv));
+        eqrb_dbg_msg("eswb_connect to %s failed %s", mount_point, eswb_strerror(erv));
         return eqrb_rv_rx_eswb_fatal_err;
     }
 
@@ -745,12 +745,12 @@ eqrb_server_start(eqrb_server_handle_t *h, const char *bus_to_replicate, uint32_
         return eqrb_rv_rx_eswb_fatal_err;
     }
 
-    erv = eswb_topic_connect(bus_to_replicate, &h->repl_root);
+    erv = eswb_connect(bus_to_replicate, &h->repl_root);
     if (erv != eswb_e_ok) {
         if (err_msg != NULL) {
             *err_msg = eswb_strerror(erv);
         }
-        eqrb_dbg_msg("eswb_topic_connect failed: %s", eswb_strerror(erv));
+        eqrb_dbg_msg("eswb_connect failed: %s", eswb_strerror(erv));
         return eqrb_rv_rx_eswb_fatal_err;
     }
 

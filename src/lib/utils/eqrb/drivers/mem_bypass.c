@@ -69,7 +69,7 @@ static int init_driver() {
             break;
         }
 
-        erv = eswb_topic_connect("itb:/eqbr_bypass", &root_td);
+        erv = eswb_connect("itb:/eqbr_bypass", &root_td);
         if (erv != eswb_e_ok) {
             rv = 1;
             break;

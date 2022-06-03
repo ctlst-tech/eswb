@@ -1,6 +1,12 @@
 #ifndef ESWB_BRIDGE_H
 #define ESWB_BRIDGE_H
 
+/** @page bridge
+ * Check bridge.h for calls descriptions
+ */
+
+/** @file */
+
 #include "types.h"
 #include "errors.h"
 

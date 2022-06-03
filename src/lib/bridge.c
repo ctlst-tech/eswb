@@ -59,7 +59,7 @@ eswb_bridge_add_topic(eswb_bridge_t *b, eswb_topic_descr_t mnt_td, const char *s
 
     eswb_rv_t rv;
     if (mnt_td == 0) {
-        rv = eswb_subscribe(src_path, &b->topics[b->tds_num].td);
+        rv = eswb_connect(src_path, &b->topics[b->tds_num].td);
     } else {
         rv = eswb_connect_nested(mnt_td, src_path, &b->topics[b->tds_num].td);
     }

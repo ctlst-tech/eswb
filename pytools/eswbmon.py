@@ -11,6 +11,8 @@ from PyQt5 import QtWidgets, QtCore
 import pyqtgraph as pg
 from random import randint
 
+from PyQt5.QtWidgets import QTableWidget
+
 import eswb as e
 import os
 
@@ -29,6 +31,8 @@ class ewBasic(QtWidgets.QWidget):
             name = os.path.basename(os.path.normpath(path))
 
         self.topics.append(e.TopicHandle(name, path))
+        self.layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.LeftToRight)
+        self.setLayout(self.layout)
 
     @abstractmethod
     def update_handler(self, vals: List[float]):
@@ -46,13 +50,18 @@ class ewBasic(QtWidgets.QWidget):
         self.update_handler(vals)
 
 
+class ewTable(ewBasic):
+    def __init__(self, *args, **kwargs):
+        super(ewChart, self).__init__(*args, **kwargs)
+
+        self.table = QTableWidget
+
 class ewChart(ewBasic):
     def __init__(self, *args, **kwargs):
         super(ewChart, self).__init__(*args, **kwargs)
         self.graph = pg.PlotWidget()
 
-        layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.LeftToRight)
-        layout.addWidget(self.graph)
+        self.layout.addWidget(self.graph)
 
         window = 300
 
@@ -61,8 +70,6 @@ class ewChart(ewBasic):
 
         pen = pg.mkPen(color=(255, 0, 0))
         self.data_line = self.graph.plot(self.x, self.y, pen=pen)
-
-        self.setLayout(layout)
 
     def update_handler(self, vals: List[float]):
 

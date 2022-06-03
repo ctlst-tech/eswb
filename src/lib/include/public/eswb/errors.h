@@ -1,9 +1,11 @@
-//
-// Created by goofy on 27.11.2020.
-//
-
 #ifndef ESWB_ERRORS_H
 #define ESWB_ERRORS_H
+
+/** @page errors
+ *
+ */
+
+/** @file */
 
 #ifdef __cplusplus
 extern "C" {

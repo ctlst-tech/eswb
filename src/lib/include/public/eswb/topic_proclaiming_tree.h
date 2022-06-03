@@ -1,11 +1,12 @@
-//
-// Created by goofy on 29.11.2020.
-//
-
 #ifndef ESWB_TOPIC_PROCLAIMING_TREE_H
 #define ESWB_TOPIC_PROCLAIMING_TREE_H
 
+/** @page proclaiming
+ * Check topic_proclaiming_tree.h for calls descriptions
+ */
+
 /** @file */
+
 
 #include <stdint.h>
 #include <stddef.h>

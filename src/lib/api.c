@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "eswb/api.h"
+#include "eswb_ctl.h"
 #include "domain_switching.h"
 
 eswb_rv_t local_buses_init(int do_reset);
@@ -36,8 +37,8 @@ eswb_rv_t eswb_disconnect(eswb_topic_descr_t td) {
     return ds_disconnect(td);
 }
 
-eswb_rv_t eswb_topic_connect(const char *connection_point, eswb_topic_descr_t *td) {
-    return ds_connect(connection_point, td);
+eswb_rv_t eswb_connect(const char *path2topic, eswb_topic_descr_t *new_td){
+    return ds_connect(path2topic, new_td);
 }
 
 static eswb_rv_t restore_path_td_std(eswb_topic_descr_t mp_td, const char *topic_name, char *path) {
@@ -64,7 +65,7 @@ eswb_rv_t eswb_connect_nested(eswb_topic_descr_t mp_td, const char *topic_name, 
         return rv;
     }
 
-    return eswb_topic_connect(full_path, td);
+    return eswb_connect(full_path, td);
 }
 
 #include <unistd.h>
@@ -83,7 +84,7 @@ eswb_rv_t eswb_wait_connect_nested(eswb_topic_descr_t mp_td, const char *topic_n
 
     do {
         // TODO refactor this to wait for event
-        rv = eswb_topic_connect(full_path, td);
+        rv = eswb_connect(full_path, td);
         if (rv == eswb_e_no_topic) {
 #           define DELAY_MS 50
             usleep(DELAY_MS * 1000); // TODO platform agnostic
@@ -120,7 +121,7 @@ eswb_rv_t eswb_proclaim_tree_by_path(const char *mount_point, topic_proclaiming_
                                      eswb_topic_descr_t *new_td) {
 
     eswb_topic_descr_t parent_td;
-    eswb_rv_t rv = eswb_topic_connect(mount_point, &parent_td);
+    eswb_rv_t rv = eswb_connect(mount_point, &parent_td);
     // TODO how to check, that we connected to the folder? Not the terminal topic?
 
     if (rv != eswb_e_ok) {
@@ -140,7 +141,7 @@ eswb_rv_t eswb_proclaim_tree_by_path(const char *mount_point, topic_proclaiming_
         strcat(new_topic_path, "/");
         strcat(new_topic_path, bp->name);
 
-        return eswb_topic_connect(new_topic_path, new_td);
+        return eswb_connect(new_topic_path, new_td);
     } else {
         return rv;
     }
@@ -172,11 +173,6 @@ eswb_rv_t eswb_update_topic (eswb_topic_descr_t td, void *data) {
     return do_update(td, upd_update_topic, data, 0);
 }
 
-eswb_rv_t eswb_subscribe(const char *path2topic, eswb_topic_descr_t *new_td) {
-    eswb_rv_t rv = eswb_topic_connect(path2topic, new_td);
-    return rv;
-}
-
 eswb_rv_t eswb_read (eswb_topic_descr_t td, void *data) {
     return ds_read(td, data);
 }
@@ -192,15 +188,6 @@ eswb_rv_t eswb_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int size
 eswb_rv_t eswb_get_topic_params (eswb_topic_descr_t td, topic_params_t *params) {
     return eswb_ctl(td, eswb_ctl_evq_get_params, params, sizeof(*params));
 }
-
-/**
- * TODO add check that next topic belongs to tree branch related to td
- * @param td
- * @param next2tid pointer to the id value for the topic, preceeding the desired. At first call value at ref must be zero.
- *              After successfull return it contains the id of just retrieved topic info
- * @param info
- * @return
- */
 
 eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next2tid, topic_extract_t *info) {
     union {
@@ -225,8 +212,8 @@ eswb_rv_t eswb_get_topic_path (eswb_topic_descr_t td, char *path) {
 }
 
 
-eswb_rv_t eswb_fifo_subscribe(const char *mount_point, eswb_topic_descr_t *new_td) {
-    eswb_rv_t rv = eswb_topic_connect(mount_point, new_td);
+eswb_rv_t eswb_fifo_subscribe(const char *path, eswb_topic_descr_t *new_td) {
+    eswb_rv_t rv = eswb_connect(path, new_td);
 
     if (rv != eswb_e_ok) {
         return rv;
