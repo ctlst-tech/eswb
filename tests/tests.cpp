@@ -2,7 +2,7 @@
 // Created by goofy on 12/24/21.
 //
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include <iostream>
 #include <string.h>
 #include <regex>

@@ -15,7 +15,6 @@ add_subdirectory(src/lib)
 add_subdirectory(src/lib/platformic/posix)
 
 set(TEST_SRC_COMMON
-        tests/test-main.cpp
         tests/tooling.cpp
         tests/tooling.h
         )
@@ -24,10 +23,10 @@ add_executable(eswb_test_basic tests/tests.cpp tests/tests.h tests/event_chain.c
 add_executable(eswb_test_eqrb tests/eqrb.cpp ${TEST_SRC_COMMON})
 
 target_include_directories(eswb_test_basic PRIVATE src/lib/include)
-target_link_libraries(eswb_test_basic PUBLIC eswb-static eswb-sync-static Catch2::Catch2)
+target_link_libraries(eswb_test_basic PUBLIC eswb-static eswb-sync-static Catch2::Catch2WithMain)
 
 target_include_directories(eswb_test_eqrb PRIVATE src/lib/include)
-target_link_libraries(eswb_test_eqrb PUBLIC eswb-static eswb-eqrb-static eswb-sync-static Catch2::Catch2)
+target_link_libraries(eswb_test_eqrb PUBLIC eswb-static eswb-eqrb-static eswb-sync-static Catch2::Catch2WithMain)
 
 
 add_executable(eswb_test_dummy tests/eswb_test_dummy.c tests/event_chain.c)

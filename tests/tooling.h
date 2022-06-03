@@ -5,7 +5,7 @@
 #ifndef ESWB_TOOLING_H
 #define ESWB_TOOLING_H
 
-#include <catch2/catch.hpp>
+#include <catch2/catch_all.hpp>
 #include "eswb/types.h"
 #include "eswb/api.h"
 #include <fcntl.h>
