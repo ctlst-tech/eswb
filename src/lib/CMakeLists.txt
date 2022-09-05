@@ -55,6 +55,13 @@ set(ESWB_UTIL_EQRB_SRC
         include/public/eswb/eqrb.h
         )
 
+set(ESWB_SERVICE_SDTL_SRC
+        services/sdtl/sdtl.c
+        services/sdtl/sdtl.h
+        services/sdtl/bbee_framing.c
+        services/sdtl/bbee_framing.h
+        )
+
 add_library(eswb-eqrb-static STATIC ${ESWB_UTIL_EQRB_SRC})
 
 target_include_directories(eswb-eqrb-static PUBLIC include/public)
@@ -70,7 +77,7 @@ if (ESWB_EQRB_NO_SERIAL)
     target_compile_definitions(eswb-eqrb-static PUBLIC ESWB_NO_SERIAL=1)
 endif()
 
-add_library(eswb SHARED ${ESWB_LIB_SRC} ${ESWB_UTIL_EQRB_SRC}  platformic/posix/posix_sync.c)
+add_library(eswb SHARED ${ESWB_LIB_SRC} ${ESWB_UTIL_EQRB_SRC} ${ESWB_SERVICE_SDTL_SRC} platformic/posix/posix_sync.c)
 target_link_libraries(eswb PUBLIC ${PL_SPECIFIC_LIBS})
 
 target_include_directories(eswb PUBLIC
