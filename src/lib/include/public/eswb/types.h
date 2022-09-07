@@ -43,7 +43,9 @@ typedef enum {
     tt_double       = 0x21,
 
     tt_string       = 0x30,
-    tt_byte_buffer  = 0x31,
+    tt_plain_data   = 0x31,
+
+    tt_byte_buffer  = 0x40,
 
     tt_event_queue  = 0xF0
 } topic_data_type_t;
