@@ -31,6 +31,12 @@ PseudoTopic *gen_folder(PseudoTopic *f) {
 }
 
 
+void gen_data(uint8_t *d, size_t s) {
+    for (size_t i = 0; i < s; i++) {
+        d[i] = rand();
+    }
+}
+
 
 PseudoTopic *create_bus_and_arbitrary_hierarchy(eswb_type_t bus_type, const std::string &bus_name) {
 

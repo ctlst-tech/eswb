@@ -2,6 +2,7 @@
 #include <stdint.h>
 #include <string.h>
 
+
 #include "sdtl.h"
 #include "bbee_framing.h"
 #include "eswb/api.h"
@@ -12,6 +13,17 @@ sdtl_channel_t *resolve_channel_by_id(sdtl_service_t *s, uint8_t ch_id) {
     for (int i = 0; i < s->channels_num; i++) {
         if (s->channels[i].cfg->id == ch_id) {
             return &s->channels[i];
+        }
+    }
+
+    return NULL;
+}
+
+sdtl_channel_handle_t *resolve_channel_handle_by_id(sdtl_service_t *s, uint8_t ch_id) {
+
+    for (int i = 0; i < s->channels_num; i++) {
+        if (s->channel_handles[i].channel->cfg->id == ch_id) {
+            return &s->channel_handles[i];
         }
     }
 
@@ -29,45 +41,23 @@ sdtl_channel_t *resolve_channel_by_name(sdtl_service_t *s, const char *name) {
     return NULL;
 }
 
-sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *ser_path, uint32_t baudrate, uint32_t mtu) {
-    // TODO open port
-
-    // TODO setup baudrate
-
-    // TODO create channels
-
-    // TODO start rx thread
-
-    /* TODO define parameters
-     *  1. MTU ?
-     *  2. Delay before resend
-     */
-}
-
-sdtl_rv_t sdtl_service_stop(sdtl_service_t *s) {
-
-    // TODO stop thread
-
-    // TODO close port
-
-}
 
 void *sdtl_alloc(size_t s) {
     return calloc(1, s);
 }
 
-static sdtl_rv_t process_data(sdtl_channel_t *ch, sdtl_data_sub_header_t *data_header) {
+static sdtl_rv_t process_data(sdtl_channel_handle_t *chh, sdtl_data_sub_header_t *data_header) {
     // TODO check state
 
-    eswb_rv_t erv = eswb_fifo_push(ch->data_td, data_header);
+    eswb_rv_t erv = eswb_fifo_push(chh->data_td, data_header);
 
     return erv == eswb_e_ok ? SDTL_OK : SDTL_ESWB_ERR;
 }
 
-static sdtl_rv_t process_ack(sdtl_channel_t *ch, sdtl_ack_sub_header_t *ack_header) {
+static sdtl_rv_t process_ack(sdtl_channel_handle_t *chh, sdtl_ack_sub_header_t *ack_header) {
     // TODO check state
 
-    eswb_rv_t erv = eswb_fifo_push(ch->ack_td, ack_header);
+    eswb_rv_t erv = eswb_fifo_push(chh->ack_td, ack_header);
 
     return erv == eswb_e_ok ? SDTL_OK : SDTL_ESWB_ERR;
 }
@@ -112,8 +102,8 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
 
     // resolve channel
 
-    sdtl_channel_t *ch = resolve_channel_by_id(s, base_header->ch_id);
-    if (ch == NULL) {
+    sdtl_channel_handle_t *chh = resolve_channel_handle_by_id(s, base_header->ch_id);
+    if (chh == NULL) {
         // TODO send ack with error
         return SDTL_NO_CHANNEL_LOCAL;
     }
@@ -122,13 +112,13 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
         case SDTL_PKT_ATTR_PKT_TYPE_DATA:
             ;
             sdtl_data_header_t *dhdr = (sdtl_data_header_t *) base_header;
-            rv = process_data(ch, &dhdr->sub);
+            rv = process_data(chh, &dhdr->sub);
             break;
 
         case SDTL_PKT_ATTR_PKT_TYPE_ACK:
             ;
             sdtl_ack_header_t *ahdr = (sdtl_ack_header_t *) base_header;
-            rv = process_ack(ch, &ahdr->sub);
+            rv = process_ack(chh, &ahdr->sub);
             break;
 
         default:
@@ -170,7 +160,6 @@ sdtl_rv_t bbee_frm_process_rx_buf(sdtl_service_t *s,
                 break;
 
             case bbee_frm_got_frame:
-
                 rx_got_frame_handler(s, rx_state->current_command_code,
                                      rx_state->payload_buffer_origin,
                                      rx_state->current_payload_size);
@@ -182,6 +171,29 @@ sdtl_rv_t bbee_frm_process_rx_buf(sdtl_service_t *s,
         total_br += bp;
     } while (total_br < rx_buf_lng);
 
+}
+
+sdtl_rv_t bbee_frm_compose_frame(void *frame_buf, size_t frame_buf_size, void *hdr, size_t hdr_len, void *d, size_t d_len, size_t *frame_size_rv) {
+    io_v_t iovec[3];
+
+    iovec_set(iovec,0, hdr, hdr_len, 0);
+    iovec_set(iovec,1, d, d_len, 1);
+
+    bbee_frm_rv_t frv = bbee_frm_compose4tx_v(0, iovec, frame_buf, frame_buf_size, frame_size_rv);
+
+    return frv == bbee_frm_ok ? SDTL_OK : SDTL_TX_BUF_SMALL;
+}
+
+sdtl_rv_t bbee_frm_allocate_tx_framebuf(size_t mtu, void **fb, size_t *l) {
+    size_t fl = mtu * 2 + 10;
+    *fb = sdtl_alloc(fl);
+    if (*fb == NULL) {
+        return SDTL_NO_MEM;
+    }
+
+    *l = fl;
+
+    return SDTL_OK;
 }
 
 static void print_debug_data(uint8_t *rx_buf, size_t rx_buf_lng) {
@@ -200,7 +212,7 @@ _Noreturn sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
     eswb_rv_t erv;
     bbee_frm_rx_state_t rx_state;
 
-    size_t payload_size = s->mtu;
+    size_t payload_size = s->mtu + 10;
     size_t rx_buf_size = payload_size << 1; // * 2
 
 
@@ -213,7 +225,7 @@ _Noreturn sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
 
     do {
         size_t rx_buf_lng;
-        media_rv = s->media_read(s->media_handle, rx_buf, rx_buf_size, &rx_buf_lng);
+        media_rv = s->media->read(s->media_handle, rx_buf, rx_buf_size, &rx_buf_lng);
 
         if (media_rv != SDTL_OK) {
 
@@ -231,54 +243,80 @@ _Noreturn sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
 }
 
 
-static sdtl_rv_t media_tx(sdtl_service_t *s, void *header, uint32_t hl, void *d, uint32_t l) {
-    // TODO frame buffer and vectorization
+static sdtl_rv_t media_tx(sdtl_channel_handle_t *chh, void *header, uint32_t hl, void *d, uint32_t l) {
+    size_t composed_frame_len;
+    sdtl_rv_t rv = bbee_frm_compose_frame(chh->tx_frame_buf, chh->tx_frame_buf_size, header, hl, d, l, &composed_frame_len);
+    if (rv != SDTL_OK) {
+        return rv;
+    }
 
-    s->media_write(s->media_handle, header, hl, NULL);
-    return s->media_write(s->media_handle, d, l, NULL);
+    return chh->channel->service->media->write(chh->channel->service->media_handle, chh->tx_frame_buf, composed_frame_len);
 }
 
 
 
-#define my_min(a,b) ((a) < (b)) ? (a) : (b)
+#define my_min(a,b) (((a) < (b)) ? (a) : (b))
 
-static sdtl_rv_t send_data(sdtl_channel_t *ch, int rel, int last_pkt, void *d, uint32_t l) {
+static sdtl_rv_t send_data(sdtl_channel_handle_t *chh, int rel, int last_pkt, void *d, uint32_t l) {
     sdtl_data_header_t hdr;
 
     hdr.base.attr = SDTL_PKT_ATTR_PKT_TYPE(SDTL_PKT_ATTR_PKT_TYPE_DATA);
 
-    hdr.base.ch_id = ch->cfg->id;
+    hdr.base.ch_id = chh->channel->cfg->id;
 
     // TODO handle states properly
-    hdr.sub.cnt = ch->tx_state.next_pkt_cnt;
+    hdr.sub.cnt = chh->channel->tx_state.next_pkt_cnt;
     hdr.sub.payload_size = l;
     hdr.sub.flags = (last_pkt ? SDTL_PKT_DATA_FLAG_LAST_PKT : 0) |
                     (rel ? SDTL_PKT_DATA_FLAG_RELIABLE : 0);
 
-    return media_tx(ch->service, &hdr, sizeof(hdr), d, l);
+    return media_tx(chh, &hdr, sizeof(hdr), d, l);
 }
 
 
-static sdtl_rv_t send_ack(sdtl_channel_t *ch, uint32_t ack_code) {
-    sdtl_data_header_t hdr;
+static sdtl_rv_t send_ack(sdtl_channel_handle_t *chh, uint32_t ack_code) {
+    sdtl_ack_header_t hdr;
 
     // TODO
-    return media_tx(ch->service, &hdr, sizeof(hdr), NULL, 0);
+    return media_tx(chh, &hdr, sizeof(hdr), NULL, 0);
 }
 
 
 static sdtl_rv_t wait_ack(sdtl_channel_handle_t *chh, uint32_t timeout_us) {
     // TODO arm timeout
-    // TODO wait on fifo
-    // TODO process return code
+
+    sdtl_ack_sub_header_t ack_sh;
+
+    eswb_rv_t rv;
+    rv = eswb_fifo_pop(chh->ack_td, &ack_sh);
+    if (rv != eswb_e_ok) {
+        return SDTL_ESWB_ERR;
+    }
+
+    // TODO handle counters
+
     return SDTL_OK;
 }
 
 
 static sdtl_rv_t wait_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, uint32_t *br) {
-    // TODO wait data
-    // TODO process rv
-    return SDTL_OK;
+    eswb_rv_t rv;
+    sdtl_data_sub_header_t *dsh = chh->rx_dafa_fifo_buf;
+
+    rv = eswb_fifo_pop(chh->data_td, dsh);
+    if (rv != eswb_e_ok) {
+        return SDTL_ESWB_ERR;
+    }
+
+    if (l < dsh->payload_size) {
+        return SDTL_RX_BUF_SMALL;
+    }
+    // TODO check counter either SDTL_OK_PACKET, or SDTL_OK_SEQ_RESTART
+    void *payload_data = ((void *) dsh) + sizeof(*dsh);
+    memcpy(d, payload_data, dsh->payload_size);
+    *br = dsh->payload_size;
+
+    return dsh->flags & SDTL_PKT_DATA_FLAG_LAST_PKT ? SDTL_OK_LAST_PACKET : SDTL_OK_PACKET;
 }
 
 
@@ -295,7 +333,7 @@ static sdtl_rv_t update_tx_state(sdtl_channel_handle_t *chh, int pkt_cnt) {
 }
 
 
-static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d, uint32_t l) {
+static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d, size_t l) {
     sdtl_pkt_payload_size_t dsize;
     uint32_t offset = 0;
 
@@ -305,16 +343,16 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
         dsize = my_min(chh->channel->max_payload_size, l);
 
         do {
-            int last_pkt = dsize <= l;
+            int last_pkt = dsize == l ? -1 : 0;
 
-            rv = send_data(chh->channel, rel, last_pkt, d + offset, dsize);
+            rv = send_data(chh, rel, last_pkt, d + offset, dsize);
             // TODO get timeout from somewhere
             if (rel) {
                 rv = wait_ack(chh, 4000);
+                // TODO handle state with sync
+                update_tx_state(chh, 0 /* TODO transition commands */);
             }
-            // TODO handle state with sync
-            update_tx_state(chh, chh->channel->tx_state.next_pkt_cnt + 1);
-        } while (rv != SDTL_OK);
+        } while (rv == SDTL_WAIT_TIMEOUT);
 
         l -= dsize;
         offset += dsize;
@@ -334,7 +372,7 @@ static sdtl_rv_t update_rx_state(sdtl_channel_t *ch, int pkt_cnt) {
     return SDTL_OK;
 }
 
-static sdtl_rv_t channel_recv_data(sdtl_channel_t *ch, int rel, void *d, uint32_t l, uint32_t *br) {
+static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d, size_t s, size_t *br) {
     uint32_t offset = 0;
     uint32_t br_pkt = 0;
     uint32_t br_total = 0;
@@ -342,11 +380,12 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_t *ch, int rel, void *d, uint32_
     sdtl_rv_t rv_rcv;
     sdtl_rv_t rv_ack;
     sdtl_rv_t rv = SDTL_OK;
+    size_t l = s;
 
     int loop = -1;
 
     do {
-        rv_rcv = wait_data(ch, d + offset, l, &br_pkt);
+        rv_rcv = wait_data(chh, d + offset, l, &br_pkt);
         switch (rv_rcv) {
             default:
             case SDTL_RX_BUF_SMALL:
@@ -354,18 +393,29 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_t *ch, int rel, void *d, uint32_
                 loop = 0;
                 break;
 
-            case SDTL_OK:
-            case SDTL_OK_LAST_PACKET:
-                rv_ack = send_ack(ch, SDTL_ACK_GOT_PKT);
-                if (rv_ack == SDTL_OK) {
-                    offset += br_pkt;
-                    l -= br_pkt;
+            // TODO rx buffer to small
 
-                    update_rx_state(ch, ch->rx_state.expected_pkt_cnt + 1);
-                    if (rv_rcv == SDTL_OK_LAST_PACKET) {
-                        rv = SDTL_OK;
+            case SDTL_OK_SEQ_RESTART:
+                offset = 0;
+                l = s;
+                break;
+
+            case SDTL_OK_PACKET:
+            case SDTL_OK_LAST_PACKET:
+                offset += br_pkt;
+                l -= br_pkt;
+
+                if (rel) {
+                    rv_ack = send_ack(chh, SDTL_ACK_GOT_PKT);
+                    if (rv_ack == SDTL_OK) {
+                        update_rx_state(chh->channel, 0 /*TODO increment pkt cmd*/ );
                     }
                 }
+
+                if (rv_rcv == SDTL_OK_LAST_PACKET) {
+                    rv = SDTL_OK;
+                }
+
                 break;
         }
 
@@ -408,63 +458,6 @@ static sdtl_rv_t check_channel_both_paths(const char *root_path, const char *ch_
     return SDTL_OK;
 }
 
-sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg, sdtl_channel_t **rv) {
-
-    if (resolve_channel_by_id(s, cfg->id)) {
-        return SDTL_CH_EXIST;
-    }
-
-    sdtl_channel_t *ch = sdtl_alloc(sizeof(*ch));
-    if (ch == NULL) {
-        return SDTL_NO_MEM;
-    }
-
-
-    size_t mtu = my_min(s->mtu, cfg->mtu_override);
-    int max_payload_size = mtu - sizeof(sdtl_data_header_t);
-    if (max_payload_size < 0) {
-        return SDTL_INVALID_MTU;
-    }
-
-    ch->cfg = cfg;
-    ch->service = s;
-    ch->max_payload_size = max_payload_size;
-
-    eswb_rv_t erv;
-
-    erv = eswb_mkdir(s->eswb_root, cfg->name);
-    if (erv != eswb_e_ok) {
-        return SDTL_ESWB_ERR;
-    }
-
-    if (check_channel_both_paths(s->eswb_root, cfg->name) != SDTL_OK) {
-        return SDTL_NAMES_TOO_LONG;
-    }
-
-    char path[ESWB_TOPIC_MAX_PATH_LEN + 1];
-
-    strcpy(path, s->eswb_root);
-    strcat(path, "/");
-    strcat(path, cfg->name);
-
-    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 4);
-    topic_proclaiming_tree_t *data_fifo_root = usr_topic_set_fifo(cntx, CHANNEL_DATA_FIFO_NAME, 4);
-    usr_topic_add_child(cntx, data_fifo_root, CHANNEL_DATA_BUF_NAME, tt_byte_buffer, 0, mtu, 0);
-    erv = eswb_proclaim_tree_by_path(path, data_fifo_root, cntx->t_num, NULL);
-    if (erv != eswb_e_ok) {
-        return SDTL_ESWB_ERR;
-    }
-
-    TOPIC_TREE_CONTEXT_LOCAL_RESET(cntx);
-    topic_proclaiming_tree_t *ack_fifo_root = usr_topic_set_fifo(cntx, CHANNEL_ACK_FIFO_NAME, 4);
-    usr_topic_add_child(cntx, ack_fifo_root, CHANNEL_ACK_BUF_NAME, tt_byte_buffer, 0, sizeof(sdtl_ack_sub_header_t), 0);
-    erv = eswb_proclaim_tree_by_path(path, ack_fifo_root, cntx->t_num, NULL);
-    if (erv != eswb_e_ok) {
-        return SDTL_ESWB_ERR;
-    }
-
-    return SDTL_OK;
-}
 
 static eswb_rv_t open_fifo(const char *base_path, const char* ch_name, const char *subpath, eswb_topic_descr_t *rv_td) {
     eswb_rv_t erv;
@@ -480,39 +473,189 @@ static eswb_rv_t open_fifo(const char *base_path, const char* ch_name, const cha
     return eswb_connect(path, rv_td);
 }
 
-sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_channel_handle_t *rv) {
+static int check_rel(sdtl_channel_handle_t *ch) {
+    return (ch->channel->cfg->type == SDTL_CHANNEL_RELIABLE);
+}
+
+
+sdtl_rv_t sdtl_service_init(sdtl_service_t *s, const char *service_name, const char *mount_point, size_t mtu,
+                            size_t max_channels_num, const sdtl_service_media_t *media) {
+    memset(s, 0, sizeof(*s));
+
+
+    s->service_name = service_name;
+    s->mtu = mtu;
+    s->max_channels_num = max_channels_num;
+    s->media = media;
+    s->channels = 0;
+
+    s->service_eswb_root = sdtl_alloc(strlen(mount_point) + strlen(service_name) + 1);
+
+    strcpy(s->service_eswb_root, mount_point);
+    strcat(s->service_eswb_root, "/");
+    strcat(s->service_eswb_root, s->service_name);
+
+    s->channels = sdtl_alloc(max_channels_num * sizeof(*s->channels));
+    if (s->channels == NULL) {
+        return SDTL_NO_MEM;
+    }
+
+    s->channel_handles = sdtl_alloc(max_channels_num * sizeof(*s->channel_handles));
+    if (s->channel_handles == NULL) {
+        return SDTL_NO_MEM;
+    }
+
+    eswb_rv_t erv;
+    erv = eswb_mkdir(mount_point, s->service_name);
+    if (erv != eswb_e_ok) {
+        return SDTL_ESWB_ERR;
+    }
+
+    return SDTL_OK;
+}
+
+
+sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *media_params) {
+    sdtl_rv_t rv;
+
+    rv = s->media->open(media_path, media_params, &s->media_handle);
+
+    if (rv != SDTL_OK) {
+        return rv;
+    }
+
+    for (int i = 0; i < s->channels_num; i++) {
+        rv = sdtl_channel_open(s, s->channels[i].cfg->name, &s->channel_handles[i]);
+        if (rv != SDTL_OK) {
+            return rv;
+        }
+    }
+
+    int prv = pthread_create(&s->rx_thread_tid, NULL, (void*)(void*) sdtl_service_rx_thread, s);
+    if (prv) {
+        return SDTL_SYS_ERR;
+    }
+
+    return SDTL_OK;
+}
+
+sdtl_rv_t sdtl_service_stop(sdtl_service_t *s) {
+
+    // TODO stop thread
+
+    // TODO close port
+
+}
+
+
+sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg) {
+
+    if (resolve_channel_by_id(s, cfg->id)) {
+        return SDTL_CH_EXIST;
+    }
+
+    if (s->channels_num >= s->max_channels_num) {
+        return SDTL_NO_MEM;
+    }
+
+    sdtl_channel_t *ch = &s->channels[s->channels_num];
+
+    memset(ch, 0, sizeof(*ch));
+
+    size_t mtu = cfg->mtu_override > 0 ? my_min(s->mtu, cfg->mtu_override) : s->mtu;
+
+    int max_payload_size = mtu - sizeof(sdtl_data_header_t);
+    if (max_payload_size < 0) {
+        return SDTL_INVALID_MTU;
+    }
+
+    ch->cfg = cfg;
+    ch->service = s;
+    ch->max_payload_size = max_payload_size;
+
+    eswb_rv_t erv;
+
+    erv = eswb_mkdir(s->service_eswb_root, cfg->name);
+    if (erv != eswb_e_ok) {
+        return SDTL_ESWB_ERR;
+    }
+
+    if (check_channel_both_paths(s->service_eswb_root, cfg->name) != SDTL_OK) {
+        return SDTL_NAMES_TOO_LONG;
+    }
+
+    char path[ESWB_TOPIC_MAX_PATH_LEN + 1];
+
+    strcpy(path, s->service_eswb_root);
+    strcat(path, "/");
+    strcat(path, cfg->name);
+
+    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 4);
+    topic_proclaiming_tree_t *data_fifo_root = usr_topic_set_fifo(cntx, CHANNEL_DATA_FIFO_NAME, 4);
+    usr_topic_add_child(cntx, data_fifo_root, CHANNEL_DATA_BUF_NAME, tt_plain_data, 0, mtu, 0);
+    erv = eswb_proclaim_tree_by_path(path, data_fifo_root, cntx->t_num, NULL);
+    if (erv != eswb_e_ok) {
+        return SDTL_ESWB_ERR;
+    }
+
+    TOPIC_TREE_CONTEXT_LOCAL_RESET(cntx);
+    topic_proclaiming_tree_t *ack_fifo_root = usr_topic_set_fifo(cntx, CHANNEL_ACK_FIFO_NAME, 4);
+    usr_topic_add_child(cntx, ack_fifo_root, CHANNEL_ACK_BUF_NAME, tt_plain_data, 0, sizeof(sdtl_ack_sub_header_t), 0);
+    erv = eswb_proclaim_tree_by_path(path, ack_fifo_root, cntx->t_num, NULL);
+    if (erv != eswb_e_ok) {
+        return SDTL_ESWB_ERR;
+    }
+
+    s->channels_num++;
+
+    return SDTL_OK;
+}
+
+
+sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_channel_handle_t *chh_rv) {
 
     sdtl_channel_t *ch = resolve_channel_by_name(s, channel_name);
     if (ch == NULL) {
         return SDTL_NO_CHANNEL_LOCAL;
     }
 
-    if (check_channel_both_paths(s->eswb_root, channel_name) != SDTL_OK) {
+    if (check_channel_both_paths(s->service_eswb_root, channel_name) != SDTL_OK) {
         return SDTL_NAMES_TOO_LONG;
     }
 
-    rv->channel = ch;
+
+    memset(chh_rv, 0, sizeof(*chh_rv));
+    chh_rv->channel = ch;
+
+    size_t mtu = ch->max_payload_size * 1.5; // TODO undestand actual
+
+    sdtl_rv_t rv;
+    rv = bbee_frm_allocate_tx_framebuf(mtu, &chh_rv->tx_frame_buf, &chh_rv->tx_frame_buf_size);
+    if (rv != SDTL_OK) {
+        return rv;
+    }
+
+    chh_rv->rx_dafa_fifo_buf = sdtl_alloc(ch->max_payload_size + sizeof(sdtl_data_sub_header_t));
+    if (chh_rv->rx_dafa_fifo_buf == NULL) {
+        return SDTL_NO_MEM;
+    }
 
     eswb_rv_t erv;
-    erv = open_fifo(s->eswb_root, channel_name, CHANNEL_DATA_SUBPATH, &rv->data_td);
+    erv = open_fifo(s->service_eswb_root, channel_name, CHANNEL_DATA_FIFO_NAME, &chh_rv->data_td);
     if (erv != eswb_e_ok) {
         return SDTL_ESWB_ERR;
     }
 
-    erv = open_fifo(s->eswb_root, channel_name, CHANNEL_ACK_SUBPATH, &rv->ack_td);
+    erv = open_fifo(s->service_eswb_root, channel_name, CHANNEL_ACK_FIFO_NAME, &chh_rv->ack_td);
     if (erv != eswb_e_ok) {
         return SDTL_ESWB_ERR;
     }
-
 
     return SDTL_OK;
 }
 
-static int check_rel(sdtl_channel_handle_t *ch) {
-    return (ch->channel->cfg->type == SDTL_CHANNEL_RELIABLE);
-}
 
-sdtl_rv_t sdtl_channel_recv_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, uint32_t *br) {
+sdtl_rv_t sdtl_channel_recv_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, size_t *br) {
     int rel = check_rel(chh);
     return channel_recv_data(chh, rel, d, l, br);
 }

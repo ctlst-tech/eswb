@@ -44,10 +44,6 @@ target_include_directories(eswb-static PRIVATE
 set(ESWB_UTIL_EQRB_SRC
         utils/eqrb/eqrb_core.c
         utils/eqrb/eqrb_core.h
-        utils/eqrb/framing.c
-        utils/eqrb/framing.h
-        utils/eqrb/crc16-ccitt.c
-        utils/eqrb/crc16-ccitt.h
         utils/eqrb/drivers/mem_bypass.c
         utils/eqrb/drivers/tcp.c
         utils/eqrb/drivers/file.c
@@ -58,6 +54,8 @@ set(ESWB_UTIL_EQRB_SRC
 set(ESWB_SERVICE_SDTL_SRC
         services/sdtl/sdtl.c
         services/sdtl/sdtl.h
+        services/sdtl/crc16-ccitt.c
+        services/sdtl/crc16-ccitt.h
         services/sdtl/bbee_framing.c
         services/sdtl/bbee_framing.h
         )
@@ -68,6 +66,13 @@ target_include_directories(eswb-eqrb-static PUBLIC include/public)
 target_include_directories(eswb-eqrb-static PRIVATE include)
 
 target_link_libraries(eswb-eqrb-static PRIVATE eswb-static)
+
+add_library(eswb-sdtl-static STATIC ${ESWB_SERVICE_SDTL_SRC})
+
+target_include_directories(eswb-sdtl-static PUBLIC include/public)
+target_include_directories(eswb-sdtl-static PRIVATE include)
+
+target_link_libraries(eswb-sdtl-static PRIVATE eswb-static)
 
 if (ESWB_EQRB_NO_SOCKET)
     target_compile_definitions(eswb-eqrb-static PUBLIC ESWB_NO_SOCKET=1)

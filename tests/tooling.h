@@ -16,6 +16,9 @@
 #include <unistd.h>
 #include <thread>
 #include <atomic>
+#include <queue>
+#include <mutex>
+#include <condition_variable>
 
 class PseudoTopic {
     std::string name;
@@ -217,7 +220,37 @@ public:
 };
 
 
+template <typename T>
+class ThreadSafeQueue {
+    std::mutex mutex;
+    std::condition_variable cond_var;
+    std::queue<T*> queue;
+
+public:
+    void push(T* item) {
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            queue.push(item);
+        }
+
+        cond_var.notify_one();
+    }
+
+    T* front() {
+        std::unique_lock<std::mutex> lock(mutex);
+        cond_var.wait(lock, [&]{ return !queue.empty(); });
+        return queue.front();
+    }
+
+    void pop() {
+        std::lock_guard<std::mutex> lock(mutex);
+        queue.pop();
+    }
+};
+
 std::string gen_name();
+void gen_data(uint8_t *d, size_t s);
+
 PseudoTopic *gen_folder(PseudoTopic *f = nullptr);
 PseudoTopic *create_bus_and_arbitrary_hierarchy(eswb_type_t bus_type, const std::string &bus_name);
 

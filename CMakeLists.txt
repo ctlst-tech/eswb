@@ -21,6 +21,18 @@ set(TEST_SRC_COMMON
 
 add_executable(eswb_test_basic tests/tests.cpp tests/tests.h tests/event_chain.c ${TEST_SRC_COMMON})
 add_executable(eswb_test_eqrb tests/eqrb.cpp ${TEST_SRC_COMMON})
+add_executable(eswb_test_sdtl tests/sdtl.cpp ${TEST_SRC_COMMON})
+
+
+add_executable(eswb_test_all
+        tests/tests.cpp
+        tests/tests.h
+        tests/eswb_sync.cpp
+        tests/event_chain.c
+        tests/eqrb.cpp
+        tests/sdtl.cpp
+        tests/bbee_framing.cpp
+        ${TEST_SRC_COMMON})
 
 target_include_directories(eswb_test_basic PRIVATE src/lib/include)
 target_link_libraries(eswb_test_basic PUBLIC eswb-static eswb-sync-static Catch2::Catch2WithMain)
@@ -28,6 +40,11 @@ target_link_libraries(eswb_test_basic PUBLIC eswb-static eswb-sync-static Catch2
 target_include_directories(eswb_test_eqrb PRIVATE src/lib/include)
 target_link_libraries(eswb_test_eqrb PUBLIC eswb-static eswb-eqrb-static eswb-sync-static Catch2::Catch2WithMain)
 
+target_include_directories(eswb_test_sdtl PRIVATE src/lib/include)
+target_link_libraries(eswb_test_sdtl PUBLIC eswb-static eswb-sdtl-static eswb-sync-static Catch2::Catch2WithMain)
+
+target_include_directories(eswb_test_all PRIVATE src/lib/include)
+target_link_libraries(eswb_test_all PUBLIC eswb-static eswb-eqrb-static eswb-sync-static Catch2::Catch2WithMain)
 
 add_executable(eswb_test_dummy tests/eswb_test_dummy.c tests/event_chain.c)
 target_link_libraries(eswb_test_dummy PUBLIC m)
