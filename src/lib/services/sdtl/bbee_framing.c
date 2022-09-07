@@ -8,11 +8,24 @@
 
 #include "crc16-ccitt.h"
 
+void iovec_set(io_v_t *v, size_t ind, void *d, size_t l, int terminate) {
+    v[ind].d = d;
+    v[ind].l = l;
+    if (terminate) {
+        v[ind + 1].d = NULL;
+    }
+}
+
 bbee_frm_rv_t
-bbee_frm_compose4tx(uint8_t command_code, void *payload, size_t payload_size, uint8_t *frame_buf, size_t frame_buf_size,
+bbee_frm_compose4tx_v(uint8_t command_code,  io_v_t *iovec, uint8_t *frame_buf, size_t frame_buf_size,
                     size_t *frame_size) {
 
     size_t available_buf_size = frame_buf_size;
+
+    size_t payload_size = 0;
+    for (int i = 0; iovec[i].d != NULL; i++) {
+        payload_size += iovec[i].l;
+    }
 
     // worst case scenario sizes check
     if (available_buf_size < (payload_size * 2 /*for escape symbols*/ + 4 /*sync*/ + 2+2 /*crc and its escapes*/ + 1/*code*/)) {
@@ -32,19 +45,22 @@ bbee_frm_compose4tx(uint8_t command_code, void *payload, size_t payload_size, ui
     crc16_ccitt_init(&crc);
     crc16_ccitt_update(&crc, command_code);
 
-    uint8_t *eb = (uint8_t *) payload;
+
 
 #   define IS_FRAME_SYNC_SYMB(__s) (((__s) == BBEE_FRM_FRAME_BEGIN_CHAR) || ((__s) == BBEE_FRM_FRAME_END_CHAR))
 
-    for (uint32_t i = 0; i < payload_size; i++) {
-        *fb = *eb;
-        crc16_ccitt_update(&crc, *fb);
-        if( IS_FRAME_SYNC_SYMB(*fb) ) {
+    for (size_t i = 0; iovec[i].d != NULL; i++) {
+        uint8_t *eb = (uint8_t *) iovec[i].d;
+        for (size_t j = 0; j < iovec[i].l; j++) {
+            *fb = *eb;
+            crc16_ccitt_update(&crc, *fb);
+            if (IS_FRAME_SYNC_SYMB(*fb)) {
+                fb++;
+                *fb = 0; // escape symbol;
+            }
             fb++;
-            *fb = 0; // escape symbol;
+            eb++;
         }
-        fb++;
-        eb++;
     }
 
     crc16_ccitt_finalize(&crc);
@@ -65,6 +81,16 @@ bbee_frm_compose4tx(uint8_t command_code, void *payload, size_t payload_size, ui
     *frame_size = fb - frame_buf;
 
     return bbee_frm_ok;
+}
+
+
+bbee_frm_rv_t
+bbee_frm_compose4tx(uint8_t command_code, void *payload, size_t payload_size, uint8_t *frame_buf, size_t frame_buf_size,
+                    size_t *frame_size) {
+    io_v_t iovec[2];
+    iovec_set(iovec, 0, payload, payload_size, -1);
+
+    return bbee_frm_compose4tx_v(command_code, iovec, frame_buf, frame_buf_size, frame_size);
 }
 
 

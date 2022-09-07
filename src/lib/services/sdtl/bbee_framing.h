@@ -38,6 +38,12 @@ typedef struct {
     int payload_started;
 } bbee_frm_rx_state_t;
 
+typedef struct {
+    void  *d;
+    size_t l;
+} io_v_t;
+
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -45,12 +51,17 @@ extern "C" {
 bbee_frm_rv_t
 bbee_frm_compose4tx(uint8_t command_code, void *payload, size_t payload_size, uint8_t *frame_buf, size_t frame_buf_size,
                     size_t *frame_size);
+bbee_frm_rv_t
+bbee_frm_compose4tx_v(uint8_t command_code,  io_v_t *iovec, uint8_t *frame_buf, size_t frame_buf_size,
+                      size_t *frame_size);
 
 void bbee_frm_reset_state(bbee_frm_rx_state_t *s);
 
 void bbee_frm_init_state(bbee_frm_rx_state_t *s, uint8_t *buffer_origin, size_t buffer_size);
 
 bbee_frm_rv_t bbee_frm_rx_iteration(bbee_frm_rx_state_t *s, const uint8_t *rx_buf, size_t rx_buf_l, size_t *byte_processed);
+
+void iovec_set(io_v_t *v, size_t ind, void *d, size_t l, int terminate);
 
 #ifdef __cplusplus
 }
