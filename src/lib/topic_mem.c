@@ -99,12 +99,11 @@ void *topic_write_byte_buffer(topic_t *t, void *data, eswb_size_t size) {
 }
 
 static topic_t *event_queue_get_buffer(topic_t *evq) {
-    return evq->first_child->next_sibling;
+    return evq->first_child->next_sibling; // hangs on slippery convention that buffer is the second member ...
 }
 
 eswb_rv_t topic_mem_event_queue_get_data(topic_t *evq, event_queue_record_t *event, void *data) {
-    //TODO deal with a convention mess: publiser points to queue itself, subscriber on nested struct
-    topic_t *buff = event_queue_get_buffer(evq->parent);
+    topic_t *buff = event_queue_get_buffer(evq);
 
     return topic_read_byte_buffer(buff, event->data, data, event->size);
 }

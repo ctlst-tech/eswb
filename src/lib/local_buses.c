@@ -89,6 +89,8 @@ static int bus_is_synced(eswb_bus_handle_t *bh) {
     return bh->local_type==synced ? -1 : 0;
 }
 
+#define TOPIC_IS_FIFO(__t) (((__t)->type == tt_fifo) || ((__t)->type == tt_event_queue))
+
 eswb_rv_t local_bus_connect(eswb_bus_handle_t *bh, const char *conn_pnt, eswb_topic_descr_t *td) {
     eswb_topic_descr_t new_td;
     topic_t *t = reg_find_topic(bh->registry, conn_pnt, bus_is_synced(bh));
@@ -97,13 +99,17 @@ eswb_rv_t local_bus_connect(eswb_bus_handle_t *bh, const char *conn_pnt, eswb_to
         return eswb_e_no_topic;
     }
 
+    if ((t->parent != NULL) &&
+            TOPIC_IS_FIFO(t->parent)) {
+        t = t->parent;
+    }
+
     eswb_rv_t rv = local_bus_alloc_topic_descr(bh, t, &new_td);
     if (rv != eswb_e_ok) {
         return rv;
     }
 
-    if ((t->parent != NULL) &&  // TODO must be some kind of common qualifier for that
-            ((t->parent->type == tt_fifo) || (t->parent->type == tt_event_queue))) {
+    if (TOPIC_IS_FIFO(t)) {
         rv = local_init_fifo_receiver(new_td);
         if (rv != eswb_e_ok) {
             return rv;
@@ -344,7 +350,7 @@ eswb_rv_t local_get_mounting_point(eswb_topic_descr_t td, char *mp) {
 eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
     topic_local_index_t *li = &local_td_index[td];
 
-    switch(li->t->parent->type) {
+    switch(li->t->type) {
         case tt_event_queue:
             return topic_io_event_queue_pop(li->t, li->event_queue_mask, &li->rcvr_state, data, bus_is_synced(li->bh));
 
@@ -459,7 +465,7 @@ eswb_rv_t local_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int siz
         case eswb_ctl_evq_set_receive_mask:
             ;
             eswb_event_queue_mask_t mask = *((eswb_event_queue_mask_t *) d);
-            if (li->t->parent->type != tt_event_queue) {
+            if (li->t->type != tt_event_queue) {
                 return eswb_e_not_evq;
             }
             // TODO lock registry?

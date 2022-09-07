@@ -27,7 +27,7 @@ eswb_rv_t eswb_event_queue_enable(eswb_topic_descr_t td, eswb_size_t queue_size,
 eswb_rv_t eswb_event_queue_subscribe(const char *bus_path, eswb_topic_descr_t *td) {
     char path[ESWB_TOPIC_MAX_PATH_LEN + 1];
 
-#define EVQ_PATH (BUS_EVENT_QUEUE_NAME "/event")
+#define EVQ_PATH BUS_EVENT_QUEUE_NAME
 
     strncpy(path, bus_path, ESWB_TOPIC_MAX_PATH_LEN - 1);
     strcat(path, "/");
