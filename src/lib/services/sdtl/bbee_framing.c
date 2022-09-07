@@ -149,7 +149,7 @@ bbee_frm_rv_t bbee_frm_rx_iteration(bbee_frm_rx_state_t *s, const uint8_t *rx_bu
                 if (bsize > 2) {
                     crc16_ccitt_update(&s->crc, s->payload_buffer_ptr[-3]); // don't want to calc crc over crc
                 }
-                if (bsize >= s->payload_buffer_max_size) {
+                if (bsize > s->payload_buffer_max_size) {
                     //eqrb_reset_state(s);
                     rv = bbee_frm_buf_overflow;
                 }
