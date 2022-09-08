@@ -6,6 +6,7 @@
 #include <stdlib.h> // for malloc
 #include <errno.h>
 #include <string.h>
+#include <sys/time.h>
 
 #include "eswb/errors.h"
 #include "eswb/types.h"
@@ -93,6 +94,39 @@ eswb_rv_t sync_wait(posix_sync_t *ps){
 
 
     return (ps->last_err == 0) ? eswb_e_ok : eswb_e_sync_wait;
+}
+
+eswb_rv_t sync_wait_timed(posix_sync_t *ps, uint32_t timeout_us) {
+    int rv;
+
+    struct timespec ts;
+//    struct timeval tv;
+//
+//    gettimeofday(&tv,NULL);
+//    ts.tv_sec = tv.tv_sec+timeout_us / USEC_IN_SEC;
+//    ts.tv_nsec = (tv.tv_usec+timeout_us % USEC_IN_SEC)*1000UL;
+//
+    clock_gettime(CLOCK_REALTIME, &ts);
+#   define USEC_IN_SEC 1000000
+#   define NSEC_IN_SEC 1000000000
+
+    ts.tv_sec += timeout_us / USEC_IN_SEC;
+    ts.tv_nsec += (timeout_us % USEC_IN_SEC) * 1000;
+    if (ts.tv_nsec > NSEC_IN_SEC) {
+        ts.tv_sec += 1;
+        ts.tv_nsec -= NSEC_IN_SEC;
+    }
+
+    ps->last_err = rv = pthread_cond_timedwait(&ps->cond, &ps->mutex, &ts);
+
+    eswb_rv_t erv;
+    if (rv == ETIMEDOUT) {
+        erv = eswb_e_timedout;
+    } else {
+        erv = (ps->last_err == 0) ? eswb_e_ok : eswb_e_sync_wait;
+    }
+
+    return erv;
 }
 
 eswb_rv_t sync_broadcast(posix_sync_t *ps){

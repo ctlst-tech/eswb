@@ -20,7 +20,7 @@ eswb_rv_t topic_io_read(topic_t *t, void *data, int synced) {
     return rv;
 }
 
-eswb_rv_t topic_io_get_update (topic_t *t, void *data, int synced) {
+eswb_rv_t topic_io_get_update(topic_t *t, void *data, int synced, uint32_t timeout_us) {
     eswb_rv_t rv;
 
     if (synced) {
@@ -28,7 +28,11 @@ eswb_rv_t topic_io_get_update (topic_t *t, void *data, int synced) {
         sync_take(t->sync);
 
         do {
-            rv = sync_wait(t->sync);
+            if (timeout_us) {
+                rv = sync_wait_timed(t->sync, timeout_us);
+            } else {
+                rv = sync_wait(t->sync);
+            }
             if (rv != eswb_e_ok) {
                 break;
             }
@@ -52,7 +56,8 @@ static int32_t fifo_index_delta(eswb_fifo_index_t i1, eswb_fifo_index_t i2, eswb
     return rv;
 }
 
-static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int synced, int do_wait) {
+static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int synced, int do_wait,
+                                    uint32_t timeout_us) {
     eswb_rv_t rv = eswb_e_ok;
 
     do {
@@ -65,7 +70,11 @@ static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, v
             rcvr_state->tail = t->fifo_ext->state.head;
         } else if (t->fifo_ext->state.head == rcvr_state->tail) {
             if (do_wait && synced) {
-                rv = sync_wait(t->sync);
+                if (timeout_us) {
+                    rv = sync_wait_timed(t->sync, timeout_us);
+                } else {
+                    rv = sync_wait(t->sync);
+                }
                 if (rv != eswb_e_ok) {
                     break;
                 }
@@ -88,9 +97,10 @@ static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, v
 }
 
 
-eswb_rv_t topic_io_fifo_pop(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int synced, int do_wait) {
+eswb_rv_t
+topic_io_fifo_pop(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int synced, int do_wait, uint32_t timeout_us) {
     if (synced) sync_take(t->sync);
-    eswb_rv_t rv = fifo_wait_and_read(t, rcvr_state, data, synced, do_wait);
+    eswb_rv_t rv = fifo_wait_and_read(t, rcvr_state, data, synced, do_wait, timeout_us);
     if (synced) sync_give(t->sync);
     return rv;
 }
@@ -104,7 +114,7 @@ eswb_rv_t topic_io_event_queue_pop (topic_t *t, eswb_event_queue_mask_t mask, fi
     if (synced) sync_take(t->sync);
 
     do {
-        rv = fifo_wait_and_read(t, rcvr_state, &event, synced, 1);
+        rv = fifo_wait_and_read(t, rcvr_state, &event, synced, 1, 0);
         if ((rv == eswb_e_ok) || (rv == eswb_e_fifo_rcvr_underrun) && (event.type == eqr_none)) {
             continue;
         }

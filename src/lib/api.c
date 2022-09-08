@@ -185,6 +185,10 @@ eswb_rv_t eswb_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int size
     return ds_ctl(td, ctl_type, d, size);
 }
 
+eswb_rv_t eswb_arm_timeout(eswb_topic_descr_t td, uint32_t timeout_us) {
+    return eswb_ctl(td, eswb_ctl_arm_timeout, &timeout_us, sizeof(timeout_us));
+}
+
 eswb_rv_t eswb_get_topic_params (eswb_topic_descr_t td, topic_params_t *params) {
     return eswb_ctl(td, eswb_ctl_evq_get_params, params, sizeof(*params));
 }
@@ -233,6 +237,7 @@ eswb_rv_t eswb_fifo_pop(eswb_topic_descr_t td, void *data) {
 eswb_rv_t eswb_fifo_try_pop(eswb_topic_descr_t td, void *data) {
     return ds_fifo_pop(td, data, 0);
 }
+
 
 void smartcat(char *dst, const char *tcat, int trailing_sl) {
 

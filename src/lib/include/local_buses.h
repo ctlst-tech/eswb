@@ -37,6 +37,8 @@ typedef struct {
 
     eswb_event_queue_mask_t event_queue_mask;
 
+    uint32_t timeout_us;
+
 } topic_local_index_t;
 
 #ifdef __cplusplus

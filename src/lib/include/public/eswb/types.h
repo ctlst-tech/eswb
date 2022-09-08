@@ -74,7 +74,8 @@ typedef enum {
     eswb_ctl_evq_set_receive_mask,
     eswb_ctl_evq_get_params,
     eswb_ctl_get_topic_path,
-    eswb_ctl_get_next_proclaiming_info
+    eswb_ctl_get_next_proclaiming_info,
+    eswb_ctl_arm_timeout
 } eswb_ctl_t;
 
 

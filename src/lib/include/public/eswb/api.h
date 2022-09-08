@@ -179,6 +179,15 @@ eswb_rv_t eswb_fifo_pop(eswb_topic_descr_t td, void *data);
 eswb_rv_t eswb_fifo_try_pop(eswb_topic_descr_t td, void *data);
 
 /**
+ * Arm timeout for getting updates from synchronized calls
+ * @param td topic descriptor
+ * @param timeout_us timeout value in microseconds
+ * @return
+ *  eswb_e_ok on success
+ */
+eswb_rv_t eswb_arm_timeout(eswb_topic_descr_t td, uint32_t timeout_us);
+
+/**
  *
  * @param mp_td
  * @param topic_name

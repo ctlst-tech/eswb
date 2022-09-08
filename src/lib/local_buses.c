@@ -311,10 +311,14 @@ eswb_rv_t local_do_read(eswb_topic_descr_t td, void *data) {
 
     return topic_io_read(li->t, data, bus_is_synced(li->bh));
 }
+
 eswb_rv_t local_get_update(eswb_topic_descr_t td, void *data) {
     topic_local_index_t *li = &local_td_index[td];
 
-    return topic_io_get_update(li->t, data, bus_is_synced(li->bh));
+    eswb_rv_t rv = topic_io_get_update(li->t, data, bus_is_synced(li->bh), li->timeout_us);
+    li->timeout_us = 0;
+
+    return rv;
 }
 
 eswb_rv_t local_get_params(eswb_topic_descr_t td, topic_params_t *params) {
@@ -322,6 +326,11 @@ eswb_rv_t local_get_params(eswb_topic_descr_t td, topic_params_t *params) {
     // don't need to be sync proteced, data is read only for registered topics
 
     return topic_mem_get_params(li->t, params);
+}
+
+eswb_rv_t local_arm_timeout(topic_local_index_t *li, uint32_t timeout_us) {
+    li->timeout_us = timeout_us;
+    return eswb_e_ok;
 }
 
 eswb_rv_t local_get_mounting_point(eswb_topic_descr_t td, char *mp) {
@@ -355,7 +364,11 @@ eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
             return topic_io_event_queue_pop(li->t, li->event_queue_mask, &li->rcvr_state, data, bus_is_synced(li->bh));
 
         case tt_fifo:
-            return topic_io_fifo_pop(li->t, &li->rcvr_state, data, bus_is_synced(li->bh), do_wait);
+            ;
+            eswb_rv_t rv = topic_io_fifo_pop(li->t, &li->rcvr_state, data,
+                                             bus_is_synced(li->bh), do_wait, li->timeout_us);;
+            li->timeout_us = 0;
+            return rv;
 
         default:
             return eswb_e_not_fifo;
@@ -480,6 +493,9 @@ eswb_rv_t local_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int siz
 
         case eswb_ctl_get_next_proclaiming_info:
             return local_bus_get_next_topic_info(li, *((eswb_topic_id_t *) d), (topic_extract_t *) d);
+
+        case eswb_ctl_arm_timeout:
+            return local_arm_timeout(li, *((uint32_t *)d));
 
         default:
             return eswb_e_not_supported;

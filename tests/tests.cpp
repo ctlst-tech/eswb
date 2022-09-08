@@ -119,7 +119,7 @@ TEST_CASE("Path parsing", "[unit]") {
     }
 }
 
-TEST_CASE("Basic Operations", "[unit]") {
+TEST_CASE("Basic Operations") {
 
     eswb_local_init(1);
 
@@ -177,6 +177,96 @@ TEST_CASE("Basic Operations", "[unit]") {
     }
 }
 
+
+TEST_CASE("Timed out eswb_get_update wait") {
+
+    eswb_local_init(1);
+
+    std::string bus_name("bus");
+    std::string bus_path = "itb:/" + bus_name;
+
+    eswb_rv_t rv = eswb_create(bus_name.c_str(), eswb_inter_thread, 20);
+    REQUIRE(rv == eswb_e_ok);
+
+    // proclaim topic
+    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 10);
+    struct structure {
+        double a;
+        double b;
+    } st = {0};
+    topic_proclaiming_tree_t *rt = usr_topic_set_struct(cntx, st, "st");
+    usr_topic_add_struct_child(cntx, rt, struct structure, a, "a", tt_double);
+    usr_topic_add_struct_child(cntx, rt, struct structure, b, "b", tt_double);
+
+    eswb_topic_descr_t publish_td;
+    rv = eswb_proclaim_tree_by_path(bus_path.c_str(), rt, cntx->t_num, &publish_td);
+    REQUIRE(rv == eswb_e_ok);
+
+    st.a = 0.1;
+    st.b = 0.2;
+    rv = eswb_update_topic(publish_td, &st);
+    REQUIRE(rv == eswb_e_ok);
+
+    eswb_topic_descr_t subs_td;
+    rv = eswb_connect((bus_path + "/st/a").c_str(), &subs_td);
+    REQUIRE(rv == eswb_e_ok);
+
+    uint32_t timeout = GENERATE(1, 5, 10, 20, 200, 500, 1000, 100000, 500000, 1000000, 1500000, 250);
+    structure st_rcv = {0};
+
+    SECTION("Simple " + std::to_string(timeout) + " timeout") {
+        rv = eswb_arm_timeout(subs_td, timeout);
+        REQUIRE(rv == eswb_e_ok);
+        struct timespec t0, t1;
+        clock_gettime(CLOCK_REALTIME, &t0);
+        rv = eswb_get_update(subs_td, &st_rcv);
+        clock_gettime(CLOCK_REALTIME, &t1);
+        REQUIRE(rv == eswb_e_timedout);
+#       define DELTA_T(a,b) ( ( (a)->tv_sec - (b)->tv_sec ) + ( (double) ( (a)->tv_nsec - (b)->tv_nsec ) / 1000000000 ) )
+        double dt = DELTA_T(&t1, &t0);
+
+        std::cout << "Timed out call with " << std::to_string(timeout)
+                    << " parameter gives " << std::to_string(dt * 1000000 - timeout) << " uSec measured error" << std::endl;
+        // 300 micro sec allowed margin
+        // double to_usec = timeout / 1000000.0;
+        // CHECK(fabs ((dt - to_usec) / to_usec) < 0.02);
+    }
+}
+
+TEST_CASE("Timed out eswb_fifo_pop wait") {
+    eswb_rv_t rv;
+
+    eswb_local_init(1);
+
+    std::string bus_path = "bus";
+
+    rv = eswb_create(bus_path.c_str(), eswb_inter_thread, 20);
+    REQUIRE(rv == eswb_e_ok);
+
+    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 10);
+#   define FIFO_SIZE 10
+    topic_proclaiming_tree_t *fifo_root = usr_topic_set_fifo(cntx, "fifo", FIFO_SIZE);
+    usr_topic_add_child(cntx, fifo_root, "elem", tt_uint32,
+                        0, 4, TOPIC_FLAG_MAPPED_TO_PARENT);
+
+    eswb_topic_descr_t snd_td;
+    rv = eswb_proclaim_tree_by_path(bus_path.c_str(), fifo_root, cntx->t_num, &snd_td);
+    REQUIRE(rv == eswb_e_ok);
+
+    eswb_topic_descr_t rcv_td;
+    rv = eswb_fifo_subscribe((bus_path + "/fifo/elem").c_str(), &rcv_td);
+    REQUIRE(rv == eswb_e_ok);
+
+    uint32_t timeout = GENERATE(1, 5, 10, 20, 200, 500, 1000, 100000, 500000);
+
+    SECTION("Simple " + std::to_string(timeout) + " timeout") {
+        rv = eswb_arm_timeout(rcv_td, timeout);
+        REQUIRE(rv == eswb_e_ok);
+        uint32_t elem;
+        rv = eswb_fifo_pop(rcv_td, &elem);
+        REQUIRE(rv == eswb_e_timedout);
+    }
+}
 
 TEST_CASE("FIFO | nsb", "[unit]") {
 
