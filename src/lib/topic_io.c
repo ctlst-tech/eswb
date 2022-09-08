@@ -70,7 +70,7 @@ static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, v
             rcvr_state->tail = t->fifo_ext->state.head;
         } else if (t->fifo_ext->state.head == rcvr_state->tail) {
             if (do_wait && synced) {
-                if (timeout_us) {
+                if (timeout_us > 0) {
                     rv = sync_wait_timed(t->sync, timeout_us);
                 } else {
                     rv = sync_wait(t->sync);

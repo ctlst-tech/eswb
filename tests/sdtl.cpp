@@ -42,6 +42,8 @@ public:
 class SDTLtestBridge {
     ThreadSafeQueue<SDTLtestPacket> upstream;
     ThreadSafeQueue<SDTLtestPacket> downstream;
+    int do_loss_each_n_pkt;
+    int pkt_num;
 
     static void write_call(ThreadSafeQueue<SDTLtestPacket> &stream, void *d, size_t s) {
         auto pkt = new SDTLtestPacket(d, s);
@@ -51,6 +53,11 @@ class SDTLtestBridge {
     static size_t read_call(ThreadSafeQueue<SDTLtestPacket> &stream, void *d, size_t s) {
         size_t br;
         auto pkt = stream.front();
+
+        if (pkt == nullptr) {
+            return 0;
+        }
+
         if (pkt->fill_in_reader(d, s, &br)) {
             stream.pop();
             delete pkt;
@@ -58,18 +65,15 @@ class SDTLtestBridge {
 
         return br;
     }
-    /*
-     *  up agent
-     *  D    ^
-     *  O    |
-     *  W    U
-     *  N    P
-     *  |
-     *  v
-     *  down agent
-     *
-     */
+
 public:
+    SDTLtestBridge() {
+        do_loss_each_n_pkt = 0;
+    }
+
+    void drop_packet_n(int n) {
+        do_loss_each_n_pkt = n;
+    }
 
     ThreadSafeQueue<SDTLtestPacket> &resolve_stream(std::string name) {
         if (name == "up") {
@@ -81,12 +85,19 @@ public:
         throw std::string ("invalid stream name");
     }
 
-
-    SDTLtestBridge() {
+    void stop() {
+        upstream.stop();
+        downstream.stop();
     }
 
     void write(bool up_agent, void *d, size_t s) {
-        write_call(up_agent ? downstream : upstream, d, s);
+        if ((do_loss_each_n_pkt > 0) && (pkt_num % do_loss_each_n_pkt == 0)) {
+            pkt_num = 0;
+        } else {
+            write_call(up_agent ? downstream : upstream, d, s);
+            pkt_num++;
+        }
+        usleep(1000);
     }
 
     size_t read(bool up_agent, void *d, size_t s) {
@@ -121,7 +132,7 @@ sdtl_rv_t sdtl_test_media_close(void *h) {
 sdtl_rv_t sdtl_test_media_read(void *h, void *data, size_t l, size_t *lr) {
     auto *bh = (test_media_store_handle *)h;
     *lr = bh->bridge_ref->read(bh->up_agent, data, l);
-    return SDTL_OK;
+    return *lr == 0 ? SDTL_MEDIA_EOF : SDTL_OK;
 }
 
 sdtl_rv_t sdtl_test_media_write(void *h, void *data, size_t l) {
@@ -239,42 +250,47 @@ void sdtl_test_setup(SDTLtestSetup &setup, size_t mtu, bool reliable, SDTLtestBr
 void sdtl_test_deinit(SDTLtestSetup &setup) {
     sdtl_rv_t rv;
     rv = sdtl_service_stop(setup.service_down);
-    REQUIRE(rv == SDTL_OK);
+    CHECK(rv == SDTL_OK);
 
     rv = sdtl_service_stop(setup.service_up);
-    REQUIRE(rv == SDTL_OK);
+    CHECK(rv == SDTL_OK);
 }
-
 
 TEST_CASE("SDTL non-guaranteed delivery") {
     eswb_local_init(1);
 
     eswb_rv_t erv;
 
-    SDTLtestBridge testing_bridge;
-
     erv = eswb_create("bus", eswb_inter_thread, 256);
     REQUIRE(erv == eswb_e_ok);
 
-    int mtu = 64;
+//    auto lose_every_n_paket = GENERATE(0, 10, 5, 3, 2, 1);
+    auto lose_every_n_paket = GENERATE(0, 2, 10);
+    auto mtu = GENERATE(16, 32, 64, 128);
+    auto data2send = GENERATE(10, 20, 57, 58, 64, 128, 256, 512, 1024);
+    std::string losses_str = lose_every_n_paket ?
+                             " with each " + std::to_string(lose_every_n_paket) + " pkt lost " :
+                             " no tx/rx losses";
+
     auto setup = SDTLtestSetup();
+    SDTLtestBridge testing_bridge;
     sdtl_test_setup(setup, mtu, false, testing_bridge);
 
-    auto buf_size = GENERATE(10, 20, 57, 58, 64, 128, 256, 512, 1024);
-    SECTION("Transmission of " + std::to_string(buf_size) + " bytes") {
+    testing_bridge.drop_packet_n(lose_every_n_paket);
 
-        uint8_t send_buffer[buf_size];
-        uint8_t rcv_buffer[buf_size];
+    SECTION("Send " + std::to_string(data2send) + " bytes" + losses_str + " MTU " + std::to_string(mtu)) {
+        uint8_t send_buffer[data2send];
+        uint8_t rcv_buffer[data2send];
 
         // gen data
-        memset(rcv_buffer, 0, buf_size);
-        gen_data(send_buffer, buf_size);
+        memset(rcv_buffer, 0, data2send);
+        gen_data(send_buffer, data2send);
 
         // define transmitter
         periodic_call_t sender = [&]() {
             sdtl_rv_t rv;
-            rv = sdtl_channel_send_data(&setup.chh_down, send_buffer, buf_size);
-            REQUIRE(rv == SDTL_OK);
+            rv = sdtl_channel_send_data(&setup.chh_down, send_buffer, data2send);
+            CHECK(rv == SDTL_OK);
         };
 
         timed_caller sender_thread(sender, 50);
@@ -284,14 +300,33 @@ TEST_CASE("SDTL non-guaranteed delivery") {
         sender_thread.start_once();
 
         size_t br;
-        rv = sdtl_channel_recv_data(&setup.chh_up, rcv_buffer, buf_size, &br);
-        REQUIRE(rv == SDTL_OK);
-        CHECK(br == buf_size);
-        CHECK(memcmp(send_buffer, rcv_buffer, buf_size) == 0);
+        sdtl_channel_recv_arm_timeout(&setup.chh_up, 200000);
+        rv = sdtl_channel_recv_data(&setup.chh_up, rcv_buffer, data2send, &br);
+        sdtl_rv_t expected_rv;
+
+        // check either transaction supposed to be successful
+        if (lose_every_n_paket == 0) {
+            expected_rv = SDTL_OK;
+        } else {
+            size_t payload_per_pkt = setup.chh_up.channel->max_payload_size;
+            uint32_t pkts_needed = data2send / payload_per_pkt; // full packets
+            if (data2send % payload_per_pkt != 0) { // data remnant
+                pkts_needed++;
+            }
+            expected_rv = pkts_needed >= lose_every_n_paket ? SDTL_TIMEDOUT : SDTL_OK;
+        }
+
+        CHECK(rv == expected_rv);
+
+        if (expected_rv == SDTL_OK) {
+            CHECK(br == data2send);
+            CHECK(memcmp(send_buffer, rcv_buffer, data2send) == 0);
+        }
 
         sender_thread.stop();
     }
 
+    testing_bridge.stop();
     sdtl_test_deinit(setup);
 }
 

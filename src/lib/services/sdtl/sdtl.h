@@ -13,7 +13,7 @@ typedef enum sdtl_rv {
     SDTL_OK_PACKET,
     SDTL_OK_SEQ_RESTART,
     SDTL_OK_LAST_PACKET,
-    SDTL_WAIT_TIMEOUT,
+    SDTL_TIMEDOUT,
     SDTL_RX_BUF_SMALL,
     SDTL_TX_BUF_SMALL,
     SDTL_NON_CONSIST_FRM_LEN,
@@ -21,7 +21,9 @@ typedef enum sdtl_rv {
     SDTL_NO_CHANNEL_REMOTE,
     SDTL_NO_CHANNEL_LOCAL,
     SDTL_MEDIA_ERR,
+    SDTL_MEDIA_EOF,
     SDTL_ESWB_ERR,
+    SDTL_RX_FIFO_OVERFLOW,
     SDTL_NO_MEM,
     SDTL_CH_EXIST,
     SDTL_INVALID_MTU,
@@ -114,6 +116,10 @@ typedef struct sdtl_channel_handle {
     void *tx_frame_buf;
     size_t tx_frame_buf_size;
 
+    uint32_t fifo_overflow;
+
+    uint32_t armed_timeout_us; // microseconds timeout
+
 } sdtl_channel_handle_t;
 
 
@@ -162,7 +168,16 @@ typedef struct __attribute__((packed)) sdtl_ack_header {
     sdtl_ack_sub_header_t sub;
 } sdtl_ack_header_t;
 
-
+/**
+ *
+ * @param s
+ * @param service_name
+ * @param mount_point
+ * @param mtu maximum transmission unit on transport level, frame lavel may add some extra
+ * @param max_channels_num
+ * @param media
+ * @return
+ */
 sdtl_rv_t sdtl_service_init(sdtl_service_t *s, const char *service_name, const char *mount_point, size_t mtu,
                             size_t max_channels_num, const sdtl_service_media_t *media);
 
@@ -172,6 +187,8 @@ sdtl_rv_t sdtl_service_stop(sdtl_service_t *s);
 sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg);
 
 sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_channel_handle_t *chh_rv);
+
+sdtl_rv_t sdtl_channel_recv_arm_timeout(sdtl_channel_handle_t *chh, uint32_t timeout_us);
 
 sdtl_rv_t sdtl_channel_recv_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, size_t *br);
 sdtl_rv_t sdtl_channel_send_data(sdtl_channel_handle_t *chh, void *d, uint32_t l);

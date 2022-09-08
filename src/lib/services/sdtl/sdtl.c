@@ -184,6 +184,9 @@ sdtl_rv_t bbee_frm_compose_frame(void *frame_buf, size_t frame_buf_size, void *h
 }
 
 sdtl_rv_t bbee_frm_allocate_tx_framebuf(size_t mtu, void **fb, size_t *l) {
+
+//    if (available_buf_size < (payload_size * 2 /*for escape symbols*/ + 4 /*sync*/ + 2+2 /*crc and its escapes*/ + 1/*code*/)) {
+
     size_t fl = mtu * 2 + 10;
     *fb = sdtl_alloc(fl);
     if (*fb == NULL) {
@@ -206,7 +209,7 @@ static void print_debug_data(uint8_t *rx_buf, size_t rx_buf_lng) {
 //    eqrb_dbg_msg("recv | data | %s", dbg_data);
 }
 
-_Noreturn sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
+sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
     char thread_name[16];
 #define SDTL_RX_THREAD_NAME_PREFIX "sdtlrx+"
     strcpy(thread_name, SDTL_RX_THREAD_NAME_PREFIX);
@@ -227,22 +230,32 @@ _Noreturn sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
 
     sdtl_rv_t media_rv;
 
+    int loop = -1;
 
     do {
         size_t rx_buf_lng;
         media_rv = s->media->read(s->media_handle, rx_buf, rx_buf_size, &rx_buf_lng);
 
-        if (media_rv != SDTL_OK) {
+        switch (media_rv) {
+            case SDTL_OK:
+                break;
 
+            default:
+            case SDTL_MEDIA_EOF:
+                loop = 0;
+                break;
         }
+
 //      eqrb_dbg_msg("recv | rx_buf_lng == %d rv == %d", rx_buf_lng, rv);
 
 #       ifdef EQRB_DEBUG
-        print_debug_data(rx_buf, rx_buf_lng)
+        print_debug_data(rx_buf, rx_buf_lng);
 #       endif
 
         bbee_frm_process_rx_buf(s, rx_buf, rx_buf_lng, &rx_state, sdtl_got_frame_handler);
-    } while (1);
+    } while (loop);
+
+    return SDTL_OK;
 }
 
 
@@ -291,14 +304,24 @@ static sdtl_rv_t wait_ack(sdtl_channel_handle_t *chh, uint32_t timeout_us) {
     sdtl_ack_sub_header_t ack_sh;
 
     eswb_rv_t rv;
-    rv = eswb_fifo_pop(chh->ack_td, &ack_sh);
-    if (rv != eswb_e_ok) {
-        return SDTL_ESWB_ERR;
+    if (chh->armed_timeout_us) {
+        eswb_arm_timeout(chh->ack_td, chh->armed_timeout_us);
     }
+    rv = eswb_fifo_pop(chh->ack_td, &ack_sh);
+    chh->armed_timeout_us = 0;
 
     // TODO handle counters
 
-    return SDTL_OK;
+    switch (rv) {
+        case eswb_e_ok:
+            return SDTL_OK;
+
+        case eswb_e_timedout:
+            return SDTL_TIMEDOUT;
+
+        default:
+            return SDTL_ESWB_ERR;
+    }
 }
 
 
@@ -306,9 +329,24 @@ static sdtl_rv_t wait_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, uint
     eswb_rv_t rv;
     sdtl_data_sub_header_t *dsh = chh->rx_dafa_fifo_buf;
 
+    if (chh->armed_timeout_us > 0) {
+        eswb_arm_timeout(chh->data_td, chh->armed_timeout_us);
+    }
     rv = eswb_fifo_pop(chh->data_td, dsh);
-    if (rv != eswb_e_ok) {
-        return SDTL_ESWB_ERR;
+
+    switch (rv) {
+        case eswb_e_ok:
+            break;
+
+        case eswb_e_timedout:
+            return SDTL_TIMEDOUT;
+
+        case eswb_e_fifo_rcvr_underrun:
+            chh->fifo_overflow++;
+            return SDTL_RX_FIFO_OVERFLOW;
+
+        default:
+            return SDTL_ESWB_ERR;
     }
 
     if (l < dsh->payload_size) {
@@ -355,7 +393,7 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
                 // TODO handle state with sync
                 update_tx_state(chh, 0 /* TODO transition commands */);
             }
-        } while (rv == SDTL_WAIT_TIMEOUT);
+        } while (rv == SDTL_TIMEDOUT);
 
         l -= dsize;
         offset += dsize;
@@ -389,6 +427,7 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
 
     do {
         rv_rcv = wait_data(chh, d + offset, l, &br_pkt);
+
         switch (rv_rcv) {
             default:
             case SDTL_RX_BUF_SMALL:
@@ -423,6 +462,9 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
         }
 
     } while ((rv_rcv != SDTL_OK_LAST_PACKET) && loop);
+
+    // we want to keep timeout for sequentially arriving packets
+    chh->armed_timeout_us = 0;
 
     if (rv == SDTL_OK) {
         *br = offset;
@@ -545,10 +587,10 @@ sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *me
 sdtl_rv_t sdtl_service_stop(sdtl_service_t *s) {
     int rv;
 
-    rv = pthread_cancel(s->rx_thread_tid);
-    if (rv != 0) {
-        return SDTL_SYS_ERR;
-    }
+//    rv = pthread_cancel(s->rx_thread_tid);
+//    if (rv != 0) {
+//        return SDTL_SYS_ERR;
+//    }
     rv = pthread_join(s->rx_thread_tid, NULL);
     if (rv != 0) {
         return SDTL_SYS_ERR;
@@ -600,8 +642,11 @@ sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg) {
     strcat(path, "/");
     strcat(path, cfg->name);
 
+    // TODO fifo size supposed to be tuned according the speed of interface and overall service latency
+#   define FIFO_SIZE 8
+
     TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 4);
-    topic_proclaiming_tree_t *data_fifo_root = usr_topic_set_fifo(cntx, CHANNEL_DATA_FIFO_NAME, 4);
+    topic_proclaiming_tree_t *data_fifo_root = usr_topic_set_fifo(cntx, CHANNEL_DATA_FIFO_NAME, FIFO_SIZE);
     usr_topic_add_child(cntx, data_fifo_root, CHANNEL_DATA_BUF_NAME, tt_plain_data, 0, mtu, 0);
     erv = eswb_proclaim_tree_by_path(path, data_fifo_root, cntx->t_num, NULL);
     if (erv != eswb_e_ok) {
@@ -609,7 +654,7 @@ sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg) {
     }
 
     TOPIC_TREE_CONTEXT_LOCAL_RESET(cntx);
-    topic_proclaiming_tree_t *ack_fifo_root = usr_topic_set_fifo(cntx, CHANNEL_ACK_FIFO_NAME, 4);
+    topic_proclaiming_tree_t *ack_fifo_root = usr_topic_set_fifo(cntx, CHANNEL_ACK_FIFO_NAME, FIFO_SIZE);
     usr_topic_add_child(cntx, ack_fifo_root, CHANNEL_ACK_BUF_NAME, tt_plain_data, 0, sizeof(sdtl_ack_sub_header_t), 0);
     erv = eswb_proclaim_tree_by_path(path, ack_fifo_root, cntx->t_num, NULL);
     if (erv != eswb_e_ok) {
@@ -637,7 +682,7 @@ sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_ch
     memset(chh_rv, 0, sizeof(*chh_rv));
     chh_rv->channel = ch;
 
-    size_t mtu = ch->max_payload_size * 1.5; // TODO undestand actual
+    size_t mtu = s->mtu; // TODO optimize
 
     sdtl_rv_t rv;
     rv = bbee_frm_allocate_tx_framebuf(mtu, &chh_rv->tx_frame_buf, &chh_rv->tx_frame_buf_size);
@@ -664,6 +709,11 @@ sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_ch
     return SDTL_OK;
 }
 
+sdtl_rv_t sdtl_channel_recv_arm_timeout(sdtl_channel_handle_t *chh, uint32_t timeout_us) {
+    // TODO limit timeout abs value
+    chh->armed_timeout_us = timeout_us;
+    return SDTL_OK;
+}
 
 sdtl_rv_t sdtl_channel_recv_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, size_t *br) {
     int rel = check_rel(chh);

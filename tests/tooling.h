@@ -222,29 +222,93 @@ public:
 
 template <typename T>
 class ThreadSafeQueue {
-    std::mutex mutex;
-    std::condition_variable cond_var;
+//    std::mutex mutex;
+//    std::condition_variable cond_var;
     std::queue<T*> queue;
+    pthread_mutex_t mutex;
+    pthread_cond_t cond;
+    bool stop_mark;
+
+    void lock() {
+        pthread_mutex_lock(&mutex);
+    }
+
+    void unlock() {
+        pthread_mutex_unlock(&mutex);
+    }
+
+    bool wait() {
+        int rv = pthread_cond_wait(&cond, &mutex);
+
+        return rv != 0;
+    }
+
+    void broadcast() {
+        pthread_cond_broadcast(&cond);
+    }
 
 public:
+    ThreadSafeQueue <T> () {
+        stop_mark = false;
+        pthread_mutex_init(&mutex, NULL);
+        pthread_cond_init(&cond, NULL);
+    }
+    ~ThreadSafeQueue() {
+        pthread_mutex_destroy(&mutex);
+        pthread_cond_destroy(&cond);
+    }
     void push(T* item) {
-        {
-            std::lock_guard<std::mutex> lock(mutex);
-            queue.push(item);
+//        {
+//            std::lock_guard<std::mutex> lock(mutex);
+//            queue.push(item);
+//        }
+//
+//        cond_var.notify_one();
+        if (stop_mark) {
+            return;
         }
 
-        cond_var.notify_one();
+        lock();
+        queue.push(item);
+        broadcast();
+        unlock();
     }
 
     T* front() {
-        std::unique_lock<std::mutex> lock(mutex);
-        cond_var.wait(lock, [&]{ return !queue.empty(); });
-        return queue.front();
+//        std::unique_lock<std::mutex> lock(mutex);
+//        int enters = 0;
+//        cond_var.wait(lock, [&]{
+//            if (enters) {
+//                return false;
+//            }
+//            enters++;
+//            return !queue.empty(); });
+
+        if (stop_mark) {
+            return nullptr;
+        }
+
+        lock();
+        while (!stop_mark && queue.empty() && wait());
+        T* rv;
+        rv = !stop_mark ? queue.front() : nullptr;
+        unlock();
+
+        return rv;
+    }
+
+    void stop() {
+        lock();
+        stop_mark = true;
+        broadcast();
+        unlock();
     }
 
     void pop() {
-        std::lock_guard<std::mutex> lock(mutex);
+//        std::lock_guard<std::mutex> lock(mutex);
+        lock();
         queue.pop();
+        unlock();
     }
 };
 
