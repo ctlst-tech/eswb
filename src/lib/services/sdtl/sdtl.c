@@ -137,8 +137,6 @@ sdtl_rv_t bbee_frm_process_rx_buf(sdtl_service_t *s,
                                   sdtl_rv_t (*rx_got_frame_handler)
                                    (sdtl_service_t *s, uint8_t cmd_code, uint8_t *data, size_t data_len)
                            ) {
-    sdtl_rv_t media_rv;
-
     bbee_frm_rv_t frv;
 
     size_t bp = 0;
@@ -171,6 +169,7 @@ sdtl_rv_t bbee_frm_process_rx_buf(sdtl_service_t *s,
         total_br += bp;
     } while (total_br < rx_buf_lng);
 
+    return SDTL_OK;
 }
 
 sdtl_rv_t bbee_frm_compose_frame(void *frame_buf, size_t frame_buf_size, void *hdr, size_t hdr_len, void *d, size_t d_len, size_t *frame_size_rv) {
@@ -208,8 +207,13 @@ static void print_debug_data(uint8_t *rx_buf, size_t rx_buf_lng) {
 }
 
 _Noreturn sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
+    char thread_name[16];
+#define SDTL_RX_THREAD_NAME_PREFIX "sdtlrx+"
+    strcpy(thread_name, SDTL_RX_THREAD_NAME_PREFIX);
+    strncat(thread_name, s->service_name, sizeof(thread_name) - sizeof(SDTL_RX_THREAD_NAME_PREFIX) - 1);
 
-    eswb_rv_t erv;
+    eswb_set_thread_name(thread_name);
+
     bbee_frm_rx_state_t rx_state;
 
     size_t payload_size = s->mtu + 10;
@@ -222,6 +226,7 @@ _Noreturn sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
     bbee_frm_init_state(&rx_state, payload_buf, payload_size);
 
     sdtl_rv_t media_rv;
+
 
     do {
         size_t rx_buf_lng;
@@ -238,8 +243,6 @@ _Noreturn sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
 
         bbee_frm_process_rx_buf(s, rx_buf, rx_buf_lng, &rx_state, sdtl_got_frame_handler);
     } while (1);
-
-    return SDTL_OK;
 }
 
 
@@ -540,11 +543,18 @@ sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *me
 }
 
 sdtl_rv_t sdtl_service_stop(sdtl_service_t *s) {
+    int rv;
 
-    // TODO stop thread
+    rv = pthread_cancel(s->rx_thread_tid);
+    if (rv != 0) {
+        return SDTL_SYS_ERR;
+    }
+    rv = pthread_join(s->rx_thread_tid, NULL);
+    if (rv != 0) {
+        return SDTL_SYS_ERR;
+    }
 
-    // TODO close port
-
+    return SDTL_OK;
 }
 
 
@@ -667,9 +677,11 @@ sdtl_rv_t sdtl_channel_send_data(sdtl_channel_handle_t *chh, void *d, uint32_t l
 
 
 sdtl_rv_t sdtl_channel_wait_cmd(sdtl_channel_t *ch) {
-
+    // TODO
+    return SDTL_OK;
 }
 
 sdtl_rv_t sdtl_channel_send_cmd(sdtl_channel_t *ch) {
-
+    // TODO
+    return SDTL_OK;
 }

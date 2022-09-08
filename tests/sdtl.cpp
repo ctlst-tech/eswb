@@ -99,8 +99,7 @@ struct test_media_store_handle {
 //    ThreadSafeQueue<SDTLtestPacket> &stream;
     bool up_agent;
 
-    test_media_store_handle(SDTLtestBridge *br, const std::string &path) :
-        bridge_ref(br) {
+    test_media_store_handle(SDTLtestBridge *br, const std::string &path) : bridge_ref(br) {
         up_agent = path == "up";
     }
 };
@@ -116,6 +115,7 @@ sdtl_rv_t sdtl_test_media_open(const char *path, void *params, void **h_rv) {
 
 sdtl_rv_t sdtl_test_media_close(void *h) {
     // TODO
+    return SDTL_MEDIA_ERR;
 }
 
 sdtl_rv_t sdtl_test_media_read(void *h, void *data, size_t l, size_t *lr) {
@@ -176,7 +176,9 @@ TEST_CASE("SDPL testing bridge standalone test") {
 
 #define SDTL_TEST_CHANNEL_NAME "test_channel"
 
-sdtl_service_t *create_and_start_service(const char *service_name, const char *media_channel, size_t mtu, SDTLtestBridge &bridge) {
+sdtl_service_t *
+create_and_start_service_w_channel(const char *service_name, const char *media_channel, size_t mtu, bool rel_ch,
+                                   SDTLtestBridge &bridge) {
 
     sdtl_service_t *sdtl_service;
 
@@ -186,15 +188,14 @@ sdtl_service_t *create_and_start_service(const char *service_name, const char *m
     rv = sdtl_service_init(sdtl_service, service_name, "bus", mtu, 4, &sdtl_test_media);
     REQUIRE(rv == SDTL_OK);
 
-
     sdtl_channel_cfg_t ch_cfg_template = {
             .name = SDTL_TEST_CHANNEL_NAME,
             .id = 1,
-            .type = SDTL_CHANNEL_NONRELIABLE,
+            .type = rel_ch ? SDTL_CHANNEL_RELIABLE : SDTL_CHANNEL_NONRELIABLE,
             .mtu_override = 0,
     };
 
-    sdtl_channel_cfg_t *ch_cfg = new sdtl_channel_cfg_t;
+    auto *ch_cfg = new sdtl_channel_cfg_t;
 
     memcpy(ch_cfg, &ch_cfg_template, sizeof (*ch_cfg));
 
@@ -207,19 +208,43 @@ sdtl_service_t *create_and_start_service(const char *service_name, const char *m
     return sdtl_service;
 }
 
-void sender_thread(uint8_t *data2send, size_t s, size_t mtu, SDTLtestBridge &brdige) {
-    sdtl_service_t *service = create_and_start_service("test_sdtl_service_down", "down", mtu, brdige);
-    REQUIRE(service != nullptr);
 
-    sdtl_channel_handle_t chh;
+
+void sender_thread(sdtl_service_t *service, uint8_t *data2send, size_t data_size) {
+
+}
+
+struct SDTLtestSetup {
+    sdtl_service_t *service_up;
+    sdtl_service_t *service_down;
+
+    sdtl_channel_handle_t chh_up;
+    sdtl_channel_handle_t chh_down;
+};
+
+void sdtl_test_setup(SDTLtestSetup &setup, size_t mtu, bool reliable, SDTLtestBridge &bridge) {
+    // init both sides terminals
+    setup.service_up = create_and_start_service_w_channel("test_up", "up", mtu, reliable, bridge);
+    setup.service_down = create_and_start_service_w_channel("test_down", "down", mtu, reliable, bridge);
 
     sdtl_rv_t rv;
-    rv = sdtl_channel_open(service, SDTL_TEST_CHANNEL_NAME, &chh);
+    rv = sdtl_channel_open(setup.service_up, SDTL_TEST_CHANNEL_NAME, &setup.chh_up);
     REQUIRE(rv == SDTL_OK);
 
-    rv = sdtl_channel_send_data(&chh, data2send, s);
+    rv = sdtl_channel_open(setup.service_down, SDTL_TEST_CHANNEL_NAME, &setup.chh_down);
+    REQUIRE(rv == SDTL_OK);
+
+}
+
+void sdtl_test_deinit(SDTLtestSetup &setup) {
+    sdtl_rv_t rv;
+    rv = sdtl_service_stop(setup.service_down);
+    REQUIRE(rv == SDTL_OK);
+
+    rv = sdtl_service_stop(setup.service_up);
     REQUIRE(rv == SDTL_OK);
 }
+
 
 TEST_CASE("SDTL non-guaranteed delivery") {
     eswb_local_init(1);
@@ -231,37 +256,46 @@ TEST_CASE("SDTL non-guaranteed delivery") {
     erv = eswb_create("bus", eswb_inter_thread, 256);
     REQUIRE(erv == eswb_e_ok);
 
-    int buf_size = 128;
     int mtu = 64;
-    uint8_t send_buffer[buf_size];
-    uint8_t rcv_buffer[buf_size];
+    auto setup = SDTLtestSetup();
+    sdtl_test_setup(setup, mtu, false, testing_bridge);
 
-    // gen data
-    memset(rcv_buffer, 0, sizeof(rcv_buffer));
-    gen_data(send_buffer, sizeof(send_buffer));
+    auto buf_size = GENERATE(10, 20, 57, 58, 64, 128, 256, 512, 1024);
+    SECTION("Transmission of " + std::to_string(buf_size) + " bytes") {
 
-    // define transmitter
-    periodic_call_t sender = [&] (){
-        sender_thread(send_buffer, sizeof(send_buffer), mtu, testing_bridge);
-    };
-    timed_caller sender_thread(sender, 200);
+        uint8_t send_buffer[buf_size];
+        uint8_t rcv_buffer[buf_size];
 
-    // init receiver
-    sdtl_service_t *service = create_and_start_service("test_sdtl_service_up", "up", mtu, testing_bridge);
-    sdtl_rv_t rv;
-    sdtl_channel_handle_t chh;
+        // gen data
+        memset(rcv_buffer, 0, buf_size);
+        gen_data(send_buffer, buf_size);
 
-    rv = sdtl_channel_open(service, SDTL_TEST_CHANNEL_NAME, &chh);
-    REQUIRE(rv == SDTL_OK);
+        // define transmitter
+        periodic_call_t sender = [&]() {
+            sdtl_rv_t rv;
+            rv = sdtl_channel_send_data(&setup.chh_down, send_buffer, buf_size);
+            REQUIRE(rv == SDTL_OK);
+        };
 
-    sender_thread.start_once();
+        timed_caller sender_thread(sender, 50);
 
-    size_t br;
-    rv = sdtl_channel_recv_data(&chh, rcv_buffer, sizeof(rcv_buffer), &br);
-    REQUIRE(rv == SDTL_OK);
-    CHECK(br == buf_size);
-    CHECK(memcmp(send_buffer, rcv_buffer, sizeof(send_buffer)) == 0);
+        sdtl_rv_t rv;
+
+        sender_thread.start_once();
+
+        size_t br;
+        rv = sdtl_channel_recv_data(&setup.chh_up, rcv_buffer, buf_size, &br);
+        REQUIRE(rv == SDTL_OK);
+        CHECK(br == buf_size);
+        CHECK(memcmp(send_buffer, rcv_buffer, buf_size) == 0);
+
+        sender_thread.stop();
+    }
+
+    sdtl_test_deinit(setup);
 }
+
+
 //
 //
 //TEST_CASE("SDTL guaranteed delivery") {

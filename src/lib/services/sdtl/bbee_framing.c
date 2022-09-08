@@ -156,26 +156,27 @@ bbee_frm_rv_t bbee_frm_rx_iteration(bbee_frm_rx_state_t *s, const uint8_t *rx_bu
             }
         } else {
             if (s->payload_started) {
-                if (!s->got_command_code) {
-                    s->current_command_code = b;
-                    s->got_command_code = -1;
-                    crc16_ccitt_update(&s->crc, b);
-                } else if (s->got_end_char) {
-                    *s->payload_buffer_ptr++ = b = BBEE_FRM_FRAME_END_CHAR;
-                    s->got_end_char = 0;
-                    s->got_begin_char = 0;
-                } else if (s->got_begin_char) {
-                    *s->payload_buffer_ptr++ = b = BBEE_FRM_FRAME_BEGIN_CHAR;
-                    s->got_begin_char = 0;
-                } else {
-                    *s->payload_buffer_ptr++ = b;
-                }
-
                 size_t bsize = s->payload_buffer_ptr - s->payload_buffer_origin;
-                if (bsize > 2) {
-                    crc16_ccitt_update(&s->crc, s->payload_buffer_ptr[-3]); // don't want to calc crc over crc
-                }
-                if (bsize > s->payload_buffer_max_size) {
+                if (bsize < s->payload_buffer_max_size) {
+                    if (!s->got_command_code) {
+                        s->current_command_code = b;
+                        s->got_command_code = -1;
+                        crc16_ccitt_update(&s->crc, b);
+                    } else if (s->got_end_char) {
+                        *s->payload_buffer_ptr++ = b = BBEE_FRM_FRAME_END_CHAR;
+                        s->got_end_char = 0;
+                        s->got_begin_char = 0;
+                    } else if (s->got_begin_char) {
+                        *s->payload_buffer_ptr++ = b = BBEE_FRM_FRAME_BEGIN_CHAR;
+                        s->got_begin_char = 0;
+                    } else {
+                        *s->payload_buffer_ptr++ = b;
+                    }
+
+                    if (s->payload_buffer_ptr - s->payload_buffer_origin > 2) {
+                        crc16_ccitt_update(&s->crc, s->payload_buffer_ptr[-3]); // don't want to calc crc over crc
+                    }
+                } else {
                     //eqrb_reset_state(s);
                     rv = bbee_frm_buf_overflow;
                 }
