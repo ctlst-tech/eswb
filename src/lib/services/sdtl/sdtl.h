@@ -10,9 +10,10 @@ extern "C" {
 
 typedef enum sdtl_rv {
     SDTL_OK = 0,
-    SDTL_OK_PACKET,
-    SDTL_OK_SEQ_RESTART,
-    SDTL_OK_LAST_PACKET,
+//    SDTL_OK_PACKET,
+//    SDTL_OK_SEQ_RESTART,
+//    SDTL_OK_LAST_PACKET,
+//    SDTL_OK_FIRST_PACKET,
     SDTL_TIMEDOUT,
     SDTL_RX_BUF_SMALL,
     SDTL_TX_BUF_SMALL,
@@ -138,8 +139,9 @@ typedef struct __attribute__((packed)) sdtl_base_header {
     uint8_t attr;
 } sdtl_base_header_t;
 
-#define SDTL_PKT_DATA_FLAG_LAST_PKT (1 << 0)
-#define SDTL_PKT_DATA_FLAG_RELIABLE (1 << 1)
+#define SDTL_PKT_DATA_FLAG_FIRST_PKT (1 << 0)
+#define SDTL_PKT_DATA_FLAG_LAST_PKT (1 << 1)
+#define SDTL_PKT_DATA_FLAG_RELIABLE (1 << 2)
 
 // these structures go over IPC
 typedef struct __attribute__((packed)) sdtl_data_sub_header {

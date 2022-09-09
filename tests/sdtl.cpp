@@ -43,6 +43,7 @@ class SDTLtestBridge {
     ThreadSafeQueue<SDTLtestPacket> upstream;
     ThreadSafeQueue<SDTLtestPacket> downstream;
     int do_loss_each_n_pkt;
+    uint do_loss_first_n_pkt;
     int pkt_num;
 
     static void write_call(ThreadSafeQueue<SDTLtestPacket> &stream, void *d, size_t s) {
@@ -69,10 +70,16 @@ class SDTLtestBridge {
 public:
     SDTLtestBridge() {
         do_loss_each_n_pkt = 0;
+        do_loss_first_n_pkt = 0;
+        pkt_num = 0;
     }
 
     void drop_packet_n(int n) {
         do_loss_each_n_pkt = n;
+    }
+
+    void drop_first_n(uint n) {
+        do_loss_first_n_pkt = n;
     }
 
     ThreadSafeQueue<SDTLtestPacket> &resolve_stream(std::string name) {
@@ -91,12 +98,22 @@ public:
     }
 
     void write(bool up_agent, void *d, size_t s) {
+        int do_write = -1;
+
+        pkt_num++;
+        // && (pkt_num > 0)
         if ((do_loss_each_n_pkt > 0) && (pkt_num % do_loss_each_n_pkt == 0)) {
-            pkt_num = 0;
-        } else {
-            write_call(up_agent ? downstream : upstream, d, s);
-            pkt_num++;
+            do_write = 0;
+        } else if (do_loss_first_n_pkt > 0) {
+            if (pkt_num-1 < do_loss_first_n_pkt) {
+                do_write = 0;
+            }
         }
+
+        if (do_write) {
+            write_call(up_agent ? downstream : upstream, d, s);
+        }
+
         usleep(1000);
     }
 
@@ -265,20 +282,51 @@ TEST_CASE("SDTL non-guaranteed delivery") {
     REQUIRE(erv == eswb_e_ok);
 
 //    auto lose_every_n_paket = GENERATE(0, 10, 5, 3, 2, 1);
-    auto lose_every_n_paket = GENERATE(0, 2, 10);
+#define LOSE_PKT_ALL_BUT_LAST 111
+    auto lose_every_n_paket = GENERATE(0, LOSE_PKT_ALL_BUT_LAST, 2, 3, 10);
     auto mtu = GENERATE(16, 32, 64, 128);
     auto data2send = GENERATE(10, 20, 57, 58, 64, 128, 256, 512, 1024);
-    std::string losses_str = lose_every_n_paket ?
-                             " with each " + std::to_string(lose_every_n_paket) + " pkt lost " :
-                             " no tx/rx losses";
+
+    std::string losses_str;
+
+    switch (lose_every_n_paket) {
+        case LOSE_PKT_ALL_BUT_LAST:
+            losses_str = " with all lost but the last";
+            break;
+
+        case 0:
+            losses_str = " no tx/rx losses";
+            break;
+
+        default:
+            if (lose_every_n_paket > 0) {
+                losses_str = " with each " + std::to_string(lose_every_n_paket) + " pkt lost ";
+            }
+            break;
+    }
+
 
     auto setup = SDTLtestSetup();
     SDTLtestBridge testing_bridge;
     sdtl_test_setup(setup, mtu, false, testing_bridge);
 
-    testing_bridge.drop_packet_n(lose_every_n_paket);
+
 
     SECTION("Send " + std::to_string(data2send) + " bytes" + losses_str + " MTU " + std::to_string(mtu)) {
+        size_t payload_per_pkt = setup.chh_up.channel->max_payload_size;
+
+        uint pkts_needed = data2send / payload_per_pkt; // full packets
+        if (data2send % payload_per_pkt != 0) { // data remnant
+            pkts_needed++;
+        }
+
+        if (lose_every_n_paket == LOSE_PKT_ALL_BUT_LAST) {
+            testing_bridge.drop_first_n(pkts_needed - 1);
+        } else if (lose_every_n_paket > 0) {
+            testing_bridge.drop_packet_n(lose_every_n_paket);
+        }
+
+
         uint8_t send_buffer[data2send];
         uint8_t rcv_buffer[data2send];
 
@@ -300,20 +348,27 @@ TEST_CASE("SDTL non-guaranteed delivery") {
         sender_thread.start_once();
 
         size_t br;
-        sdtl_channel_recv_arm_timeout(&setup.chh_up, 200000);
+        sdtl_channel_recv_arm_timeout(&setup.chh_up, 100000);
         rv = sdtl_channel_recv_data(&setup.chh_up, rcv_buffer, data2send, &br);
         sdtl_rv_t expected_rv;
 
         // check either transaction supposed to be successful
-        if (lose_every_n_paket == 0) {
-            expected_rv = SDTL_OK;
-        } else {
-            size_t payload_per_pkt = setup.chh_up.channel->max_payload_size;
-            uint32_t pkts_needed = data2send / payload_per_pkt; // full packets
-            if (data2send % payload_per_pkt != 0) { // data remnant
-                pkts_needed++;
-            }
-            expected_rv = pkts_needed >= lose_every_n_paket ? SDTL_TIMEDOUT : SDTL_OK;
+        switch (lose_every_n_paket) {
+            case 0:
+                expected_rv = SDTL_OK;
+                break;
+
+            case LOSE_PKT_ALL_BUT_LAST:
+                if (pkts_needed > 1) {
+                    expected_rv = SDTL_TIMEDOUT;
+                } else {
+                    expected_rv = SDTL_OK;
+                }
+                break;
+
+            default:
+                expected_rv = pkts_needed >= lose_every_n_paket ? SDTL_TIMEDOUT : SDTL_OK;
+                break;
         }
 
         CHECK(rv == expected_rv);

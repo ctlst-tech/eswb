@@ -273,7 +273,7 @@ static sdtl_rv_t media_tx(sdtl_channel_handle_t *chh, void *header, uint32_t hl,
 
 #define my_min(a,b) (((a) < (b)) ? (a) : (b))
 
-static sdtl_rv_t send_data(sdtl_channel_handle_t *chh, int rel, int last_pkt, void *d, uint32_t l) {
+static sdtl_rv_t send_data(sdtl_channel_handle_t *chh, uint8_t pkt_num, uint8_t flags, void *d, uint32_t l) {
     sdtl_data_header_t hdr;
 
     hdr.base.attr = SDTL_PKT_ATTR_PKT_TYPE(SDTL_PKT_ATTR_PKT_TYPE_DATA);
@@ -281,10 +281,9 @@ static sdtl_rv_t send_data(sdtl_channel_handle_t *chh, int rel, int last_pkt, vo
     hdr.base.ch_id = chh->channel->cfg->id;
 
     // TODO handle states properly
-    hdr.sub.cnt = chh->channel->tx_state.next_pkt_cnt;
+    hdr.sub.cnt = pkt_num;
     hdr.sub.payload_size = l;
-    hdr.sub.flags = (last_pkt ? SDTL_PKT_DATA_FLAG_LAST_PKT : 0) |
-                    (rel ? SDTL_PKT_DATA_FLAG_RELIABLE : 0);
+    hdr.sub.flags = flags;
 
     return media_tx(chh, &hdr, sizeof(hdr), d, l);
 }
@@ -299,7 +298,6 @@ static sdtl_rv_t send_ack(sdtl_channel_handle_t *chh, uint32_t ack_code) {
 
 
 static sdtl_rv_t wait_ack(sdtl_channel_handle_t *chh, uint32_t timeout_us) {
-    // TODO arm timeout
 
     sdtl_ack_sub_header_t ack_sh;
 
@@ -325,7 +323,7 @@ static sdtl_rv_t wait_ack(sdtl_channel_handle_t *chh, uint32_t timeout_us) {
 }
 
 
-static sdtl_rv_t wait_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, uint32_t *br) {
+static sdtl_rv_t wait_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, sdtl_data_sub_header_t *dsh_rv) {
     eswb_rv_t rv;
     sdtl_data_sub_header_t *dsh = chh->rx_dafa_fifo_buf;
 
@@ -355,9 +353,9 @@ static sdtl_rv_t wait_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, uint
     // TODO check counter either SDTL_OK_PACKET, or SDTL_OK_SEQ_RESTART
     void *payload_data = ((void *) dsh) + sizeof(*dsh);
     memcpy(d, payload_data, dsh->payload_size);
-    *br = dsh->payload_size;
+    *dsh_rv = *dsh;
 
-    return dsh->flags & SDTL_PKT_DATA_FLAG_LAST_PKT ? SDTL_OK_LAST_PACKET : SDTL_OK_PACKET;
+    return SDTL_OK;
 }
 
 
@@ -380,20 +378,30 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
 
     sdtl_rv_t rv = SDTL_OK;
 
+    uint8_t pktn_in_seq = 0;
+    uint8_t flags = SDTL_PKT_DATA_FLAG_FIRST_PKT |
+                    (rel ? SDTL_PKT_DATA_FLAG_RELIABLE : 0);
+
     do {
         dsize = my_min(chh->channel->max_payload_size, l);
 
         do {
-            int last_pkt = dsize == l ? -1 : 0;
+            flags|= dsize == l ? SDTL_PKT_DATA_FLAG_LAST_PKT : 0;
 
-            rv = send_data(chh, rel, last_pkt, d + offset, dsize);
+            rv = send_data(chh, pktn_in_seq, flags, d + offset, dsize);
             // TODO get timeout from somewhere
             if (rel) {
                 rv = wait_ack(chh, 4000);
                 // TODO handle state with sync
                 update_tx_state(chh, 0 /* TODO transition commands */);
+            } else {
+
             }
         } while (rv == SDTL_TIMEDOUT);
+
+        flags&= ~SDTL_PKT_DATA_FLAG_FIRST_PKT;
+
+        pktn_in_seq++;
 
         l -= dsize;
         offset += dsize;
@@ -414,19 +422,23 @@ static sdtl_rv_t update_rx_state(sdtl_channel_t *ch, int pkt_cnt) {
 }
 
 static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d, size_t s, size_t *br) {
-    uint32_t offset = 0;
-    uint32_t br_pkt = 0;
-    uint32_t br_total = 0;
 
     sdtl_rv_t rv_rcv;
     sdtl_rv_t rv_ack;
     sdtl_rv_t rv = SDTL_OK;
+
+    sdtl_data_sub_header_t dsh;
+
+    // state variables:
+    int sequence_started = 0;
+    uint32_t offset = 0;
     size_t l = s;
+    int prev_pkt_num = -1;
 
     int loop = -1;
 
     do {
-        rv_rcv = wait_data(chh, d + offset, l, &br_pkt);
+        rv_rcv = wait_data(chh, d + offset, l, &dsh);
 
         switch (rv_rcv) {
             default:
@@ -435,33 +447,51 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
                 loop = 0;
                 break;
 
-            // TODO rx buffer to small
+            case SDTL_OK:
+                if (dsh.flags & SDTL_PKT_DATA_FLAG_FIRST_PKT) {
+                    sequence_started = -1;
+                }
 
-            case SDTL_OK_SEQ_RESTART:
-                offset = 0;
-                l = s;
-                break;
+                if (sequence_started) {
+                    offset += dsh.payload_size;
+                    l -= dsh.payload_size;
 
-            case SDTL_OK_PACKET:
-            case SDTL_OK_LAST_PACKET:
-                offset += br_pkt;
-                l -= br_pkt;
+                    if (rel) {
+                        rv_ack = send_ack(chh, SDTL_ACK_GOT_PKT);
+                        if (rv_ack == SDTL_OK) {
+                            update_rx_state(chh->channel, 0 /*TODO increment pkt cmd*/ );
+                        }
+                    } else {
+                        // TODO this logic is just for nonrel for nuw
+                        if (prev_pkt_num == -1) {
+                            prev_pkt_num = 0;
+                        } else {
+                            int dc = dsh.cnt - (prev_pkt_num % 256);
+                            if (dc < 0) {
+                                dc += 256;
+                            }
+                            if (dc > 1) {
+                                // missed packets, resetting state
+                                l = s;
+                                offset = 0;
+                                prev_pkt_num = -1;
+                                sequence_started = 0;
+                                break;
+                            } else {
+                                prev_pkt_num++;
+                            }
+                        }
+                    }
 
-                if (rel) {
-                    rv_ack = send_ack(chh, SDTL_ACK_GOT_PKT);
-                    if (rv_ack == SDTL_OK) {
-                        update_rx_state(chh->channel, 0 /*TODO increment pkt cmd*/ );
+                    if (dsh.flags & SDTL_PKT_DATA_FLAG_LAST_PKT) {
+                        rv = SDTL_OK;
+                        loop = 0;
                     }
                 }
-
-                if (rv_rcv == SDTL_OK_LAST_PACKET) {
-                    rv = SDTL_OK;
-                }
-
                 break;
         }
 
-    } while ((rv_rcv != SDTL_OK_LAST_PACKET) && loop);
+    } while (loop);
 
     // we want to keep timeout for sequentially arriving packets
     chh->armed_timeout_us = 0;
