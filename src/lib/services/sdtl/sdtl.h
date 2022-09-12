@@ -13,8 +13,12 @@ typedef enum sdtl_rv {
 //    SDTL_OK_PACKET,
 //    SDTL_OK_SEQ_RESTART,
 //    SDTL_OK_LAST_PACKET,
-//    SDTL_OK_FIRST_PACKET,
     SDTL_TIMEDOUT,
+    SDTL_OK_FIRST_PACKET,
+    SDTL_OK_REPEATED,
+    SDTL_OK_MISSED_PKT_IN_SEQ,
+    SDTL_REMOTE_RX_CANCELED,
+    SDTL_REMOTE_RX_NO_CLIENT,
     SDTL_RX_BUF_SMALL,
     SDTL_TX_BUF_SMALL,
     SDTL_NON_CONSIST_FRM_LEN,
@@ -86,29 +90,49 @@ typedef uint16_t sdtl_pkt_payload_size_t;
 typedef enum sdtl_ack_code {
     SDTL_ACK_GOT_PKT = 0,
     SDTL_ACK_NO_RECEIVER = 1,
-    SDTL_ACK_PAYLOAD_TOO_BIG = 2,
-    SDTL_ACK_RESET = 3,
+    SDTL_ACK_CANCELED = 2,
+    SDTL_ACK_PAYLOAD_TOO_BIG = 3,
+    SDTL_ACK_RESET = 4,
 } sdtl_ack_code_t;
+
+typedef enum sdtl_rx_state {
+    SDTL_RX_STATE_IDLE = 0,
+    SDTL_RX_STATE_WAIT_DATA = 1,
+    SDTL_RX_STATE_SEQ_DONE = 2,
+    SDTL_RX_STATE_RCV_CANCELED = 3,
+} sdtl_rx_state_t;
+
+
 
 typedef struct sdtl_channel {
     sdtl_channel_cfg_t *cfg;
     uint32_t max_payload_size; // payload inside data_pkt
     sdtl_service_t *service;
 
-    struct {
-        sdtl_pkt_cnt_t next_pkt_cnt;
-    } tx_state;
+//    struct {
+//        sdtl_pkt_cnt_t next_pkt_cnt;
+//    } tx_state;
+//
 
-    struct {
-        sdtl_pkt_cnt_t expected_pkt_cnt;
-    } rx_state;
+
 
 } sdtl_channel_t;
+
+typedef struct sdtl_channel_rx_state {
+//    sdtl_rx_state_t state;
+
+    union {
+        uint32_t state;
+        sdtl_rx_state_t state_enum;
+    };
+
+} sdtl_channel_rx_state_t;
 
 
 typedef struct sdtl_channel_handle {
     eswb_topic_descr_t data_td;
     eswb_topic_descr_t ack_td;
+    eswb_topic_descr_t rx_state_td;
 
     sdtl_channel_t *channel;
 
@@ -127,10 +151,10 @@ typedef struct sdtl_channel_handle {
 #define SDTL_PKT_ATTR_PKT_TYPE_DATA (0)
 #define SDTL_PKT_ATTR_PKT_TYPE_ACK (1)
 
-#define SDTL_PKT_ATTR_PKT_TYPE_MASK(t) ((t) & 0x02)
+#define SDTL_PKT_ATTR_PKT_TYPE_MASK(t) ((t) & 0x03)
 #define SDTL_PKT_ATTR_PKT_TYPE(t) (SDTL_PKT_ATTR_PKT_TYPE_MASK(t) << 0)
 
-#define SDTL_PKT_ATTR_PKT_READ_TYPE(__attr) SDTL_PKT_ATTR_PKT_TYPE_MASK((__attr) >> 0)
+#define SDTL_PKT_ATTR_PKT_READ_TYPE(__attr) SDTL_PKT_ATTR_PKT_TYPE_MASK((__attr))
 
 
 // this structure goes over physical
