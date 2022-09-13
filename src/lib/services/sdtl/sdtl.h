@@ -15,6 +15,7 @@ typedef enum sdtl_rv {
 //    SDTL_OK_LAST_PACKET,
     SDTL_TIMEDOUT,
     SDTL_OK_FIRST_PACKET,
+    SDTL_OK_OMIT,
     SDTL_OK_REPEATED,
     SDTL_OK_MISSED_PKT_IN_SEQ,
     SDTL_REMOTE_RX_CANCELED,
@@ -86,6 +87,7 @@ typedef struct sdtl_channel_cfg {
 
 typedef uint8_t sdtl_pkt_cnt_t;
 typedef uint16_t sdtl_pkt_payload_size_t;
+typedef uint16_t sdtl_seq_code_t;
 
 typedef enum sdtl_ack_code {
     SDTL_ACK_GOT_PKT = 0,
@@ -119,12 +121,13 @@ typedef struct sdtl_channel {
 } sdtl_channel_t;
 
 typedef struct sdtl_channel_rx_state {
-//    sdtl_rx_state_t state;
 
     union {
         uint32_t state;
         sdtl_rx_state_t state_enum;
     };
+
+    sdtl_seq_code_t last_received_seq;
 
 } sdtl_channel_rx_state_t;
 
@@ -145,14 +148,17 @@ typedef struct sdtl_channel_handle {
 
     uint32_t armed_timeout_us; // microseconds timeout
 
+    int tx_seq_num;
+
+
 } sdtl_channel_handle_t;
 
 
 #define SDTL_PKT_ATTR_PKT_TYPE_DATA (0)
 #define SDTL_PKT_ATTR_PKT_TYPE_ACK (1)
 
-#define SDTL_PKT_ATTR_PKT_TYPE_MASK(t) ((t) & 0x03)
-#define SDTL_PKT_ATTR_PKT_TYPE(t) (SDTL_PKT_ATTR_PKT_TYPE_MASK(t) << 0)
+#define SDTL_PKT_ATTR_PKT_TYPE_MASK(t)  ((t) & 0x03)
+#define SDTL_PKT_ATTR_PKT_TYPE(t)       (SDTL_PKT_ATTR_PKT_TYPE_MASK(t) << 0)
 
 #define SDTL_PKT_ATTR_PKT_READ_TYPE(__attr) SDTL_PKT_ATTR_PKT_TYPE_MASK((__attr))
 
@@ -166,11 +172,13 @@ typedef struct __attribute__((packed)) sdtl_base_header {
 #define SDTL_PKT_DATA_FLAG_FIRST_PKT (1 << 0)
 #define SDTL_PKT_DATA_FLAG_LAST_PKT (1 << 1)
 #define SDTL_PKT_DATA_FLAG_RELIABLE (1 << 2)
+#define SDTL_PKT_DATA_FLAG_REPEAT   (1 << 3)
 
 // these structures go over IPC
 typedef struct __attribute__((packed)) sdtl_data_sub_header {
     sdtl_pkt_cnt_t cnt;
     uint8_t flags;
+    sdtl_seq_code_t seq_code;
     sdtl_pkt_payload_size_t payload_size;
 
     // uint8_t payload [payload_size]
@@ -193,6 +201,16 @@ typedef struct __attribute__((packed)) sdtl_ack_header {
     sdtl_base_header_t base;
     sdtl_ack_sub_header_t sub;
 } sdtl_ack_header_t;
+
+void sdtl_debug_msg(const char *fn, const char *txt, ...);
+
+//#define SDTL_DEBUG
+
+#ifdef SDTL_DEBUG
+#define sdtl_dbg_msg(txt,...) sdtl_debug_msg(__func__, txt, ##__VA_ARGS__)
+#else
+#define sdtl_dbg_msg(txt,...) {}
+#endif
 
 /**
  *

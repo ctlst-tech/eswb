@@ -62,3 +62,12 @@ PseudoTopic *create_bus_and_arbitrary_hierarchy(eswb_type_t bus_type, const std:
 
     return bus;
 }
+
+void thread_safe_failure_assert(bool condition, const std::string &msg) {
+    if (!condition) {
+        while(1) {
+            usleep(100000);
+            std::cout << msg << std::endl;
+        }
+    }
+}

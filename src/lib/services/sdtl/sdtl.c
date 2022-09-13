@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdarg.h>
+#include <stdio.h>
 
 
 #include "sdtl.h"
@@ -8,10 +10,21 @@
 #include "eswb/api.h"
 #include "eswb/topic_proclaiming_tree.h"
 
-
-static sdtl_rv_t set_rx_state(sdtl_channel_handle_t *chh, sdtl_rx_state_t state);
+static sdtl_rv_t set_rx_state(sdtl_channel_handle_t *chh, sdtl_rx_state_t state, sdtl_seq_code_t code);
 static sdtl_rv_t read_rx_state(sdtl_channel_handle_t *chh, sdtl_channel_rx_state_t *rx_state);
 static sdtl_rv_t send_ack(sdtl_channel_handle_t *chh, uint8_t pkt_cnt, uint32_t ack_code);
+
+void sdtl_debug_msg(const char *fn, const char *txt, ...) {
+    va_list (args);
+    char pn[16];
+    pthread_getname_np(pthread_self(), pn, sizeof(pn));
+    fprintf(stdout, "%s | %s | ", pn, fn);
+    va_start (args,txt);
+    vfprintf(stdout, txt, args);
+    va_end (args);
+    fprintf(stdout, "\n");
+}
+
 
 sdtl_channel_t *resolve_channel_by_id(sdtl_service_t *s, uint8_t ch_id) {
 
@@ -124,26 +137,42 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
         rx_state.state = SDTL_RX_STATE_WAIT_DATA;
     }
 
+#   define HAS_SAME_PARITY(__hdr,__curr_is_odd) (((__hdr)->base.attr & SDTL_PKT_ATTR_ODD_FLAG) && (__curr_is_odd))
+
     switch (pkt_type) {
         case SDTL_PKT_ATTR_PKT_TYPE_DATA:
             ;
             sdtl_data_header_t *dhdr = (sdtl_data_header_t *) base_header;
+
+            if ((dhdr->sub.flags & (SDTL_PKT_DATA_FLAG_LAST_PKT)) &&
+                (dhdr->sub.seq_code == rx_state.last_received_seq)) {
+                sdtl_dbg_msg("Got rx state: ack trailing paket from prior seq 0x%04X", rx_state.last_received_seq);
+
+//                rx_state.state = SDTL_RX_STATE_SEQ_DONE; // just a local copy of the state
+                rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_GOT_PKT);
+            }
+
             switch (rx_state.state) {
                 default:
                 case SDTL_RX_STATE_RCV_CANCELED:
                     rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_CANCELED);
-                    break;
-
-                case SDTL_RX_STATE_IDLE:
-                    rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_NO_RECEIVER);
+                    sdtl_dbg_msg("Got rx state: SDTL_RX_STATE_RCV_CANCELED");
                     break;
 
                 case SDTL_RX_STATE_SEQ_DONE:
-                    rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_GOT_PKT);
+                case SDTL_RX_STATE_IDLE:
+                    rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_NO_RECEIVER);
+                    sdtl_dbg_msg("Got rx state: SDTL_RX_STATE_IDLE");
                     break;
+
+//                case SDTL_RX_STATE_SEQ_DONE:
+//                    rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_GOT_PKT);
+//                    sdtl_dbg_msg("Got rx state: SDTL_RX_STATE_SEQ_DONE");
+//                    break;
 
                 case SDTL_RX_STATE_WAIT_DATA:
                     rv = process_data(chh, &dhdr->sub);
+                    sdtl_dbg_msg("Got pkt #%d with %d bytes", dhdr->sub.cnt, dhdr->sub.payload_size);
                     break;
             }
             break;
@@ -152,10 +181,12 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
             ;
             sdtl_ack_header_t *ahdr = (sdtl_ack_header_t *) base_header;
             rv = process_ack(chh, &ahdr->sub);
+            sdtl_dbg_msg("Got ack for pkt #%d", ahdr->sub.cnt);
             break;
 
         default:
             // TODO throw invalid packet error
+            sdtl_dbg_msg("Invalid packet");
             break;
     }
 
@@ -306,10 +337,14 @@ static sdtl_rv_t media_tx(sdtl_channel_handle_t *chh, void *header, uint32_t hl,
 
 #define my_min(a,b) (((a) < (b)) ? (a) : (b))
 
-static sdtl_rv_t send_data(sdtl_channel_handle_t *chh, uint8_t pkt_num, uint8_t flags, void *d, uint32_t l) {
+static sdtl_rv_t
+send_data(sdtl_channel_handle_t *chh, uint8_t pkt_num, uint8_t flags, sdtl_seq_code_t seq_code, void *d, uint32_t l) {
     sdtl_data_header_t hdr;
 
+
     hdr.base.attr = SDTL_PKT_ATTR_PKT_TYPE(SDTL_PKT_ATTR_PKT_TYPE_DATA);
+
+    hdr.sub.seq_code = seq_code;
 
     hdr.base.ch_id = chh->channel->cfg->id;
 
@@ -347,8 +382,6 @@ static sdtl_rv_t wait_ack(sdtl_channel_handle_t *chh, uint32_t timeout_us, sdtl_
     }
     erv = eswb_fifo_pop(chh->ack_td, &ack_sh);
     chh->armed_timeout_us = 0;
-
-    // TODO handle counters
 
     switch (erv) {
         case eswb_e_ok:
@@ -404,7 +437,11 @@ wait_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, sdtl_data_sub_header_
                     return SDTL_OK;
                 }
             } else {
-                return SDTL_OK_FIRST_PACKET;
+                if (dsh->flags & SDTL_PKT_DATA_FLAG_FIRST_PKT) {
+                    return SDTL_OK_FIRST_PACKET;
+                } else {
+                    return SDTL_OK_OMIT;
+                }
             }
 
         case eswb_e_timedout:
@@ -447,6 +484,17 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
     uint8_t flags = SDTL_PKT_DATA_FLAG_FIRST_PKT |
                     (rel ? SDTL_PKT_DATA_FLAG_RELIABLE : 0);
 
+    sdtl_seq_code_t seq_code;
+    struct timespec timespec;
+    clock_gettime(CLOCK_MONOTONIC, &timespec);
+
+    // pseudorandom seq num
+    seq_code = chh->tx_seq_num + (timespec.tv_nsec >> 10);
+    if (seq_code == 0) {
+        seq_code--;
+    }
+
+    sdtl_dbg_msg("================= call ================= (size == %d)", l);
 
     do {
         dsize = my_min(chh->channel->max_payload_size, l);
@@ -454,23 +502,28 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
         flags|= dsize == l ? SDTL_PKT_DATA_FLAG_LAST_PKT : 0;
 
         do {
-            rv = send_data(chh, pktn_in_seq, flags, d + offset, dsize);
+            rv = send_data(chh, pktn_in_seq, flags, seq_code, d + offset, dsize);
+            sdtl_dbg_msg("Send %d bytes in pkt #%d in seq 0x%04X", dsize, pktn_in_seq, seq_code);
+
             // TODO get timeout from somewhere
             if (rel) {
                 sdtl_ack_sub_header_t ack_sh;
-                rv = wait_ack(chh, 50000, &ack_sh);
+                rv = wait_ack(chh, 100000, &ack_sh);
 
                 switch (rv) {
                     case SDTL_OK:
                         switch (ack_sh.code) {
                             case SDTL_ACK_GOT_PKT:
                                 // TODO check pkt num
+                                sdtl_dbg_msg("Got ack for pkt #%d", ack_sh.cnt);
                                 break;
 
                             case SDTL_ACK_CANCELED:
+                                sdtl_dbg_msg("Got ack with SDTL_ACK_CANCELED");
                                 return SDTL_REMOTE_RX_CANCELED;
 
                             case SDTL_ACK_NO_RECEIVER:
+                                sdtl_dbg_msg("Got ack with SDTL_ACK_NO_RECEIVER");
                                 return SDTL_REMOTE_RX_NO_CLIENT;
 
                             default:
@@ -479,6 +532,7 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
                         break;
 
                     case SDTL_TIMEDOUT:
+                        sdtl_dbg_msg("Ack timeout");
                         break;
 
                     default:
@@ -496,14 +550,17 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
         offset += dsize;
     } while (l > 0);
 
+    chh->tx_seq_num++;
+
     return rv;
 }
 
-static sdtl_rv_t set_rx_state(sdtl_channel_handle_t *chh, sdtl_rx_state_t state) {
+static sdtl_rv_t set_rx_state(sdtl_channel_handle_t *chh, sdtl_rx_state_t state, sdtl_seq_code_t code) {
     eswb_rv_t erv;
 
     sdtl_channel_rx_state_t rx_state = {
             .state = state,
+            .last_received_seq = code,
     };
 
     erv = eswb_update_topic(chh->rx_state_td, &rx_state);
@@ -548,12 +605,20 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
     int loop = -1;
 
     if (rel) {
-        rv_state = set_rx_state(chh, SDTL_RX_STATE_WAIT_DATA);
+        sdtl_channel_rx_state_t rx_state;
+        rv_state = read_rx_state(chh, &rx_state);
+        if (rv_state != SDTL_OK) {
+            return rv_state;
+        }
+
+        rv_state = set_rx_state(chh, SDTL_RX_STATE_WAIT_DATA, rx_state.last_received_seq);
         if (rv_state != SDTL_OK) {
             return rv_state;
         }
         // TODO check state before, check that channal is not busy
     }
+
+    sdtl_dbg_msg("================= call ================= (size == %d)", s);
 
 
     do {
@@ -564,27 +629,32 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
             case SDTL_RX_BUF_SMALL:
                 rv = rv_rcv;
                 loop = 0;
+                sdtl_dbg_msg("Buffer too small (l==%d against payload_size == %d)", l, dsh->payload_size);
                 break;
 
             case SDTL_OK_REPEATED:
                 if (rel) {
                     rv_ack = send_ack(chh, dsh->cnt, SDTL_ACK_GOT_PKT);
                 }
+                sdtl_dbg_msg("Got repeated pkt #%d", dsh->cnt);
+                break;
+
+            case SDTL_OK_OMIT:
                 break;
 
             case SDTL_OK_FIRST_PACKET:
-                if (dsh->flags & SDTL_PKT_DATA_FLAG_FIRST_PKT) {
-                    sequence_started = -1;
-                }
+                sdtl_dbg_msg("Got SDTL_OK_FIRST_PACKET state");
+                sequence_started = -1;
                 prev_pkt_num = 0;
                 // no break here
+
 
             case SDTL_OK:
                 if (sequence_started) {
                     if (rel) {
                         rv_ack = send_ack(chh, dsh->cnt, SDTL_ACK_GOT_PKT);
                     } else {
-
+                        // no action required
                     }
 
                     void *payload_data = ((void *) dsh) + sizeof(*dsh);
@@ -597,7 +667,11 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
                         prev_pkt_num++;
                     }
 
+                    sdtl_dbg_msg("Send %d bytes in pkt #%d in seq 0x%04X", dsh->payload_size, dsh->cnt, dsh->seq_code);
+
                     if (dsh->flags & SDTL_PKT_DATA_FLAG_LAST_PKT) {
+                        sdtl_dbg_msg("Got SDTL_PKT_DATA_FLAG_LAST_PKT flag");
+
                         rv = SDTL_OK;
                         loop = 0;
                     }
@@ -610,7 +684,10 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
                 } else {
                     RESET_SEQ();
                 }
+                sdtl_dbg_msg("Got missed pkt in seq (pkt #%d, prev #%d)", dsh->cnt, prev_pkt_num);
                 break;
+
+
         }
 
     } while (loop);
@@ -620,9 +697,9 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
 
     if (rel) {
         if (rv == SDTL_OK) {
-            set_rx_state(chh, SDTL_RX_STATE_SEQ_DONE);
+            set_rx_state(chh, SDTL_RX_STATE_SEQ_DONE, dsh->seq_code);
         } else {
-            set_rx_state(chh, SDTL_RX_STATE_RCV_CANCELED);
+            set_rx_state(chh, SDTL_RX_STATE_RCV_CANCELED, 0);
         }
     }
 
@@ -735,7 +812,7 @@ sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *me
             return rv;
         }
         if (check_rel(&s->channel_handles[i])) {
-            set_rx_state(&s->channel_handles[i], SDTL_RX_STATE_IDLE);
+            set_rx_state(&s->channel_handles[i], SDTL_RX_STATE_IDLE, 0);
         }
     }
 

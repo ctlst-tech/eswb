@@ -168,8 +168,14 @@ class timed_caller {
     std::thread th;
 
     std::atomic_bool run;
+    std::string name;
+
+    void set_name() {
+        pthread_setname_np(name.c_str());
+    }
 
     void loop() {
+        set_name();
         while(run) {
             std::this_thread::sleep_for(std::chrono::milliseconds(period));
             timed_call();
@@ -177,12 +183,13 @@ class timed_caller {
     }
 
     void once () {
+        set_name();
         std::this_thread::sleep_for(std::chrono::milliseconds(period));
         timed_call();
     };
 
 public:
-    timed_caller(periodic_call_t &call, uint32_t p) : timed_call(call), period(p), run(false) {
+    timed_caller(periodic_call_t &call, uint32_t p, const std::string _name = "") : timed_call(call), period(p), name(_name), run(false) {
     }
 
     ~timed_caller() {
@@ -311,6 +318,8 @@ public:
         unlock();
     }
 };
+
+void thread_safe_failure_assert(bool condition, const std::string &msg);
 
 std::string gen_name();
 void gen_data(uint8_t *d, size_t s);
