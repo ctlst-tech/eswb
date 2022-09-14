@@ -30,11 +30,7 @@ typedef enum {
 
     eqrb_server_already_launched,
 
-    eqrb_rv_rx_inv_crc,
-    eqrb_rv_rx_got_frame,
-    eqrb_rv_rx_buf_overflow,
-    eqrb_rv_rx_got_empty_frame,
-    eqrb_rv_rx_eswb_fatal_err,
+    eqrb_rv_rx_eswb_fatal_err
 } eqrb_rv_t;
 
 struct eqrb_client_handle;

@@ -319,7 +319,9 @@ public:
     }
 };
 
-void thread_safe_failure_assert(bool condition, const std::string &msg);
+
+
+void thread_safe_failure_assert(bool condition, const std::string &msg = "");
 
 std::string gen_name();
 void gen_data(uint8_t *d, size_t s);

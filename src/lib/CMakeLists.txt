@@ -44,7 +44,6 @@ target_include_directories(eswb-static PRIVATE
 set(ESWB_UTIL_EQRB_SRC
         utils/eqrb/eqrb_core.c
         utils/eqrb/eqrb_core.h
-        utils/eqrb/drivers/mem_bypass.c
         utils/eqrb/drivers/tcp.c
         utils/eqrb/drivers/file.c
         utils/eqrb/drivers/serial.c

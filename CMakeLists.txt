@@ -17,17 +17,18 @@ add_subdirectory(src/lib/platformic/posix)
 set(TEST_SRC_COMMON
         tests/tooling.cpp
         tests/tooling.h
+        tests/sdtl_tooling.cpp
+        tests/sdtl_tooling.h
         )
 
 add_executable(eswb_test_basic tests/tests.cpp tests/tests.h tests/event_chain.c ${TEST_SRC_COMMON})
-add_executable(eswb_test_eqrb tests/eqrb.cpp ${TEST_SRC_COMMON})
+add_executable(eswb_test_eqrb tests/eqrb.cpp  ${TEST_SRC_COMMON})
 add_executable(eswb_test_sdtl tests/sdtl.cpp ${TEST_SRC_COMMON})
 
 
 add_executable(eswb_test_all
         tests/tests.cpp
         tests/tests.h
-#        tests/eswb_sync.cpp
         tests/event_chain.c
         tests/sdtl.cpp
         tests/eqrb.cpp
@@ -38,7 +39,7 @@ target_include_directories(eswb_test_basic PRIVATE src/lib/include)
 target_link_libraries(eswb_test_basic PUBLIC eswb-static eswb-sync-static Catch2::Catch2WithMain)
 
 target_include_directories(eswb_test_eqrb PRIVATE src/lib/include)
-target_link_libraries(eswb_test_eqrb PUBLIC eswb-static eswb-eqrb-static eswb-sync-static Catch2::Catch2WithMain)
+target_link_libraries(eswb_test_eqrb PUBLIC eswb-static eswb-eqrb-static eswb-sdtl-static eswb-sync-static Catch2::Catch2WithMain)
 
 target_include_directories(eswb_test_sdtl PRIVATE src/lib/include)
 target_link_libraries(eswb_test_sdtl PUBLIC eswb-static eswb-sdtl-static eswb-sync-static Catch2::Catch2WithMain)

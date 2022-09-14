@@ -74,7 +74,6 @@ const driver_t serial_driver = {
         .send = serial_send,
         .recv = serial_recv,
         .disconnect = serial_disconnect,
-        .type = eqrb_duplex
 };
 
 static eqrb_rv_t open_serial(const char *path, uint32_t baudrate, int *fd_rv) {

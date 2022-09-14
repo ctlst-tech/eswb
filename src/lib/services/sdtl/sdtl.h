@@ -236,8 +236,6 @@ sdtl_rv_t sdtl_channel_recv_arm_timeout(sdtl_channel_handle_t *chh, uint32_t tim
 
 sdtl_rv_t sdtl_channel_recv_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, size_t *br);
 sdtl_rv_t sdtl_channel_send_data(sdtl_channel_handle_t *chh, void *d, uint32_t l);
-sdtl_rv_t sdtl_channel_wait_cmd(sdtl_channel_t *ch);
-sdtl_rv_t sdtl_channel_send_cmd(sdtl_channel_t *ch);
 
 #ifdef __cplusplus
 }

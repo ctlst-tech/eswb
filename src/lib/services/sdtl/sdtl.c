@@ -277,7 +277,7 @@ sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
     char thread_name[16];
 #define SDTL_RX_THREAD_NAME_PREFIX "sdtlrx+"
     strcpy(thread_name, SDTL_RX_THREAD_NAME_PREFIX);
-    strncat(thread_name, s->service_name, sizeof(thread_name) - sizeof(SDTL_RX_THREAD_NAME_PREFIX) - 1);
+    strncat(thread_name, s->service_name, sizeof(thread_name) - 1);
 
     eswb_set_thread_name(thread_name);
 
@@ -934,7 +934,7 @@ sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_ch
     memset(chh_rv, 0, sizeof(*chh_rv));
     chh_rv->channel = ch;
 
-    size_t mtu = s->mtu; // TODO optimize
+    size_t mtu = s->mtu;
 
     sdtl_rv_t rv;
     rv = bbee_frm_allocate_tx_framebuf(mtu, &chh_rv->tx_frame_buf, &chh_rv->tx_frame_buf_size);
@@ -982,15 +982,4 @@ sdtl_rv_t sdtl_channel_recv_data(sdtl_channel_handle_t *chh, void *d, uint32_t l
 sdtl_rv_t sdtl_channel_send_data(sdtl_channel_handle_t *chh, void *d, uint32_t l) {
     int rel = check_rel(chh);
     return channel_send_data(chh, rel, d, l);
-}
-
-
-sdtl_rv_t sdtl_channel_wait_cmd(sdtl_channel_t *ch) {
-    // TODO
-    return SDTL_OK;
-}
-
-sdtl_rv_t sdtl_channel_send_cmd(sdtl_channel_t *ch) {
-    // TODO
-    return SDTL_OK;
 }

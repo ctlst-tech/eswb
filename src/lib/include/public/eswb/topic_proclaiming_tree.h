@@ -76,11 +76,11 @@ topic_proclaiming_tree_t *usr_topic_set_root(topic_tree_context_t *context, cons
 topic_proclaiming_tree_t *usr_topic_add_child(topic_tree_context_t *context, topic_proclaiming_tree_t *root, const char *name,
                                               topic_data_type_t type, uint32_t data_offset, size_t data_size, uint32_t flags);
 
-#define usr_topic_set_struct(__cntx,__struct_ptr,__topic_name) \
+#define usr_topic_set_struct(__cntx,__struct_val,__topic_name) \
                             usr_topic_set_root(__cntx,        \
                             __topic_name, \
                             tt_struct,                        \
-                            sizeof(__struct_ptr))
+                            sizeof(__struct_val))
 
 #define usr_topic_set_fifo(__cntx,__topic_name,__fifo_size) \
                             usr_topic_set_root(__cntx,        \
@@ -91,12 +91,12 @@ topic_proclaiming_tree_t *usr_topic_add_child(topic_tree_context_t *context, top
 #define OFFSETOF(__type, __member) ((size_t)&(((__type *)(void*)0)->__member) )
 #define SIZEOFMEMBER(__type, __member) (sizeof(((__type *)(void*)0)->__member))
 
-#define usr_topic_add_struct_child(__cntx,__root,__struct_type,__str_var,__topic_name,__type) \
+#define usr_topic_add_struct_child(__cntx,__root,__struct_type,__struct_var,__topic_name,__type) \
                             usr_topic_add_child(__cntx, __root,       \
                             __topic_name, \
                             __type,                                   \
-                            OFFSETOF(__struct_type, __str_var),                                    \
-                            SIZEOFMEMBER(__struct_type, __str_var),                                \
+                            OFFSETOF(__struct_type, __struct_var),                                    \
+                            SIZEOFMEMBER(__struct_type, __struct_var),                                \
                             TOPIC_FLAG_MAPPED_TO_PARENT)
 
 void print_topics_tree(topic_proclaiming_tree_t *current);

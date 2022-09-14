@@ -105,7 +105,6 @@ const driver_t tcp_driver = {
         .send = tcp_send,
         .recv = tcp_recv,
         .disconnect = tcp_disconnect,
-        .type = eqrb_duplex
 };
 
 int receive_msg_line(int sktd, char *line, int max_len) {

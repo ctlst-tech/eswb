@@ -2,11 +2,13 @@
 // Created by goofy on 1/6/22.
 //
 
-#include <string.h>
+#include <string>
 #include "tooling.h"
+#include "sdtl_tooling.h"
 
-#include "../src/lib/utils/eqrb/framing.h"
+
 #include "../src/lib/utils/eqrb/eqrb_core.h"
+#include "../src/lib/services/sdtl/sdtl.h"
 
 
 TEST_CASE("Topics id map", "[unit]") {
@@ -112,309 +114,6 @@ TEST_CASE("Topics id map", "[unit]") {
     map_dealloc(&map);
 }
 
-typedef std::function<bool (eqrb_rx_state_t*, eqrb_rv_t, bool last)> check_lambda_t;
-
-bool rx(int parts, uint8_t *tx_frame_buf, size_t tx_frame_size, check_lambda_t &check_lambda) {
-    eqrb_rx_state_t rx_state;
-#       define RX_PAYLOAD_BUFF_SIZE 512
-    uint8_t rx_payload_buf[RX_PAYLOAD_BUFF_SIZE];
-    uint8_t pkt_buf[tx_frame_size];
-    eqrb_init_state(&rx_state, rx_payload_buf, RX_PAYLOAD_BUFF_SIZE);
-    size_t bytes_processed;
-    eqrb_rv_t rv;
-
-    size_t bytes_to_process = std::max<size_t>(1, tx_frame_size / parts);
-    size_t offset = 0;
-
-    bool loop;
-    do {
-        memset(pkt_buf, 0, sizeof(pkt_buf));
-        auto pkt_size = std::min<size_t>(bytes_to_process, tx_frame_size - offset);
-        memcpy(pkt_buf, tx_frame_buf + offset, pkt_size);
-
-        rv = eqrb_rx_frame_iteration(&rx_state, pkt_buf, pkt_size, &bytes_processed);
-
-        // terminate loop if necessary
-        loop = check_lambda(&rx_state, rv, false);
-
-        offset += bytes_processed;
-    } while ((offset < tx_frame_size) && loop);
-
-    check_lambda(&rx_state, rv, true);
-
-    return loop;
-};
-
-TEST_CASE("EQBR framing", "[eqrb][unit]") {
-
-#   define FRAME_BUF_SIZE 1024
-#   define PAYLOAD_BUFF_SIZE 256
-
-#   define COMMAND_CODE 0
-
-    uint8_t tx_payload[PAYLOAD_BUFF_SIZE] = {0};
-    uint8_t tx_frame_buf[FRAME_BUF_SIZE] = {0};
-
-    SECTION("Bad command code") {
-        size_t size;
-        REQUIRE( eqrb_make_tx_frame(EQRB_FRAME_BEGIN_CHAR, tx_payload, sizeof(tx_payload), tx_frame_buf, FRAME_BUF_SIZE,
-                                &size) == eqrb_inv_code);
-        REQUIRE( eqrb_make_tx_frame(EQRB_FRAME_END_CHAR, tx_payload, sizeof(tx_payload), tx_frame_buf, FRAME_BUF_SIZE,
-                                    &size) == eqrb_inv_code);
-    }
-
-    SECTION("Too small frame buffer") {
-        size_t size;
-        REQUIRE( eqrb_make_tx_frame(EQRB_FRAME_END_CHAR, tx_payload, sizeof(tx_payload), tx_frame_buf, sizeof(tx_payload),
-                                    &size) == eqrb_small_buf);
-    }
-
-    for (unsigned char & i : tx_payload) {
-        i = rand();
-    }
-
-    eqrb_rv_t rv;
-
-    size_t tx_frame_size;
-
-    eqrb_rx_state_t rx_state;
-#   define RX_PAYLOAD_BUFF_SIZE 512
-    uint8_t rx_payload_buf[RX_PAYLOAD_BUFF_SIZE];
-    eqrb_init_state(&rx_state, rx_payload_buf, RX_PAYLOAD_BUFF_SIZE);
-
-    uint8_t expected_code= COMMAND_CODE;
-    uint8_t *buf_to_compare = tx_payload;
-
-    check_lambda_t check_lambda_simple = [&] (eqrb_rx_state_t *rx_state, eqrb_rv_t rv, bool last) -> bool {
-        if (last) {
-            CHECK(rv == eqrb_rv_rx_got_frame);
-            CHECK(rx_state->current_command_code == expected_code);
-
-            CHECK(memcmp(rx_state->payload_buffer_origin,
-                         buf_to_compare,
-                         rx_state->current_payload_size) == 0);
-        }
-        return true;
-    };
-
-    SECTION("Check processed bytes num") {
-        uint8_t pkt[99];
-        for (uint8_t i : pkt) {
-            i = rand();
-        }
-
-        rv = eqrb_make_tx_frame(0x10, pkt, sizeof(pkt), tx_frame_buf, FRAME_BUF_SIZE, &tx_frame_size);
-        REQUIRE(rv == eqrb_rv_ok);
-
-        for (auto &bts : {64, 51, 33, 13, 45}) {
-            SECTION(std::string("First part size ") + std::to_string(bts) + std::string(" bytes")) {
-
-                size_t bytes_processed;
-                rv = eqrb_rx_frame_iteration(&rx_state, tx_frame_buf, bts, &bytes_processed);
-                REQUIRE(rv == eqrb_rv_ok);
-                CHECK(bytes_processed == bts);
-
-                rv = eqrb_rx_frame_iteration(&rx_state, &tx_frame_buf[bytes_processed], tx_frame_size - bts, &bytes_processed);
-                REQUIRE(rv == eqrb_rv_rx_got_frame);
-                CHECK(bytes_processed == tx_frame_size - bts);
-            }
-        }
-    }
-
-    for (auto &parts : {1, 3, 5, 10, 33}) {
-        SECTION(std::string("Frame RX tests | by ") + std::to_string(parts) + std::string(" parts")) {
-            SECTION("Simple") {
-                rv = eqrb_make_tx_frame(COMMAND_CODE, tx_payload, sizeof(tx_payload), tx_frame_buf, FRAME_BUF_SIZE,
-                                        &tx_frame_size);
-                REQUIRE(rv == eqrb_rv_ok);
-
-                buf_to_compare = tx_payload;
-                expected_code = COMMAND_CODE;
-
-                auto trv = rx(parts, tx_frame_buf, tx_frame_size, check_lambda_simple);
-                REQUIRE(trv == true);
-            }
-
-            SECTION("With B-s and E-s") {
-                for (int i: {10, 13, 43, 57}) {
-                    tx_payload[i] = EQRB_FRAME_BEGIN_CHAR;
-                }
-                for (int i: {33, 22, 54, 81}) {
-                    tx_payload[i] = EQRB_FRAME_END_CHAR;
-                }
-                rv = eqrb_make_tx_frame(COMMAND_CODE, tx_payload, PAYLOAD_BUFF_SIZE, tx_frame_buf, FRAME_BUF_SIZE, &tx_frame_size);
-                REQUIRE(rv == eqrb_rv_ok);
-                REQUIRE(rx(parts, tx_frame_buf, tx_frame_size, check_lambda_simple) == true);
-            }
-
-            SECTION("With B-s and E-s") {
-                for (int i: {10, 13, 43, 57}) {
-                    tx_payload[i] = EQRB_FRAME_BEGIN_CHAR;
-                }
-                for (int i: {33, 22, 54, 81}) {
-                    tx_payload[i] = EQRB_FRAME_END_CHAR;
-                }
-                rv = eqrb_make_tx_frame(COMMAND_CODE, tx_payload, PAYLOAD_BUFF_SIZE, tx_frame_buf, FRAME_BUF_SIZE, &tx_frame_size);
-                REQUIRE(rv == eqrb_rv_ok);
-                REQUIRE(rx(parts, tx_frame_buf, tx_frame_size, check_lambda_simple) == true);
-            }
-
-            SECTION("With All B-s") {
-                for (uint8_t &i: tx_payload) {
-                    i = EQRB_FRAME_BEGIN_CHAR;
-                }
-                rv = eqrb_make_tx_frame(0, tx_payload, PAYLOAD_BUFF_SIZE, tx_frame_buf, FRAME_BUF_SIZE, &tx_frame_size);
-                REQUIRE(rv == eqrb_rv_ok);
-                REQUIRE(rx(parts, tx_frame_buf, tx_frame_size, check_lambda_simple) == true);
-            }
-
-            SECTION("With B or/and E in crc") {
-                uint32_t data;
-                int have_seen_b = 0;
-                int have_seen_e = 0;
-                int have_seen_be = 0;
-
-                buf_to_compare = (uint8_t *) &data;
-
-                for (data = 0; data < UINT32_MAX >> 16; data++) {
-                    rv = eqrb_make_tx_frame(COMMAND_CODE, &data, sizeof(data), tx_frame_buf, FRAME_BUF_SIZE, &tx_frame_size);
-                    REQUIRE(rv == eqrb_rv_ok);
-
-                    if (tx_frame_buf[tx_frame_size - 4] == EQRB_FRAME_BEGIN_CHAR) {
-                        have_seen_b = -1;
-                    }
-                    if (tx_frame_buf[tx_frame_size - 4] == EQRB_FRAME_END_CHAR) {
-                        have_seen_e = -1;
-                    }
-                    if ((tx_frame_buf[tx_frame_size - 6] == EQRB_FRAME_BEGIN_CHAR) &&
-                        (tx_frame_buf[tx_frame_size - 4] == EQRB_FRAME_END_CHAR)) {
-                        have_seen_be = -1;
-                    }
-                    REQUIRE(rx(parts, tx_frame_buf, tx_frame_size, check_lambda_simple) == true);
-                }
-                REQUIRE(have_seen_b);
-                REQUIRE(have_seen_e);
-                REQUIRE(have_seen_be);
-            }
-
-            SECTION("With restarted frame") {
-                size_t tx_frame_size_1;
-                rv = eqrb_make_tx_frame(COMMAND_CODE, tx_payload, 50, tx_frame_buf, FRAME_BUF_SIZE,
-                                        &tx_frame_size_1);
-
-                REQUIRE(rv == eqrb_rv_ok);
-
-                rv = eqrb_make_tx_frame(COMMAND_CODE, tx_payload, 50, tx_frame_buf + 25, FRAME_BUF_SIZE - 25,
-                                        &tx_frame_size);
-
-                tx_frame_size_1 = 25;
-
-                REQUIRE(rv == eqrb_rv_ok);
-                REQUIRE(rx(parts, tx_frame_buf, tx_frame_size + tx_frame_size_1, check_lambda_simple) == true);
-            }
-
-            SECTION("With several frames through") {
-                uint8_t tx_payload2 [128];
-
-                int j = 0;
-                for (auto &i : tx_payload2) {
-                    i = j++;
-                }
-
-                int received_frames = 0;
-
-                check_lambda_t check_lambda_2frames = [&] (eqrb_rx_state_t *rx_state, eqrb_rv_t rv, bool last)  -> bool  {
-                    if (!last) {
-                        if (rv == eqrb_rv_rx_got_frame) {
-                            received_frames++;
-                            CHECK(rx_state->current_command_code == expected_code);
-
-                            if (received_frames == 1) {
-                                CHECK(memcmp(rx_state->payload_buffer_origin,
-                                             tx_payload,
-                                             rx_state->current_payload_size) == 0);
-                            } else if (received_frames == 2) {
-                                CHECK(memcmp(rx_state->payload_buffer_origin,
-                                             tx_payload2,
-                                             rx_state->current_payload_size) == 0);
-                            }
-                        }
-                    } else {
-                        CHECK(received_frames == 2);
-                    }
-                    return true;
-                };
-
-                size_t tx_frame_size2;
-                rv = eqrb_make_tx_frame(COMMAND_CODE, tx_payload, sizeof(tx_payload), tx_frame_buf, FRAME_BUF_SIZE,
-                                        &tx_frame_size);
-                REQUIRE(rv == eqrb_rv_ok);
-
-                rv = eqrb_make_tx_frame(COMMAND_CODE, tx_payload2, sizeof(tx_payload2), tx_frame_buf  + tx_frame_size, FRAME_BUF_SIZE - 25,
-                                        &tx_frame_size2);
-
-                REQUIRE(rv == eqrb_rv_ok);
-                REQUIRE(rx(parts, tx_frame_buf, tx_frame_size + tx_frame_size2, check_lambda_2frames) == true);
-            }
-
-            SECTION("With broken frame") {
-                check_lambda_t check_lambda_bad_crc = [&] (eqrb_rx_state_t *rx_state, eqrb_rv_t rv, bool last)  -> bool  {
-                    if (last) {
-                        CHECK(rv == eqrb_rv_rx_inv_crc);
-                    }
-                    return true;
-                };
-
-                rv = eqrb_make_tx_frame(COMMAND_CODE, tx_payload, sizeof(tx_payload), tx_frame_buf, FRAME_BUF_SIZE,
-                                        &tx_frame_size);
-
-                tx_frame_buf[8] = 55;
-
-                REQUIRE(rv == eqrb_rv_ok);
-                REQUIRE(rx(parts, tx_frame_buf, tx_frame_size, check_lambda_bad_crc) == true);
-            }
-
-            SECTION("With RX buffer overflow (frame with no end)") {
-                uint8_t tx_payload_overflow [RX_PAYLOAD_BUFF_SIZE * 2];
-                uint8_t frame_buf [RX_PAYLOAD_BUFF_SIZE * 5];
-
-                uint8_t j = 0;
-                for (auto &i : tx_payload_overflow) {
-                    i = j++;
-                }
-
-                check_lambda_t check_lambda_overflow = [&] (eqrb_rx_state_t *rx_state, eqrb_rv_t rv, bool last)  -> bool  {
-                    if (rv == eqrb_rv_rx_buf_overflow) {
-                        CHECK(rx_state->payload_buffer_ptr - rx_state->payload_buffer_origin
-                                        == rx_state->payload_buffer_max_size);
-                        return false;
-                    }
-                    return true;
-                };
-
-                rv = eqrb_make_tx_frame(COMMAND_CODE, tx_payload_overflow, sizeof(tx_payload_overflow), frame_buf, sizeof(frame_buf),
-                                        &tx_frame_size);
-
-                REQUIRE(rv == eqrb_rv_ok);
-                REQUIRE(rx(parts, frame_buf, tx_frame_size, check_lambda_overflow) == false);
-            }
-
-            SECTION("With empty frame") {
-                uint8_t empty_frame [4] = {EQRB_FRAME_BEGIN_CHAR, EQRB_FRAME_BEGIN_CHAR, EQRB_FRAME_END_CHAR, EQRB_FRAME_END_CHAR};
-
-                check_lambda_t check_lambda_empty = [&] (eqrb_rx_state_t *rx_state, eqrb_rv_t rv, bool last)  -> bool  {
-                    if (rv == eqrb_rv_rx_got_empty_frame) {
-                        return false;
-                    }
-                    return true;
-                };
-
-                REQUIRE(rx(parts, empty_frame, sizeof(empty_frame), check_lambda_empty) == false);
-            }
-        }
-    }
-}
-
 #include "eswb/api.h"
 
 void replication_test(std::function<void (std::string&, std::string&)> repl_factory_init,
@@ -449,11 +148,7 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
     erv = eswb_event_queue_enable(src_bus_td, 40, 1024);
     REQUIRE(erv == eswb_e_ok);
 
-
     repl_factory_init(src_bus_full_path, dst_bus_full_path);
-
-    //usleep(1000000);
-    //eqrb_demo_stop();
 
     eswb_topic_descr_t publisher_td;
 
@@ -466,20 +161,20 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
         usr_topic_add_child(cntx, fifo_root, "cnt", tt_uint32, 0, 4, TOPIC_FLAG_MAPPED_TO_PARENT);
 
         rv = eswb_event_queue_order_topic(src_bus_td, src_bus.c_str(), 1 );
-        REQUIRE(rv == eswb_e_ok);
+        thread_safe_failure_assert(rv == eswb_e_ok, "eswb_event_queue_order_topic");
 
         rv = eswb_proclaim_tree_by_path(src_bus_full_path.c_str(), fifo_root, cntx->t_num, &publisher_td);
-        REQUIRE(rv == eswb_e_ok);
+        thread_safe_failure_assert(rv == eswb_e_ok, "eswb_proclaim_tree_by_path");
 
         rv = eswb_event_queue_order_topic(src_bus_td, (src_bus + "/fifo").c_str(), 1 );
-        REQUIRE(rv == eswb_e_ok);
+        thread_safe_failure_assert(rv == eswb_e_ok, "eswb_event_queue_order_topic");
     };
 
     uint32_t counter = 0;
 
     periodic_call_t update = [&] () mutable {
         eswb_rv_t rv = eswb_fifo_push(publisher_td, &counter);
-        REQUIRE(rv == eswb_e_ok);
+        thread_safe_failure_assert(rv == eswb_e_ok, "eswb_fifo_push");
         counter++;
     };
 
@@ -487,9 +182,9 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
 //        FAIL("Timed out abort");
     };
 
-    timed_caller proclaimer(proclaim, 200);
-    timed_caller aborter(abort, 5000);
-    timed_caller updater(update, 200);
+    timed_caller proclaimer(proclaim, 200, "proclaimer");
+    timed_caller aborter(abort, 5000, "aborter");
+    timed_caller updater(update, 200, "updater");
 
     proclaimer.start_once(false);
     proclaimer.wait();
@@ -497,7 +192,6 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
     std::this_thread::sleep_for(std::chrono::milliseconds (200));
     updater.start_loop();
 
-    //std::this_thread::sleep_for(std::chrono::seconds (2));
     eswb_topic_descr_t replicated_fifo_td;
     erv = eswb_wait_connect_nested(dst_bus_td, "fifo/cnt", &replicated_fifo_td, 2000);
     REQUIRE(erv == eswb_e_ok);
@@ -513,19 +207,151 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
         expected_cnt++;
     } while((erv == eswb_e_ok) && (expected_cnt < 10));
 
-    repl_factory_deinit();
     updater.stop();
+    repl_factory_deinit();
 }
+
+
+typedef struct {
+    const char *ch_name;
+    sdtl_service_t *service;
+} eqrb_sdtl_params_t;
+
+eqrb_sdtl_params_t *conn_params(const char *n, sdtl_service_t *s) {
+    auto rv = new eqrb_sdtl_params_t;
+
+    rv->ch_name = n;
+    rv->service = s;
+
+    return rv;
+}
+
+eqrb_rv_t mem_bypass_connect (void *param, device_descr_t *dh) {
+    eqrb_sdtl_params_t *p = (eqrb_sdtl_params_t *)param;
+    sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) malloc(sizeof(*chh));
+    sdtl_rv_t rv = sdtl_channel_open(p->service, p->ch_name, chh);
+
+    *dh = chh;
+
+    return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
+}
+
+eqrb_rv_t mem_bypass_send (device_descr_t dh, void *data, size_t bts, size_t *bs) {
+
+    sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
+
+    sdtl_rv_t rv = sdtl_channel_send_data(chh, data, bts);
+    if (rv == SDTL_OK) {
+        *bs = bts;
+    }
+    return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
+}
+
+eqrb_rv_t mem_bypass_recv (device_descr_t dh, void *data, size_t btr, size_t *br) {
+    sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
+
+    sdtl_rv_t rv = sdtl_channel_recv_data(chh, data, btr, br);
+
+    return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
+}
+int mem_bypass_disconnect (device_descr_t dh) {
+
+//    return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
+
+return SDTL_OK;
+}
+
+const driver_t sdtl_mem_bridge = {
+        .name = "mem_bypass",
+        .connect = mem_bypass_connect,
+        .send = mem_bypass_send,
+        .recv = mem_bypass_recv,
+        .disconnect = mem_bypass_disconnect,
+};
+
+static eqrb_server_handle_t sh;
+static eqrb_client_handle_t ch;
+
+#define EQRB_SDTL_TEST_CHANEL "test_channel"
+extern const sdtl_service_media_t sdtl_test_media;
+SDTLtestBridge sdtl_bypass_bridge;
+
+
+sdtl_service_t *
+init_test_sdtl(const char *service_mp, const char *service_name, const char *media_channel, size_t mtu, SDTLtestBridge &bridge) {
+
+    sdtl_service_t *sdtl_service;
+    sdtl_service = new sdtl_service_t;
+
+    sdtl_rv_t rv;
+    rv = sdtl_service_init(sdtl_service, service_name, service_mp, mtu, 4, &sdtl_test_media);
+    REQUIRE(rv == SDTL_OK);
+
+    sdtl_channel_cfg_t ch_cfg_template = {
+            .name = EQRB_SDTL_TEST_CHANEL,
+            .id = 1,
+            .type = SDTL_CHANNEL_RELIABLE,
+            .mtu_override = 0,
+    };
+
+    auto *ch_cfg = new sdtl_channel_cfg_t;
+
+    memcpy(ch_cfg, &ch_cfg_template, sizeof (*ch_cfg));
+
+    rv = sdtl_channel_create(sdtl_service, ch_cfg);
+    REQUIRE(rv == SDTL_OK);
+
+    rv = sdtl_service_start(sdtl_service, media_channel, &bridge);
+    REQUIRE(rv == SDTL_OK);
+
+    return sdtl_service;
+}
+
+
+eqrb_rv_t eqrb_mem_bypass_start(const char *bus_to_replicate, const char *replication_point, uint32_t mask_to_replicate) {
+
+    std::string sdtl_bus_name = "sdtl_bus";
+
+    eswb_rv_t erv;
+    erv = eswb_create(sdtl_bus_name.c_str(), eswb_inter_thread, 100);
+    REQUIRE(erv == eswb_e_ok);
+
+    sh.h.driver = &sdtl_mem_bridge;
+    ch.h.driver = &sdtl_mem_bridge;
+
+    sdtl_service_t *s_up = init_test_sdtl(sdtl_bus_name.c_str(), "up", "up", 128, sdtl_bypass_bridge);
+    sdtl_service_t *s_down = init_test_sdtl(sdtl_bus_name.c_str(), "down", "down", 128, sdtl_bypass_bridge);
+
+    sh.h.connectivity_params = conn_params(EQRB_SDTL_TEST_CHANEL, s_up);
+    ch.h.connectivity_params = conn_params(EQRB_SDTL_TEST_CHANEL, s_down);
+
+    eqrb_rv_t s_rv = eqrb_server_start(&sh, bus_to_replicate, mask_to_replicate, NULL);
+    if (s_rv != eqrb_rv_ok) {
+        return s_rv;
+    }
+    eqrb_rv_t c_rv = eqrb_client_start(&ch, replication_point, 100);
+    if (c_rv != eqrb_rv_ok) {
+        return c_rv;
+    }
+
+    return eqrb_rv_ok;
+}
+
+eqrb_rv_t eqrb_mem_bypass_stop() {
+    eqrb_service_stop(&sh.h);
+    return eqrb_service_stop(&ch.h);
+}
+
 
 void repl_factory_mem_bypass_init(std::string &src, std::string &dst) {
     eqrb_rv_t hrv;
 
-    hrv = eqrb_demo_start(src.c_str(), dst.c_str(), 0xFFFFFFFF);
+    hrv = eqrb_mem_bypass_start(src.c_str(), dst.c_str(), 0xFFFFFFFF);
     REQUIRE(hrv == eqrb_rv_ok);
 }
 
 void repl_factory_mem_bypass_deinit() {
-
+    eqrb_mem_bypass_stop();
 }
 
 static eqrb_client_handle_t *repl_factory_ch;
@@ -701,3 +527,4 @@ TEST_CASE("EQBR - tcp", "[eqrb]") {
 TEST_CASE("EQBR - serial", "[eqrb]") {
     replication_test(repl_factory_serial_init, repl_factory_serial_deinit);
 }
+
