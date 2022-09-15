@@ -381,3 +381,19 @@ TEST_CASE("SDTL consecutive transfers") {
     testing_bridge.stop();
     sdtl_test_deinit(setup);
 }
+
+
+
+
+ /*
+ *  TODO
+ *   1. how to recover from sutiation, where we sender restarts in the middle of the transaction?
+ *   2. how to recover from sutiation, where we receiver restarts in the middle of the transaction?
+ *   3. sync MTU size?
+ *   4. flush eswb fifo on starting accepting new frame
+ *
+ *  TODO new tests
+ *   1. packets in sequence > 256
+ *
+ *
+ */

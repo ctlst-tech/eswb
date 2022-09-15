@@ -5,6 +5,7 @@
 #include <string>
 #include "tooling.h"
 #include "sdtl_tooling.h"
+#include "eswb/api.h"
 
 
 #include "../src/lib/utils/eqrb/eqrb_core.h"
@@ -114,18 +115,26 @@ TEST_CASE("Topics id map", "[unit]") {
     map_dealloc(&map);
 }
 
-#include "eswb/api.h"
+namespace EqrbTestAgent {
 
-void replication_test(std::function<void (std::string&, std::string&)> repl_factory_init,
-                      std::function<void (void)> repl_factory_deinit){
+class Basic {
 
-    eswb_local_init(1);
+public:
+    Basic() {
+    }
+
+    virtual void start() = 0;
+    virtual void stop() = 0;
+};
+
+}
+
+void replication_test(EqrbTestAgent::Basic &server, EqrbTestAgent::Basic &client,
+                      const std::string &src_bus, const std::string &dst_bus){
 
     eswb_set_thread_name("main");
 
-    std::string src_bus = "src";
     std::string src_bus_full_path = "itb:/" + src_bus;
-    std::string dst_bus = "dst";
     std::string dst_bus_full_path = "itb:/" + dst_bus;
     eswb_rv_t erv;
     eqrb_rv_t hrv;
@@ -147,8 +156,6 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
 
     erv = eswb_event_queue_enable(src_bus_td, 40, 1024);
     REQUIRE(erv == eswb_e_ok);
-
-    repl_factory_init(src_bus_full_path, dst_bus_full_path);
 
     eswb_topic_descr_t publisher_td;
 
@@ -182,6 +189,9 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
 //        FAIL("Timed out abort");
     };
 
+    server.start();
+    client.start();
+
     timed_caller proclaimer(proclaim, 200, "proclaimer");
     timed_caller aborter(abort, 5000, "aborter");
     timed_caller updater(update, 200, "updater");
@@ -208,9 +218,10 @@ void replication_test(std::function<void (std::string&, std::string&)> repl_fact
     } while((erv == eswb_e_ok) && (expected_cnt < 10));
 
     updater.stop();
-    repl_factory_deinit();
-}
 
+    client.stop();
+    server.stop();
+}
 
 typedef struct {
     const char *ch_name;
@@ -226,7 +237,7 @@ eqrb_sdtl_params_t *conn_params(const char *n, sdtl_service_t *s) {
     return rv;
 }
 
-eqrb_rv_t mem_bypass_connect (void *param, device_descr_t *dh) {
+eqrb_rv_t sdtl_media_connect (void *param, device_descr_t *dh) {
     eqrb_sdtl_params_t *p = (eqrb_sdtl_params_t *)param;
     sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) malloc(sizeof(*chh));
     sdtl_rv_t rv = sdtl_channel_open(p->service, p->ch_name, chh);
@@ -236,7 +247,7 @@ eqrb_rv_t mem_bypass_connect (void *param, device_descr_t *dh) {
     return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
 }
 
-eqrb_rv_t mem_bypass_send (device_descr_t dh, void *data, size_t bts, size_t *bs) {
+eqrb_rv_t sdtl_media_send (device_descr_t dh, void *data, size_t bts, size_t *bs) {
 
     sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
 
@@ -247,111 +258,174 @@ eqrb_rv_t mem_bypass_send (device_descr_t dh, void *data, size_t bts, size_t *bs
     return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
 }
 
-eqrb_rv_t mem_bypass_recv (device_descr_t dh, void *data, size_t btr, size_t *br) {
+eqrb_rv_t sdtl_media_recv (device_descr_t dh, void *data, size_t btr, size_t *br) {
     sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
 
     sdtl_rv_t rv = sdtl_channel_recv_data(chh, data, btr, br);
 
     return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
 }
-int mem_bypass_disconnect (device_descr_t dh) {
-
+int sdtl_media_disconnect (device_descr_t dh) {
 //    return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
-
-return SDTL_OK;
+    return SDTL_OK;
 }
 
-const driver_t sdtl_mem_bridge = {
-        .name = "mem_bypass",
-        .connect = mem_bypass_connect,
-        .send = mem_bypass_send,
-        .recv = mem_bypass_recv,
-        .disconnect = mem_bypass_disconnect,
+const driver_t eqrb_sdtl_driver = {
+        .name = "eqrb_sdtl",
+        .connect = sdtl_media_connect,
+        .send = sdtl_media_send,
+        .recv = sdtl_media_recv,
+        .disconnect = sdtl_media_disconnect,
 };
 
-static eqrb_server_handle_t sh;
-static eqrb_client_handle_t ch;
 
 #define EQRB_SDTL_TEST_CHANEL "test_channel"
 extern const sdtl_service_media_t sdtl_test_media;
-SDTLtestBridge sdtl_bypass_bridge;
 
+namespace EqrbTestAgent {
 
-sdtl_service_t *
-init_test_sdtl(const char *service_mp, const char *service_name, const char *media_channel, size_t mtu, SDTLtestBridge &bridge) {
+class sdtlBasic : public Basic {
 
     sdtl_service_t *sdtl_service;
-    sdtl_service = new sdtl_service_t;
+    void *media_data_handle;
 
-    sdtl_rv_t rv;
-    rv = sdtl_service_init(sdtl_service, service_name, service_mp, mtu, 4, &sdtl_test_media);
-    REQUIRE(rv == SDTL_OK);
+    std::string service_name;
+    std::string media_path;
 
-    sdtl_channel_cfg_t ch_cfg_template = {
-            .name = EQRB_SDTL_TEST_CHANEL,
-            .id = 1,
-            .type = SDTL_CHANNEL_RELIABLE,
-            .mtu_override = 0,
-    };
+protected:
+    const sdtl_service_media_t *sdtl_media;
 
-    auto *ch_cfg = new sdtl_channel_cfg_t;
+    static sdtl_service_t *
+    sdtl_init(const char *service_mp, const char *service_name, size_t mtu,
+              const sdtl_service_media_t *media) {
+        sdtl_service_t *sdtl_service;
+        sdtl_service = new sdtl_service_t;
+        sdtl_rv_t rv;
 
-    memcpy(ch_cfg, &ch_cfg_template, sizeof (*ch_cfg));
+        rv = sdtl_service_init(sdtl_service, service_name, service_mp, mtu, 4, media);
+        REQUIRE(rv == SDTL_OK);
 
-    rv = sdtl_channel_create(sdtl_service, ch_cfg);
-    REQUIRE(rv == SDTL_OK);
+        sdtl_channel_cfg_t ch_cfg_template = {
+                .name = EQRB_SDTL_TEST_CHANEL,
+                .id = 1,
+                .type = SDTL_CHANNEL_RELIABLE,
+                .mtu_override = 0,
+        };
 
-    rv = sdtl_service_start(sdtl_service, media_channel, &bridge);
-    REQUIRE(rv == SDTL_OK);
+        auto *ch_cfg = new sdtl_channel_cfg_t;
+        memcpy(ch_cfg, &ch_cfg_template, sizeof(*ch_cfg));
+        rv = sdtl_channel_create(sdtl_service, ch_cfg);
+        REQUIRE(rv == SDTL_OK);
 
-    return sdtl_service;
-}
+        return sdtl_service;
+    }
+
+    void sdtl_start() {
+        sdtl_rv_t rv = sdtl_service_start(sdtl_service, media_path.c_str(), media_data_handle);
+        REQUIRE(rv == SDTL_OK);
+    }
 
 
-eqrb_rv_t eqrb_mem_bypass_start(const char *bus_to_replicate, const char *replication_point, uint32_t mask_to_replicate) {
+    void sdtl_stop() {
+        sdtl_rv_t rv = sdtl_service_stop(sdtl_service);
+        REQUIRE(rv == SDTL_OK);
+    }
 
-    std::string sdtl_bus_name = "sdtl_bus";
 
-    eswb_rv_t erv;
-    erv = eswb_create(sdtl_bus_name.c_str(), eswb_inter_thread, 100);
-    REQUIRE(erv == eswb_e_ok);
+    sdtl_service_t *init_environment(eqrb_handle_common_t &handle) {
+        auto service_bus_name = "sdtl_" + service_name + "_tst_bus";
+        eswb_rv_t erv;
+        erv = eswb_create(service_bus_name.c_str(), eswb_inter_thread, 100);
+        REQUIRE(erv == eswb_e_ok);
 
-    sh.h.driver = &sdtl_mem_bridge;
-    ch.h.driver = &sdtl_mem_bridge;
+        sdtl_service_t *s_rv = sdtl_init(service_bus_name.c_str(),
+                                          service_name.c_str(), 128, sdtl_media);
+        handle.connectivity_params = conn_params(EQRB_SDTL_TEST_CHANEL, s_rv);
 
-    sdtl_service_t *s_up = init_test_sdtl(sdtl_bus_name.c_str(), "up", "up", 128, sdtl_bypass_bridge);
-    sdtl_service_t *s_down = init_test_sdtl(sdtl_bus_name.c_str(), "down", "down", 128, sdtl_bypass_bridge);
-
-    sh.h.connectivity_params = conn_params(EQRB_SDTL_TEST_CHANEL, s_up);
-    ch.h.connectivity_params = conn_params(EQRB_SDTL_TEST_CHANEL, s_down);
-
-    eqrb_rv_t s_rv = eqrb_server_start(&sh, bus_to_replicate, mask_to_replicate, NULL);
-    if (s_rv != eqrb_rv_ok) {
         return s_rv;
     }
-    eqrb_rv_t c_rv = eqrb_client_start(&ch, replication_point, 100);
-    if (c_rv != eqrb_rv_ok) {
-        return c_rv;
+
+public:
+    sdtlBasic(const sdtl_service_media_t *sdtl_media_,
+              const std::string &service_name_,
+              const std::string &media_path_,
+              eqrb_handle_common_t &handle,
+              void *media_h) : sdtl_media(sdtl_media_),
+                                           service_name(service_name_),
+                                           media_path(media_path_),
+                                           media_data_handle(media_h) {
+
+        sdtl_service = init_environment(handle);
+    }
+};
+
+class sdtlMemBridgeBasic : public sdtlBasic {
+
+public:
+    sdtlMemBridgeBasic(const std::string &service_name_,
+                       const std::string &media_path_,
+                       eqrb_handle_common_t &handle,
+                       SDTLtestBridge &bridge) :
+            sdtlBasic(&sdtl_test_media, service_name_, media_path_, handle, &bridge) {
+    }
+};
+
+class sdtlMemBridgeServer : public sdtlMemBridgeBasic {
+    const std::string bus2replicate;
+    uint32_t mask2replicate;
+    eqrb_server_handle_t server_handle;
+
+public:
+    sdtlMemBridgeServer(const std::string &bus2replicate_, uint32_t mask2replicate_,
+                        SDTLtestBridge &bridge) :
+            sdtlMemBridgeBasic("server", "down", server_handle.h, bridge),
+            bus2replicate(bus2replicate_),
+            mask2replicate(mask2replicate_){
+
+        server_handle.h.driver = &eqrb_sdtl_driver;
     }
 
-    return eqrb_rv_ok;
-}
+    void start() {
+        sdtl_start();
 
-eqrb_rv_t eqrb_mem_bypass_stop() {
-    eqrb_service_stop(&sh.h);
-    return eqrb_service_stop(&ch.h);
-}
+        eqrb_rv_t rv = eqrb_server_start(&server_handle, bus2replicate.c_str(), mask2replicate, NULL);
+        REQUIRE(rv == eqrb_rv_ok);
+    }
+
+    void stop() {
+        sdtl_stop();
+        eqrb_rv_t rv = eqrb_service_stop(&server_handle.h);
+        REQUIRE(rv == eqrb_rv_ok);
+    }
+};
 
 
-void repl_factory_mem_bypass_init(std::string &src, std::string &dst) {
-    eqrb_rv_t hrv;
+class sdtlMemBridgeClient : public sdtlMemBridgeBasic {
+    const std::string &replicate_to_path;
+    eqrb_client_handle_t client_handle;
 
-    hrv = eqrb_mem_bypass_start(src.c_str(), dst.c_str(), 0xFFFFFFFF);
-    REQUIRE(hrv == eqrb_rv_ok);
-}
+public:
+    sdtlMemBridgeClient(const std::string &replicate_to_path_,
+                        SDTLtestBridge &bridge) :
+            sdtlMemBridgeBasic("client", "up", client_handle.h, bridge),
+            replicate_to_path(replicate_to_path_){
+        client_handle.h.driver = &eqrb_sdtl_driver;
+    }
 
-void repl_factory_mem_bypass_deinit() {
-    eqrb_mem_bypass_stop();
+    void start() {
+        sdtl_start();
+
+        eqrb_rv_t rv = eqrb_client_start(&client_handle, replicate_to_path.c_str(), 100);
+        REQUIRE(rv == eqrb_rv_ok);
+    }
+
+    void stop() {
+        sdtl_stop();
+        eqrb_rv_t rv = eqrb_service_stop(&client_handle.h);
+        REQUIRE(rv == eqrb_rv_ok);
+    }
+};
+
 }
 
 static eqrb_client_handle_t *repl_factory_ch;
@@ -387,8 +461,8 @@ void repl_factory_serial_init(std::string &src, std::string &dst) {
 
     int fd1;
     int fd2;
-#define SERIAL1 "/tmp/vserial1"
-#define SERIAL2 "/tmp/vserial2"
+#   define SERIAL1 "/tmp/vserial1"
+#   define SERIAL2 "/tmp/vserial2"
 
     fd1 = open(SERIAL1, O_RDWR);
     fd2 = open(SERIAL2, O_RDWR);
@@ -516,15 +590,24 @@ TEST_CASE("EQRB bus state sync") {
 }
 
 
-TEST_CASE("EQBR - mem_bypass", "[eqrb]") {
-    replication_test(repl_factory_mem_bypass_init, repl_factory_mem_bypass_deinit);
+TEST_CASE("EQBR - mem_bypass") {
+    eswb_local_init(1);
+
+    auto bus_from = "src";
+    auto bus_to = "dst";
+
+    SDTLtestBridge bridge;
+
+    EqrbTestAgent::sdtlMemBridgeClient client(bus_to, bridge);
+    EqrbTestAgent::sdtlMemBridgeServer server(bus_from, 0xFFFFFFFF, bridge);
+    replication_test(server, client, bus_from, bus_to);
 }
 
-TEST_CASE("EQBR - tcp", "[eqrb]") {
-    replication_test(repl_factory_tcp_init, repl_factory_tcp_deinit);
-}
 
-TEST_CASE("EQBR - serial", "[eqrb]") {
-    replication_test(repl_factory_serial_init, repl_factory_serial_deinit);
-}
-
+//TEST_CASE("EQBR - tcp", "[eqrb]") {
+//    replication_test(repl_factory_tcp_init, repl_factory_tcp_deinit);
+//}
+//
+//TEST_CASE("EQBR - serial", "[eqrb]") {
+//    replication_test(repl_factory_serial_init, repl_factory_serial_deinit);
+//}

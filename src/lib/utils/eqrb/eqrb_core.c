@@ -59,7 +59,11 @@ send_msg(device_descr_t dd, const driver_t *dr, eqrb_cmd_code_t msg_code, eqrb_i
     return dr->send(dd, hdr, sizeof(*hdr) + sizeof(*e) + e->size, &br);;
 }
 
-static eqrb_rv_t send_topic(device_descr_t dd, const driver_t *dr, eqrb_bus_sync_state_t *bus_sync_state, event_queue_transfer_t *event, topic_extract_t *topic_info) {
+static eqrb_rv_t send_topic(device_descr_t dd, const driver_t *dr,
+                            eqrb_bus_sync_state_t *bus_sync_state,
+                            eqrb_interaction_header_t *hdr,
+                            event_queue_transfer_t *event,
+                            topic_extract_t *topic_info) {
     eswb_topic_id_t parent_tid = topic_info->parent_id;
     event->topic_id = parent_tid;
     event->size = sizeof(topic_proclaiming_tree_t) * 1; // for now sending record by record
@@ -73,7 +77,7 @@ static eqrb_rv_t send_topic(device_descr_t dd, const driver_t *dr, eqrb_bus_sync
                  event->topic_id);
     eqrb_rv_t rv;
 
-    rv = send_msg(dd, dr, EQRB_CMD_SERVER_TOPIC, NULL, event);
+    rv = send_msg(dd, dr, EQRB_CMD_SERVER_TOPIC, hdr, event);
     if (rv != eqrb_rv_ok) {
         eqrb_dbg_msg("send_msg for EQRB_CMD_SERVER_TOPIC error: %d", rv);
     }
@@ -146,7 +150,7 @@ void *eqrb_server_thread(void *p) {
         while (mode_do_initial_sync) {
             erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid, topic_info);
             if (erv == eswb_e_ok) {
-                send_topic(dd, dev, &bus_sync_state, event, topic_info);
+                send_topic(dd, dev, &bus_sync_state, hdr, event, topic_info);
             } else {
                 eqrb_dbg_msg("Done sending bus state");
                 mode_do_initial_sync = 0;

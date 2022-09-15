@@ -827,13 +827,18 @@ sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *me
 sdtl_rv_t sdtl_service_stop(sdtl_service_t *s) {
     int rv;
 
-//    rv = pthread_cancel(s->rx_thread_tid);
-//    if (rv != 0) {
-//        return SDTL_SYS_ERR;
-//    }
+    rv = pthread_cancel(s->rx_thread_tid);
+    if (rv != 0) {
+        return SDTL_SYS_ERR;
+    }
+
     rv = pthread_join(s->rx_thread_tid, NULL);
     if (rv != 0) {
         return SDTL_SYS_ERR;
+    }
+
+    for (int i = 0; i < s->channels_num; i++) {
+        sdtl_channel_close(&s->channel_handles[i]);
     }
 
     return SDTL_OK;
@@ -967,6 +972,32 @@ sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_ch
 
     return SDTL_OK;
 }
+
+sdtl_rv_t sdtl_channel_close(sdtl_channel_handle_t *chh) {
+    eswb_rv_t erv;
+
+    // TODO free buffers
+    // FIXME eswb_disconnect currently is not supported
+
+    erv = eswb_disconnect(chh->data_td);
+    if (erv != eswb_e_ok) {
+        return SDTL_ESWB_ERR;
+    }
+
+    if (chh->channel->cfg->type == SDTL_CHANNEL_RELIABLE) {
+        erv = eswb_disconnect(chh->ack_td);
+        if (erv != eswb_e_ok) {
+            return SDTL_ESWB_ERR;
+        }
+        erv = eswb_disconnect(chh->rx_state_td);
+        if (erv != eswb_e_ok) {
+            return SDTL_ESWB_ERR;
+        }
+    }
+
+    return SDTL_OK;
+}
+
 
 sdtl_rv_t sdtl_channel_recv_arm_timeout(sdtl_channel_handle_t *chh, uint32_t timeout_us) {
     // TODO limit timeout abs value

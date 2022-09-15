@@ -231,6 +231,7 @@ sdtl_rv_t sdtl_service_stop(sdtl_service_t *s);
 sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg);
 
 sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_channel_handle_t *chh_rv);
+sdtl_rv_t sdtl_channel_close(sdtl_channel_handle_t *chh);
 
 sdtl_rv_t sdtl_channel_recv_arm_timeout(sdtl_channel_handle_t *chh, uint32_t timeout_us);
 
