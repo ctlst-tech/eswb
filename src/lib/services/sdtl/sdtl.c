@@ -771,7 +771,7 @@ sdtl_rv_t sdtl_service_init(sdtl_service_t *s, const char *service_name, const c
     s->media = media;
     s->channels = 0;
 
-    s->service_eswb_root = sdtl_alloc(strlen(mount_point) + strlen(service_name) + 1);
+    s->service_eswb_root = sdtl_alloc(strlen(mount_point) + 1 + strlen(service_name) + 1);
 
     strcpy(s->service_eswb_root, mount_point);
     strcat(s->service_eswb_root, "/");
