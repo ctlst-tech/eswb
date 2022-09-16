@@ -59,22 +59,18 @@ send_msg(device_descr_t dd, const driver_t *dr, eqrb_cmd_code_t msg_code, eqrb_i
     return dr->send(dd, hdr, sizeof(*hdr) + sizeof(*e) + e->size, &br);;
 }
 
-static eqrb_rv_t send_topic(device_descr_t dd, const driver_t *dr,
-                            eqrb_bus_sync_state_t *bus_sync_state,
-                            eqrb_interaction_header_t *hdr,
-                            event_queue_transfer_t *event,
-                            topic_extract_t *topic_info) {
-    eswb_topic_id_t parent_tid = topic_info->parent_id;
+static eqrb_rv_t
+send_topic(device_descr_t dd, const driver_t *dr, eqrb_interaction_header_t *hdr, eswb_topic_id_t parent_tid, event_queue_transfer_t *event,
+           size_t topics_num) {
     event->topic_id = parent_tid;
-    event->size = sizeof(topic_proclaiming_tree_t) * 1; // for now sending record by record
+    event->size = sizeof(topic_proclaiming_tree_t) * topics_num; // for now sending record by record
     event->type = eqr_topic_proclaim;
 
-    bus_sync_state->current_tid = topic_info->info.topic_id;
-
-    eqrb_dbg_msg("---- send proclaim info for topic \"%s\" tid == %d parent_tid == %d ----",
+    eqrb_dbg_msg("---- send proclaim info for topic \"%s\" tid == %d parent_tid == %d topics_num == %d ----",
                  ((topic_proclaiming_tree_t *) EVENT_QUEUE_TRANSFER_DATA(event))->name,
                  ((topic_proclaiming_tree_t *) EVENT_QUEUE_TRANSFER_DATA(event))->topic_id,
-                 event->topic_id);
+                 event->topic_id,
+                 topics_num);
     eqrb_rv_t rv;
 
     rv = send_msg(dd, dr, EQRB_CMD_SERVER_TOPIC, hdr, event);
@@ -100,7 +96,8 @@ void *eqrb_server_thread(void *p) {
     event_queue_transfer_t *event = (event_queue_transfer_t*)(event_buf + sizeof(*hdr));
 
     // Let the info for transfer be mapped directly
-    topic_extract_t *topic_info = (topic_extract_t *)(EVENT_QUEUE_TRANSFER_DATA(event) - OFFSETOF(topic_extract_t, info));
+    topic_extract_t *topic_info = (topic_extract_t *)(EVENT_QUEUE_TRANSFER_DATA(event));
+    topic_proclaiming_tree_t *topic_tree_elem = (topic_proclaiming_tree_t *)(EVENT_QUEUE_TRANSFER_DATA(event));
 
 #define RESET_BUS_SYNC_STATE()  {memset(&bus_sync_state, 0, sizeof(bus_sync_state)); \
                                 bus_sync_state.next_tid = 0;}
@@ -123,6 +120,7 @@ void *eqrb_server_thread(void *p) {
 
     do {
         while(mode_wait_cmd) {
+            eqrb_dbg_msg("Waiting client command");
             rv = dev->recv(dd, hdr, EVENT_BUF_SIZE, &br);
             if (rv != eqrb_rv_ok) {
                 eqrb_dbg_msg("device recv error: %d", rv);
@@ -147,10 +145,25 @@ void *eqrb_server_thread(void *p) {
 
         RESET_BUS_SYNC_STATE();
 
+        if (mode_do_initial_sync) {
+            eqrb_dbg_msg("Do initial topics sync data");
+        }
+
         while (mode_do_initial_sync) {
-            erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid, topic_info);
+            erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid, &topic_tree_elem[0]);
             if (erv == eswb_e_ok) {
-                send_topic(dd, dev, &bus_sync_state, hdr, event, topic_info);
+                size_t topics_num = 1;
+                if (topic_info->info.type == tt_fifo) {
+                    erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid,&topic_tree_elem[1]);
+                    if (erv == eswb_e_ok) {
+                        topics_num++;
+                        topic_tree_elem[0].first_child_ind = 1;
+                    }
+                }
+                // insted of topic_tree_elem structure topic_extract_t is extracted with trailing additional info
+                bus_sync_state.current_tid = ((topic_extract_t *)&topic_tree_elem[topics_num-1])->info.topic_id;
+
+                send_topic(dd, dev, hdr, topic_info->parent_id, event, topics_num);
             } else {
                 eqrb_dbg_msg("Done sending bus state");
                 mode_do_initial_sync = 0;
@@ -159,7 +172,13 @@ void *eqrb_server_thread(void *p) {
             }
         }
 
+
+        if (mode_do_stream) {
+            eqrb_dbg_msg("Streaming data");
+        }
+
         while (mode_do_stream) {
+            // TODO arm timeout
             erv = eswb_event_queue_pop(h->evq_td, event);
             if (erv != eswb_e_ok) {
                 // TODO BREAK_LOOP_AND_RETURN(eqrb_rv_rx_eswb_fatal_err);
@@ -253,6 +272,7 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
 
     do {
         while(mode_wait_server) {
+            hdr->msg_code = EQRB_CMD_CLIENT_REQ_SYNC;
             rv = dev->send(dd, hdr, sizeof(*hdr), &bs);
             if (rv == eqrb_rv_ok) {
                 mode_wait_server = 0;

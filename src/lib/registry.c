@@ -317,18 +317,14 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
                     break;
 
                 case tt_fifo:
-                    /* FIXME this session fails when proclaimed via EQRB,
-                     * FIXME because transfered topic by topic, w/o intermediate relations
                     if ((topic_struct->first_child_ind == PR_TREE_NO_REF_IND) || // fifo must have a child
                         (topic_struct[topic_struct->first_child_ind].next_sibling_ind != PR_TREE_NO_REF_IND)) { // and the only child
                         // TODO children cannot be fifo-s
                         rv = eswb_e_invargs;
                         break;
                     }
-                     */
 
                     // fall through ...
-
                 case tt_event_queue:
                     rv = alloc_fifo_topic_data(new, topic_struct[topic_struct->first_child_ind].data_size);
                     break;

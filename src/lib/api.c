@@ -193,7 +193,7 @@ eswb_rv_t eswb_get_topic_params (eswb_topic_descr_t td, topic_params_t *params) 
     return eswb_ctl(td, eswb_ctl_evq_get_params, params, sizeof(*params));
 }
 
-eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next2tid, topic_extract_t *info) {
+eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next2tid, /*topic_extract_t*/ void *info) {
     union {
         eswb_topic_id_t             tid;
         topic_extract_t             xtract;
