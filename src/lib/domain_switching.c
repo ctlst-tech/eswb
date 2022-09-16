@@ -209,6 +209,7 @@ eswb_rv_t ds_delete(const char *bus_path) {
         case eswb_inter_process:
             return eswb_e_not_supported;
 
+        case eswb_not_defined:
         case eswb_inter_thread:
         case eswb_non_synced:
             return local_bus_delete(bh);
