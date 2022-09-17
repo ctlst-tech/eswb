@@ -382,6 +382,122 @@ TEST_CASE("SDTL consecutive transfers") {
     sdtl_test_deinit(setup);
 }
 
+TEST_CASE("SDTL transfer reset") {
+    eswb_local_init(1);
+
+    eswb_rv_t erv;
+
+    erv = eswb_create("bus", eswb_inter_thread, 256);
+    REQUIRE(erv == eswb_e_ok);
+
+    auto lose_every_n_paket = GENERATE(0, 3, 5);
+    auto mtu = GENERATE(20, 37);
+    auto data2send = 512;
+    auto seq_pieces = 5;
+    auto reset_on_piece = GENERATE(1, 2, 3);
+
+    auto setup = SDTLtestSetup();
+    SDTLtestBridge testing_bridge;
+    sdtl_test_setup(setup, mtu, true, testing_bridge);
+
+    SECTION("Send " + std::to_string(data2send)
+                + " bytes via " + std::to_string(seq_pieces) + " pieces "
+                + pkt_losses_note(lose_every_n_paket)
+                + " MTU " + std::to_string(mtu)
+                + " reset cond on piece " + std::to_string(reset_on_piece)
+    ) {
+        size_t payload_per_pkt = setup.chh_up.channel->max_payload_size;
+
+        setup_bridge_losses(testing_bridge, lose_every_n_paket, 0);
+
+        uint8_t send_buffer[data2send];
+        uint8_t rcv_buffer[data2send];
+
+        // gen data
+        memset(rcv_buffer, 0, data2send);
+        gen_data(send_buffer, data2send);
+
+        // define transmitter
+        periodic_call_t sender = [&]() {
+            sdtl_rv_t rv;
+            uint32_t pkt_size_per_seq = data2send / seq_pieces;
+
+            uint32_t l = data2send;
+            uint32_t offset = 0;
+            size_t piece_num = 0;
+            bool had_reset = false;
+            do {
+                uint32_t bytes_per_seq = std::min(l, pkt_size_per_seq);
+                bool loop = true;
+                do {
+                    rv = sdtl_channel_send_data(&setup.chh_down, send_buffer + offset, bytes_per_seq);
+                    switch (rv) {
+                        case SDTL_OK:
+                            loop = false;
+                            break;
+
+                        case SDTL_REMOTE_RX_CANCELED:
+                        case SDTL_REMOTE_RX_NO_CLIENT:
+                            usleep(2000);
+                            break;
+
+                        default:
+                            usleep(2000);
+                            break;
+                    }
+                } while (loop);
+
+                thread_safe_failure_assert(rv == SDTL_OK, "rv != SDTL_OK");
+
+                offset += bytes_per_seq;
+                l -= bytes_per_seq;
+                piece_num++;
+
+                if (piece_num == reset_on_piece) {
+                    rv = sdtl_channel_send_cmd(&setup.chh_down, SDTL_PKT_CMD_CODE_RESET);
+                    CHECK(rv == SDTL_OK);
+                    had_reset = true;
+                }
+            } while (l > 0);
+        };
+
+        timed_caller sender_thread(sender, 50, "sending client");
+        pthread_setname_np("receiving client");
+
+        sdtl_rv_t rv;
+        sender_thread.start_once();
+        size_t offset = 0;
+        size_t piece_num = 0;
+        size_t reset_nums = 0;
+
+        do {
+            size_t br;
+            rv = sdtl_channel_recv_data(&setup.chh_up, rcv_buffer + offset, data2send - offset, &br);
+
+            if (rv == SDTL_APP_RESET) {
+                CHECK(piece_num == reset_on_piece);
+                rv = sdtl_channel_reset_condition(&setup.chh_up);
+                CHECK(rv == SDTL_OK);
+                reset_nums++;
+                continue;
+            }
+            piece_num++;
+
+            CHECK(rv == SDTL_OK);
+            offset += br;
+        } while(offset < data2send);
+
+        if (rv == SDTL_OK) {
+            CHECK(offset == data2send);
+            CHECK(memcmp(send_buffer, rcv_buffer, data2send) == 0);
+        }
+
+        sender_thread.stop();
+    }
+
+    testing_bridge.stop();
+    sdtl_test_deinit(setup);
+}
 
 
 
@@ -389,7 +505,7 @@ TEST_CASE("SDTL consecutive transfers") {
  *  TODO
  *   1. how to recover from sutiation, where we sender restarts in the middle of the transaction?
  *   2. how to recover from sutiation, where we receiver restarts in the middle of the transaction?
- *   3. sync MTU size?
+ *   3. sync MTU size? or at least check it. Different MTU will fail because of the fixed ESWB fifo size
  *   4. flush eswb fifo on starting accepting new frame
  *
  *  TODO new tests

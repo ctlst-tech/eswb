@@ -10,9 +10,6 @@ extern "C" {
 
 typedef enum sdtl_rv {
     SDTL_OK = 0,
-//    SDTL_OK_PACKET,
-//    SDTL_OK_SEQ_RESTART,
-//    SDTL_OK_LAST_PACKET,
     SDTL_TIMEDOUT,
     SDTL_OK_FIRST_PACKET,
     SDTL_OK_OMIT,
@@ -26,8 +23,6 @@ typedef enum sdtl_rv {
     SDTL_INVALID_FRAME_TYPE,
     SDTL_NO_CHANNEL_REMOTE,
     SDTL_NO_CHANNEL_LOCAL,
-    SDTL_MEDIA_ERR,
-    SDTL_MEDIA_EOF,
     SDTL_ESWB_ERR,
     SDTL_RX_FIFO_OVERFLOW,
     SDTL_NO_MEM,
@@ -35,6 +30,15 @@ typedef enum sdtl_rv {
     SDTL_INVALID_MTU,
     SDTL_NAMES_TOO_LONG,
     SDTL_SYS_ERR,
+    SDTL_INVALID_CH_TYPE,
+
+    SDTL_MEDIA_NO_ENTITY,
+    SDTL_MEDIA_NOT_SUPPORTED, // not supported call
+    SDTL_MEDIA_ERR,
+    SDTL_MEDIA_EOF,
+
+    SDTL_APP_CANCEL,  // cancel current operation (out-of-band notification)
+    SDTL_APP_RESET,   // reset application state  (out-of-band notification)
 } sdtl_rv_t;
 
 typedef enum sdtl_channel_type {
@@ -44,6 +48,7 @@ typedef enum sdtl_channel_type {
 
 #define SDTL_MTU_DEFAULT 256
 #define SDTL_MTU_MAX     1024
+
 
 typedef sdtl_rv_t (*media_open_t)(const char *path, void *params, void **h_rv);
 typedef sdtl_rv_t (*media_close_t)(void *h);
@@ -91,10 +96,11 @@ typedef uint16_t sdtl_seq_code_t;
 
 typedef enum sdtl_ack_code {
     SDTL_ACK_GOT_PKT = 0,
-    SDTL_ACK_NO_RECEIVER = 1,
-    SDTL_ACK_CANCELED = 2,
-    SDTL_ACK_PAYLOAD_TOO_BIG = 3,
-    SDTL_ACK_RESET = 4,
+    SDTL_ACK_GOT_CMD = 1,
+    SDTL_ACK_NO_RECEIVER = 2,
+    SDTL_ACK_CANCELED = 3,
+    SDTL_ACK_PAYLOAD_TOO_BIG = 4,
+    SDTL_ACK_OUT_BAND_EVENT = 5,
 } sdtl_ack_code_t;
 
 typedef enum sdtl_rx_state {
@@ -111,25 +117,25 @@ typedef struct sdtl_channel {
     uint32_t max_payload_size; // payload inside data_pkt
     sdtl_service_t *service;
 
-//    struct {
-//        sdtl_pkt_cnt_t next_pkt_cnt;
-//    } tx_state;
-//
-
 
 
 } sdtl_channel_t;
 
-typedef struct sdtl_channel_rx_state {
+#define SDTL_CHANNEL_STATE_COND_FLAG_APP_RESET (1 << 0)
+#define SDTL_CHANNEL_STATE_COND_FLAG_APP_CANCEL (1 << 1)
+
+typedef struct sdtl_channel_state {
 
     union {
-        uint32_t state;
-        sdtl_rx_state_t state_enum;
+        uint32_t rx_state;
+        sdtl_rx_state_t rx_state_enum;
     };
 
     sdtl_seq_code_t last_received_seq;
 
-} sdtl_channel_rx_state_t;
+    uint8_t condition_flags;
+
+} sdtl_channel_state_t;
 
 
 typedef struct sdtl_channel_handle {
@@ -156,11 +162,12 @@ typedef struct sdtl_channel_handle {
 
 #define SDTL_PKT_ATTR_PKT_TYPE_DATA (0)
 #define SDTL_PKT_ATTR_PKT_TYPE_ACK (1)
+#define SDTL_PKT_ATTR_PKT_TYPE_CMD (2)
 
 #define SDTL_PKT_ATTR_PKT_TYPE_MASK(t)  ((t) & 0x03)
-#define SDTL_PKT_ATTR_PKT_TYPE(t)       (SDTL_PKT_ATTR_PKT_TYPE_MASK(t) << 0)
+#define SDTL_PKT_ATTR_PKT_TYPE(t)       (SDTL_PKT_ATTR_PKT_TYPE_MASK(t))
 
-#define SDTL_PKT_ATTR_PKT_READ_TYPE(__attr) SDTL_PKT_ATTR_PKT_TYPE_MASK((__attr))
+#define SDTL_PKT_ATTR_PKT_GET_TYPE(__attr) SDTL_PKT_ATTR_PKT_TYPE_MASK((__attr))
 
 
 // this structure goes over physical
@@ -187,7 +194,6 @@ typedef struct __attribute__((packed)) sdtl_data_sub_header {
 typedef struct __attribute__((packed)) sdtl_ack_sub_header {
     sdtl_pkt_cnt_t cnt;
     uint32_t code;
-
 } sdtl_ack_sub_header_t;
 
 
@@ -201,6 +207,14 @@ typedef struct __attribute__((packed)) sdtl_ack_header {
     sdtl_base_header_t base;
     sdtl_ack_sub_header_t sub;
 } sdtl_ack_header_t;
+
+#define SDTL_PKT_CMD_CODE_CANCEL 0x10
+#define SDTL_PKT_CMD_CODE_RESET  0x11
+
+typedef struct __attribute__((packed)) sdtl_cmd_header {
+    sdtl_base_header_t base;
+    uint8_t cmd_code;
+} sdtl_cmd_header_t;
 
 void sdtl_debug_msg(const char *fn, const char *txt, ...);
 
@@ -237,6 +251,8 @@ sdtl_rv_t sdtl_channel_recv_arm_timeout(sdtl_channel_handle_t *chh, uint32_t tim
 
 sdtl_rv_t sdtl_channel_recv_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, size_t *br);
 sdtl_rv_t sdtl_channel_send_data(sdtl_channel_handle_t *chh, void *d, uint32_t l);
+sdtl_rv_t sdtl_channel_send_cmd(sdtl_channel_handle_t *chh, uint8_t code);
+sdtl_rv_t sdtl_channel_reset_condition(sdtl_channel_handle_t *chh);
 
 #ifdef __cplusplus
 }

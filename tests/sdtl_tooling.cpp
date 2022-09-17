@@ -24,8 +24,8 @@ sdtl_rv_t sdtl_test_media_open(const char *path, void *params, void **h_rv) {
 }
 
 sdtl_rv_t sdtl_test_media_close(void *h) {
-    // TODO
-    return SDTL_MEDIA_ERR;
+
+    return SDTL_MEDIA_NOT_SUPPORTED;
 }
 
 sdtl_rv_t sdtl_test_media_read(void *h, void *data, size_t l, size_t *lr) {

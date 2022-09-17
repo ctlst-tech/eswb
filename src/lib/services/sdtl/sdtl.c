@@ -10,8 +10,11 @@
 #include "eswb/api.h"
 #include "eswb/topic_proclaiming_tree.h"
 
-static sdtl_rv_t set_rx_state(sdtl_channel_handle_t *chh, sdtl_rx_state_t state, sdtl_seq_code_t code);
-static sdtl_rv_t read_rx_state(sdtl_channel_handle_t *chh, sdtl_channel_rx_state_t *rx_state);
+static sdtl_rv_t ch_state_set_rx(sdtl_channel_handle_t *chh, sdtl_rx_state_t rx_state, sdtl_seq_code_t code);
+static sdtl_rv_t ch_state_read(sdtl_channel_handle_t *chh, sdtl_channel_state_t *rx_state);
+static sdtl_rv_t ch_state_alter_cond_flags(sdtl_channel_handle_t *chh, uint8_t cond_flags, int set);
+static sdtl_rv_t ch_state_return_condition(sdtl_channel_handle_t *chh);
+
 static sdtl_rv_t send_ack(sdtl_channel_handle_t *chh, uint8_t pkt_cnt, uint32_t ack_code);
 
 void sdtl_debug_msg(const char *fn, const char *txt, ...) {
@@ -69,35 +72,34 @@ void *sdtl_alloc(size_t s) {
 }
 
 static sdtl_rv_t process_data(sdtl_channel_handle_t *chh, sdtl_data_sub_header_t *data_header) {
-    // TODO check state
-
     eswb_rv_t erv = eswb_fifo_push(chh->data_td, data_header);
-
     return erv == eswb_e_ok ? SDTL_OK : SDTL_ESWB_ERR;
 }
 
 static sdtl_rv_t process_ack(sdtl_channel_handle_t *chh, sdtl_ack_sub_header_t *ack_header) {
-    // TODO check state
-
     eswb_rv_t erv = eswb_fifo_push(chh->ack_td, ack_header);
-
     return erv == eswb_e_ok ? SDTL_OK : SDTL_ESWB_ERR;
 }
 
 static sdtl_rv_t validate_base_header(sdtl_base_header_t *hdr, uint8_t pkt_type, size_t data_len) {
     switch (pkt_type) {
         case SDTL_PKT_ATTR_PKT_TYPE_DATA:
-            ;
-            sdtl_data_header_t *dhdr = (sdtl_data_header_t *) hdr;
+            ; sdtl_data_header_t *dhdr = (sdtl_data_header_t *) hdr;
             if (dhdr->sub.payload_size != data_len - sizeof(*dhdr)) {
                 return SDTL_NON_CONSIST_FRM_LEN;
             }
             break;
 
         case SDTL_PKT_ATTR_PKT_TYPE_ACK:
-            ;
-            sdtl_ack_header_t *ahdr = (sdtl_ack_header_t *) hdr;
+            ; sdtl_ack_header_t *ahdr = (sdtl_ack_header_t *) hdr;
             if (data_len != sizeof(*ahdr)) {
+                return SDTL_NON_CONSIST_FRM_LEN;
+            }
+            break;
+
+        case SDTL_PKT_ATTR_PKT_TYPE_CMD:
+            ; sdtl_cmd_header_t *chdr = (sdtl_cmd_header_t *) hdr;
+            if (data_len != sizeof(*chdr)) {
                 return SDTL_NON_CONSIST_FRM_LEN;
             }
             break;
@@ -113,9 +115,9 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
     sdtl_rv_t rv;
     sdtl_base_header_t *base_header = (sdtl_base_header_t *) data;
 
-    uint8_t pkt_type = SDTL_PKT_ATTR_PKT_READ_TYPE(base_header->attr);
+    uint8_t pkt_type = SDTL_PKT_ATTR_PKT_GET_TYPE(base_header->attr);
 
-    sdtl_channel_rx_state_t rx_state;
+    sdtl_channel_state_t rx_state;
 
     // validate packet
     rv = validate_base_header(base_header, pkt_type, data_len);
@@ -132,27 +134,27 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
     }
 
     if (check_rel(chh)) {
-        read_rx_state(chh, &rx_state);
+        ch_state_read(chh, &rx_state);
     } else {
-        rx_state.state = SDTL_RX_STATE_WAIT_DATA;
+        rx_state.rx_state = SDTL_RX_STATE_WAIT_DATA;
     }
 
 #   define HAS_SAME_PARITY(__hdr,__curr_is_odd) (((__hdr)->base.attr & SDTL_PKT_ATTR_ODD_FLAG) && (__curr_is_odd))
+    sdtl_data_header_t *dhdr = (sdtl_data_header_t *) base_header;
+    sdtl_ack_header_t *ahdr = (sdtl_ack_header_t *) base_header;
+    sdtl_cmd_header_t *chdr = (sdtl_cmd_header_t *) base_header;
 
     switch (pkt_type) {
         case SDTL_PKT_ATTR_PKT_TYPE_DATA:
-            ;
-            sdtl_data_header_t *dhdr = (sdtl_data_header_t *) base_header;
-
             if ((dhdr->sub.flags & (SDTL_PKT_DATA_FLAG_LAST_PKT)) &&
                 (dhdr->sub.seq_code == rx_state.last_received_seq)) {
                 sdtl_dbg_msg("Got rx state: ack trailing paket from prior seq 0x%04X", rx_state.last_received_seq);
 
 //                rx_state.state = SDTL_RX_STATE_SEQ_DONE; // just a local copy of the state
-                rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_GOT_PKT);
+                send_ack(chh, dhdr->sub.cnt, SDTL_ACK_GOT_PKT);
             }
 
-            switch (rx_state.state) {
+            switch (rx_state.rx_state) {
                 default:
                 case SDTL_RX_STATE_RCV_CANCELED:
                     rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_CANCELED);
@@ -165,11 +167,6 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
                     sdtl_dbg_msg("Got rx state: SDTL_RX_STATE_IDLE");
                     break;
 
-//                case SDTL_RX_STATE_SEQ_DONE:
-//                    rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_GOT_PKT);
-//                    sdtl_dbg_msg("Got rx state: SDTL_RX_STATE_SEQ_DONE");
-//                    break;
-
                 case SDTL_RX_STATE_WAIT_DATA:
                     rv = process_data(chh, &dhdr->sub);
                     sdtl_dbg_msg("Got pkt #%d with %d bytes", dhdr->sub.cnt, dhdr->sub.payload_size);
@@ -177,11 +174,33 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
             }
             break;
 
+
         case SDTL_PKT_ATTR_PKT_TYPE_ACK:
-            ;
-            sdtl_ack_header_t *ahdr = (sdtl_ack_header_t *) base_header;
             rv = process_ack(chh, &ahdr->sub);
             sdtl_dbg_msg("Got ack for pkt #%d", ahdr->sub.cnt);
+            break;
+
+        case SDTL_PKT_ATTR_PKT_TYPE_CMD:
+            if (check_rel(chh)) { ;
+                uint8_t flags = 0;
+                if (chdr->cmd_code == SDTL_PKT_CMD_CODE_RESET) {
+                    flags |= SDTL_CHANNEL_STATE_COND_FLAG_APP_RESET;
+                }
+                if (chdr->cmd_code == SDTL_PKT_CMD_CODE_CANCEL) {
+                    flags |= SDTL_CHANNEL_STATE_COND_FLAG_APP_CANCEL;
+                }
+                ch_state_alter_cond_flags(chh, flags, 1);
+                // fake data pkt
+                memset(&dhdr->sub, 0, sizeof(dhdr->sub));
+                // convention is : dhdr->sub.payload_size == 0;
+                process_data(chh, &dhdr->sub);
+
+                // fake ack
+                ahdr->sub.code = SDTL_ACK_OUT_BAND_EVENT;
+                process_ack(chh, &ahdr->sub);
+
+                send_ack(chh, dhdr->sub.cnt, SDTL_ACK_GOT_CMD);
+            }
             break;
 
         default:
@@ -275,9 +294,9 @@ static void print_debug_data(uint8_t *rx_buf, size_t rx_buf_lng) {
 
 sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
     char thread_name[16];
-#define SDTL_RX_THREAD_NAME_PREFIX "sdtlrx+"
+#define SDTL_RX_THREAD_NAME_PREFIX "sdtl_rx_"
     strcpy(thread_name, SDTL_RX_THREAD_NAME_PREFIX);
-    strncat(thread_name, s->service_name, sizeof(thread_name) - 1);
+    strncat(thread_name, s->service_name, sizeof(thread_name) - sizeof(SDTL_RX_THREAD_NAME_PREFIX) - 1);
 
     eswb_set_thread_name(thread_name);
 
@@ -341,19 +360,26 @@ static sdtl_rv_t
 send_data(sdtl_channel_handle_t *chh, uint8_t pkt_num, uint8_t flags, sdtl_seq_code_t seq_code, void *d, uint32_t l) {
     sdtl_data_header_t hdr;
 
-
     hdr.base.attr = SDTL_PKT_ATTR_PKT_TYPE(SDTL_PKT_ATTR_PKT_TYPE_DATA);
-
-    hdr.sub.seq_code = seq_code;
-
     hdr.base.ch_id = chh->channel->cfg->id;
 
-    // TODO handle states properly
+    hdr.sub.seq_code = seq_code;
     hdr.sub.cnt = pkt_num;
     hdr.sub.payload_size = l;
     hdr.sub.flags = flags;
 
     return media_tx(chh, &hdr, sizeof(hdr), d, l);
+}
+
+static sdtl_rv_t send_cmd(sdtl_channel_handle_t *chh, uint8_t cmd_code) {
+    sdtl_cmd_header_t hdr;
+
+    hdr.base.attr = SDTL_PKT_ATTR_PKT_TYPE(SDTL_PKT_ATTR_PKT_TYPE_CMD);
+    hdr.base.ch_id = chh->channel->cfg->id;
+
+    hdr.cmd_code = cmd_code;
+
+    return media_tx(chh, &hdr, sizeof(hdr), NULL, 0);
 }
 
 
@@ -368,6 +394,13 @@ static sdtl_rv_t send_ack(sdtl_channel_handle_t *chh, uint8_t pkt_cnt, sdtl_ack_
     hdr.sub.cnt = pkt_cnt;
 
     return media_tx(chh, &hdr, sizeof(hdr), NULL, 0);
+}
+
+static sdtl_rv_t
+wait_ack_reset(sdtl_channel_handle_t *chh) {
+    eswb_rv_t rv;
+    rv = eswb_fifo_flush(chh->ack_td);
+    return rv == eswb_e_ok ? SDTL_OK : SDTL_ESWB_ERR;
 }
 
 
@@ -385,7 +418,11 @@ static sdtl_rv_t wait_ack(sdtl_channel_handle_t *chh, uint32_t timeout_us, sdtl_
 
     switch (erv) {
         case eswb_e_ok:
-            rv = SDTL_OK;
+            if (ack_sh.code == SDTL_ACK_OUT_BAND_EVENT) {
+                rv = ch_state_return_condition(chh);
+            } else {
+                rv = SDTL_OK;
+            }
             break;
 
         case eswb_e_timedout:
@@ -402,6 +439,14 @@ static sdtl_rv_t wait_ack(sdtl_channel_handle_t *chh, uint32_t timeout_us, sdtl_
     return rv;
 }
 
+static sdtl_rv_t
+wait_data_reset(sdtl_channel_handle_t *chh) {
+    eswb_rv_t rv;
+
+    rv = eswb_fifo_flush(chh->data_td);
+
+    return rv == eswb_e_ok ? SDTL_OK : SDTL_ESWB_ERR;
+}
 
 static sdtl_rv_t
 wait_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, sdtl_data_sub_header_t **dsh_rv, int prev_pkt_num) {
@@ -418,6 +463,10 @@ wait_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, sdtl_data_sub_header_
 
     switch (rv) {
         case eswb_e_ok:
+            if (dsh->payload_size == 0) {
+                // out of band event
+                return ch_state_return_condition(chh);
+            }
             if (prev_pkt_num != -1) {
                 int dc = dsh->cnt - (prev_pkt_num % 256);
                 if (dc < 0) {
@@ -496,12 +545,23 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
 
     sdtl_dbg_msg("================= call ================= (size == %d)", l);
 
+    if (rel) {
+        wait_ack_reset(chh);
+    }
+
     do {
         dsize = my_min(chh->channel->max_payload_size, l);
 
         flags|= dsize == l ? SDTL_PKT_DATA_FLAG_LAST_PKT : 0;
 
         do {
+            if (rel) {
+                rv = ch_state_return_condition(chh);
+                if (rv != SDTL_OK) {
+                    sdtl_dbg_msg("Out of band event, return (on tranfer)");
+                    return rv;
+                }
+            }
             rv = send_data(chh, pktn_in_seq, flags, seq_code, d + offset, dsize);
             sdtl_dbg_msg("Send %d bytes in pkt #%d in seq 0x%04X", dsize, pktn_in_seq, seq_code);
 
@@ -535,6 +595,11 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
                         sdtl_dbg_msg("Ack timeout");
                         break;
 
+                    case SDTL_APP_RESET:
+                    case SDTL_APP_CANCEL:
+                        sdtl_dbg_msg("Out of band event, return (on ack)");
+                        return rv;
+
                     default:
                         // error
                         return rv;
@@ -555,15 +620,68 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
     return rv;
 }
 
-static sdtl_rv_t set_rx_state(sdtl_channel_handle_t *chh, sdtl_rx_state_t state, sdtl_seq_code_t code) {
+static sdtl_rv_t channel_send_cmd(sdtl_channel_handle_t *chh, uint8_t cmd_code) {
+
+    sdtl_rv_t rv;
+    int loop = -1;
+    // only for reliable channels
+    if (!check_rel(chh)) {
+        return SDTL_INVALID_CH_TYPE;
+    }
+
+    sdtl_dbg_msg("================= call ================= (cmd == 0x%02)", cmd_code);
+
+    sdtl_ack_sub_header_t ack_sh;
+    do {
+        rv = send_cmd(chh, cmd_code);
+        if (rv != SDTL_OK) {
+            return rv;
+        }
+
+        // TODO timeout value must be calculated
+        rv = wait_ack(chh, 100000, &ack_sh);
+
+        switch (rv) {
+            case SDTL_APP_RESET:
+            case SDTL_APP_CANCEL:
+                loop = 0;
+                rv = SDTL_OK;
+                break;
+
+            case SDTL_OK:
+                if (ack_sh.code == SDTL_ACK_GOT_CMD) {
+                    loop = 0;
+                }
+                break;
+
+            case SDTL_TIMEDOUT:
+                sdtl_dbg_msg("Cmd ack timeout");
+                break;
+
+            default:
+                loop = 0;
+                break;
+
+        }
+
+    } while (loop);
+
+    return rv;
+}
+
+static sdtl_rv_t ch_state_set_rx(sdtl_channel_handle_t *chh, sdtl_rx_state_t rx_state, sdtl_seq_code_t code) {
     eswb_rv_t erv;
+    sdtl_channel_state_t state;
 
-    sdtl_channel_rx_state_t rx_state = {
-            .state = state,
-            .last_received_seq = code,
-    };
+    sdtl_rv_t rv = ch_state_read(chh, &state);
+    if (rv != SDTL_OK) {
+        return rv;
+    }
 
-    erv = eswb_update_topic(chh->rx_state_td, &rx_state);
+    state.rx_state = rx_state;
+    state.last_received_seq = code;
+
+    erv = eswb_update_topic(chh->rx_state_td, &state);
     if (erv != eswb_e_ok) {
         return SDTL_ESWB_ERR;
     }
@@ -571,7 +689,32 @@ static sdtl_rv_t set_rx_state(sdtl_channel_handle_t *chh, sdtl_rx_state_t state,
     return SDTL_OK;
 }
 
-static sdtl_rv_t read_rx_state(sdtl_channel_handle_t *chh, sdtl_channel_rx_state_t *rx_state) {
+
+static sdtl_rv_t ch_state_alter_cond_flags(sdtl_channel_handle_t *chh, uint8_t cond_flags, int set) {
+    eswb_rv_t erv;
+    sdtl_channel_state_t state;
+
+    sdtl_rv_t rv = ch_state_read(chh, &state);
+    if (rv != SDTL_OK) {
+        return rv;
+    }
+
+    if (set) {
+        state.condition_flags |= cond_flags;
+    } else {
+        state.condition_flags &= ~cond_flags;
+    }
+
+    erv = eswb_update_topic(chh->rx_state_td, &state);
+    if (erv != eswb_e_ok) {
+        return SDTL_ESWB_ERR;
+    }
+
+    return SDTL_OK;
+}
+
+
+static sdtl_rv_t ch_state_read(sdtl_channel_handle_t *chh, sdtl_channel_state_t *rx_state) {
     eswb_rv_t erv;
     erv = eswb_read(chh->rx_state_td, rx_state);
     if (erv != eswb_e_ok) {
@@ -581,6 +724,26 @@ static sdtl_rv_t read_rx_state(sdtl_channel_handle_t *chh, sdtl_channel_rx_state
     return SDTL_OK;
 }
 
+static sdtl_rv_t ch_state_return_condition(sdtl_channel_handle_t *chh) {
+    sdtl_rv_t rv;
+
+    // TODO create a mask to be able ignore some of the conditions
+
+    sdtl_channel_state_t rx_state;
+
+    rv = ch_state_read(chh, &rx_state);
+    if (rv != SDTL_OK) {
+        return rv;
+    }
+
+    if (rx_state.condition_flags & SDTL_CHANNEL_STATE_COND_FLAG_APP_RESET) {
+        return SDTL_APP_RESET;
+    } else if (rx_state.condition_flags & SDTL_CHANNEL_STATE_COND_FLAG_APP_CANCEL) {
+        return SDTL_APP_CANCEL;
+    }
+
+    return SDTL_OK;
+}
 
 static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d, size_t s, size_t *br) {
 
@@ -605,13 +768,13 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
     int loop = -1;
 
     if (rel) {
-        sdtl_channel_rx_state_t rx_state;
-        rv_state = read_rx_state(chh, &rx_state);
+        sdtl_channel_state_t rx_state;
+        rv_state = ch_state_read(chh, &rx_state);
         if (rv_state != SDTL_OK) {
             return rv_state;
         }
 
-        rv_state = set_rx_state(chh, SDTL_RX_STATE_WAIT_DATA, rx_state.last_received_seq);
+        rv_state = ch_state_set_rx(chh, SDTL_RX_STATE_WAIT_DATA, rx_state.last_received_seq);
         if (rv_state != SDTL_OK) {
             return rv_state;
         }
@@ -620,15 +783,35 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
 
     sdtl_dbg_msg("================= call ================= (size == %d)", s);
 
+#   define BREAK_LOOP(__rv) rv = __rv; loop = 0
+
+    if (rel) {
+        wait_data_reset(chh);
+    }
 
     do {
+        if (rel) {
+            rv = ch_state_return_condition(chh);
+            if (rv != SDTL_OK) {
+                sdtl_dbg_msg("Out of band event, return (before waiting data)");
+                break;
+            }
+        }
         rv_rcv = wait_data(chh, d + offset, l, &dsh, prev_pkt_num);
 
         switch (rv_rcv) {
             default:
+                BREAK_LOOP(rv_rcv);
+                break;
+
+            case SDTL_APP_CANCEL:
+            case SDTL_APP_RESET:
+                BREAK_LOOP(rv_rcv);
+                sdtl_dbg_msg("Out of band event, return (on wait_data)");
+                break;
+
             case SDTL_RX_BUF_SMALL:
-                rv = rv_rcv;
-                loop = 0;
+                BREAK_LOOP(rv_rcv);
                 sdtl_dbg_msg("Buffer too small (l==%d against payload_size == %d)", l, dsh->payload_size);
                 break;
 
@@ -648,11 +831,13 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
                 prev_pkt_num = 0;
                 // no break here
 
-
             case SDTL_OK:
                 if (sequence_started) {
                     if (rel) {
                         rv_ack = send_ack(chh, dsh->cnt, SDTL_ACK_GOT_PKT);
+                        if (rv_ack != SDTL_OK) {
+                            sdtl_dbg_msg("Got send_ack err: %d", rv_ack);
+                        }
                     } else {
                         // no action required
                     }
@@ -697,9 +882,9 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
 
     if (rel) {
         if (rv == SDTL_OK) {
-            set_rx_state(chh, SDTL_RX_STATE_SEQ_DONE, dsh->seq_code);
+            ch_state_set_rx(chh, SDTL_RX_STATE_SEQ_DONE, dsh->seq_code);
         } else {
-            set_rx_state(chh, SDTL_RX_STATE_RCV_CANCELED, 0);
+            ch_state_set_rx(chh, SDTL_RX_STATE_RCV_CANCELED, 0);
         }
     }
 
@@ -812,7 +997,7 @@ sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *me
             return rv;
         }
         if (check_rel(&s->channel_handles[i])) {
-            set_rx_state(&s->channel_handles[i], SDTL_RX_STATE_IDLE, 0);
+            ch_state_set_rx(&s->channel_handles[i], SDTL_RX_STATE_IDLE, 0);
         }
     }
 
@@ -908,11 +1093,11 @@ sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg) {
             return SDTL_ESWB_ERR;
         }
 
-        sdtl_channel_rx_state_t rx_state;
+        sdtl_channel_state_t rx_state;
 
         TOPIC_TREE_CONTEXT_LOCAL_RESET(cntx);
         topic_proclaiming_tree_t *rx_state_root = usr_topic_set_struct(cntx, rx_state, CHANNEL_RX_STATE_STRUCT_NAME);
-        usr_topic_add_struct_child(cntx, rx_state_root, sdtl_channel_rx_state_t, state, "state", tt_uint32);
+        usr_topic_add_struct_child(cntx, rx_state_root, sdtl_channel_state_t, rx_state, "state", tt_uint32);
         erv = eswb_proclaim_tree_by_path(path, rx_state_root, cntx->t_num, NULL);
         if (erv != eswb_e_ok) {
             return SDTL_ESWB_ERR;
@@ -1013,4 +1198,13 @@ sdtl_rv_t sdtl_channel_recv_data(sdtl_channel_handle_t *chh, void *d, uint32_t l
 sdtl_rv_t sdtl_channel_send_data(sdtl_channel_handle_t *chh, void *d, uint32_t l) {
     int rel = check_rel(chh);
     return channel_send_data(chh, rel, d, l);
+}
+
+
+sdtl_rv_t sdtl_channel_send_cmd(sdtl_channel_handle_t *chh, uint8_t code) {
+    return channel_send_cmd(chh, code);
+}
+
+sdtl_rv_t sdtl_channel_reset_condition(sdtl_channel_handle_t *chh) {
+    return ch_state_alter_cond_flags(chh, 0xFF, 0);
 }
