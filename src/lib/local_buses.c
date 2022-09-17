@@ -375,6 +375,9 @@ eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
     }
 }
 
+eswb_rv_t local_fifo_flush(topic_local_index_t *li) {
+    return topic_io_fifo_flush(li->t, &li->rcvr_state);
+}
 
 eswb_rv_t local_init_fifo_receiver(eswb_topic_descr_t td) {
     topic_local_index_t *li = &local_td_index[td];
@@ -493,6 +496,9 @@ eswb_rv_t local_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int siz
 
         case eswb_ctl_get_next_proclaiming_info:
             return local_bus_get_next_topic_info(li, *((eswb_topic_id_t *) d), (topic_extract_t *) d);
+
+        case eswb_ctl_fifo_flush:
+            return local_fifo_flush(li);
 
         case eswb_ctl_arm_timeout:
             return local_arm_timeout(li, *((uint32_t *)d));

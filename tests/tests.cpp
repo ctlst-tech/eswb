@@ -402,6 +402,33 @@ TEST_CASE("FIFO | nsb", "[unit]") {
             }
         }
     }
+
+    SECTION("FIFO flush" ) {
+        int num_op_pushs = GENERATE(1, 4, 8, 12);
+
+        SECTION(std::to_string(num_op_pushs) + std::string(" pushes")) {
+            for (int push = 0; push < num_op_pushs; push++) {
+                uint32_t data_snd = push;
+                uint32_t data_rcv;
+                rv = eswb_fifo_push(snd_td, &data_snd);
+                REQUIRE(rv == eswb_e_ok);
+
+                rv = eswb_fifo_flush(rcv_td);
+                REQUIRE(rv == eswb_e_ok);
+
+                rv = eswb_fifo_pop(rcv_td, &data_rcv);
+                REQUIRE(rv == eswb_e_no_update);
+
+                // push one more time  and check that it is still working
+                rv = eswb_fifo_push(snd_td, &data_snd);
+                REQUIRE(rv == eswb_e_ok);
+
+                rv = eswb_fifo_pop(rcv_td, &data_rcv);
+                REQUIRE(rv == eswb_e_ok);
+                REQUIRE(data_rcv == data_snd);
+            }
+        }
+    }
 }
 
 

@@ -27,11 +27,17 @@ typedef enum {
     eqrb_media_err,
     eqrb_media_stop,
     eqrb_media_invarg,
+    eqrb_media_reset_cmd,
 
     eqrb_server_already_launched,
 
     eqrb_rv_rx_eswb_fatal_err
 } eqrb_rv_t;
+
+typedef enum {
+    eqrb_cmd_reset_remote,
+    eqrb_cmd_reset_local_state,
+} eqrb_cmd_t;
 
 struct eqrb_client_handle;
 

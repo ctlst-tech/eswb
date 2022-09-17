@@ -75,6 +75,7 @@ typedef enum {
     eswb_ctl_evq_get_params,
     eswb_ctl_get_topic_path,
     eswb_ctl_get_next_proclaiming_info,
+    eswb_ctl_fifo_flush,
     eswb_ctl_arm_timeout
 } eswb_ctl_t;
 

@@ -165,8 +165,17 @@ eswb_rv_t eswb_fifo_push(eswb_topic_descr_t td, void *data);
  * @param data pointer to data to save popped element; must point to the data with a size equal to the proclaimed
  * fifo's element size
  * @return eswb_e_ok on success
+ * eswb_e_no_update if FIFO is created on NSB bus type and there are no elements in queue
  */
 eswb_rv_t eswb_fifo_pop(eswb_topic_descr_t td, void *data);
+
+/**
+ * Flush fifo for specified td
+ * @param td fifo's topic descriptor
+ * @return eswb_e_ok on success
+ */
+eswb_rv_t eswb_fifo_flush(eswb_topic_descr_t td);
+
 
 /**
  * Check if there was an update since the last call and pop it if so

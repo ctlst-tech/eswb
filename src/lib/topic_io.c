@@ -97,10 +97,27 @@ static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, v
 }
 
 
+static eswb_rv_t fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state) {
+    eswb_rv_t rv = eswb_e_ok;
+
+    rcvr_state->lap = t->fifo_ext->state.lap_num;
+    rcvr_state->tail = t->fifo_ext->state.head;
+
+    return rv;
+}
+
+
 eswb_rv_t
 topic_io_fifo_pop(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int synced, int do_wait, uint32_t timeout_us) {
     if (synced) sync_take(t->sync);
     eswb_rv_t rv = fifo_wait_and_read(t, rcvr_state, data, synced, do_wait, timeout_us);
+    if (synced) sync_give(t->sync);
+    return rv;
+}
+
+eswb_rv_t topic_io_fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state) {
+    if (synced) sync_take(t->sync);
+    eswb_rv_t rv = fifo_flush(t, rcvr_state);
     if (synced) sync_give(t->sync);
     return rv;
 }

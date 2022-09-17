@@ -234,6 +234,10 @@ eswb_rv_t eswb_fifo_pop(eswb_topic_descr_t td, void *data) {
     return ds_fifo_pop(td, data, 1);
 }
 
+eswb_rv_t eswb_fifo_flush(eswb_topic_descr_t td) {
+    return ds_ctl(td, eswb_ctl_fifo_flush, NULL, 0);
+}
+
 eswb_rv_t eswb_fifo_try_pop(eswb_topic_descr_t td, void *data) {
     return ds_fifo_pop(td, data, 0);
 }
