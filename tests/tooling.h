@@ -236,6 +236,10 @@ class ThreadSafeQueue {
     pthread_cond_t cond;
     bool stop_mark;
 
+    static void unlock_mutex (void *m) {
+        pthread_mutex_unlock((pthread_mutex_t *)m);
+    }
+
     void lock() {
         pthread_mutex_lock(&mutex);
     }
@@ -295,11 +299,13 @@ public:
             return nullptr;
         }
 
+        T* rv;
+        pthread_cleanup_push(unlock_mutex, &mutex);
         lock();
         while (!stop_mark && queue.empty() && wait());
-        T* rv;
         rv = !stop_mark ? queue.front() : nullptr;
         unlock();
+        pthread_cleanup_pop(0);
 
         return rv;
     }
@@ -308,6 +314,12 @@ public:
         lock();
         stop_mark = true;
         broadcast();
+        unlock();
+    }
+
+    void start() {
+        lock();
+        stop_mark = true;
         unlock();
     }
 

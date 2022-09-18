@@ -103,6 +103,11 @@ public:
         downstream.stop();
     }
 
+    void start() {
+        upstream.start();
+        downstream.start();
+    }
+
     void write(bool up_agent, void *d, size_t s) {
         int do_write = -1;
 

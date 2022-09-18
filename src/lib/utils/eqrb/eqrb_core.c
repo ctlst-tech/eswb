@@ -42,7 +42,6 @@ typedef enum {
     EQRB_CMD_CLIENT_REQ_STREAM = 1,
     EQRB_CMD_SERVER_EVENT = 2,
     EQRB_CMD_SERVER_TOPIC = 3,
-    EQRB_CMD_SERVER_RESET = 4,
 } eqrb_cmd_code_t;
 
 typedef struct  __attribute__((packed)) eqrb_interaction_header {
@@ -89,6 +88,8 @@ void *eqrb_server_thread(void *p) {
 
     eswb_rv_t erv;
 
+    eswb_set_thread_name(__func__);
+
 #   define EVENT_BUF_SIZE 1024
     uint8_t *event_buf = eqrb_alloc(EVENT_BUF_SIZE);
     eqrb_interaction_header_t *hdr = (eqrb_interaction_header_t *) event_buf;
@@ -104,7 +105,6 @@ void *eqrb_server_thread(void *p) {
 
     eqrb_bus_sync_state_t bus_sync_state;
 
-
     device_descr_t dd;
     size_t br;
 
@@ -112,9 +112,17 @@ void *eqrb_server_thread(void *p) {
     int mode_do_initial_sync = 0;
     int mode_do_stream = 0;
 
+#define TRANSITION_WAIT_CMD() mode_wait_cmd = -1; mode_do_initial_sync = 0; mode_do_stream = 0
+
     rv = dev->connect(h->h.connectivity_params, &dd);
     if (rv != eqrb_rv_ok) {
         eqrb_dbg_msg("device connection error: %d", rv);
+        return NULL;
+    }
+
+    rv = dev->command(dd, eqrb_cmd_reset_remote);
+    if (rv != eqrb_rv_ok) {
+        eqrb_dbg_msg("device command eqrb_cmd_reset_remote error: %d", rv);
         return NULL;
     }
 
@@ -122,10 +130,19 @@ void *eqrb_server_thread(void *p) {
         while(mode_wait_cmd) {
             eqrb_dbg_msg("Waiting client command");
             rv = dev->recv(dd, hdr, EVENT_BUF_SIZE, &br);
-            if (rv != eqrb_rv_ok) {
-                eqrb_dbg_msg("device recv error: %d", rv);
-                return NULL;
+            switch (rv) {
+                case eqrb_rv_ok:
+                    break;
+
+                case eqrb_media_reset_cmd:
+                    dev->command(dd, eqrb_cmd_reset_local_state);
+                    continue;
+
+                default:
+                    eqrb_dbg_msg("device recv error: %d", rv);
+                    return NULL;
             }
+
             switch (hdr->msg_code) {
                 case EQRB_CMD_CLIENT_REQ_SYNC:
                     mode_do_initial_sync = -1;
@@ -147,6 +164,7 @@ void *eqrb_server_thread(void *p) {
 
         if (mode_do_initial_sync) {
             eqrb_dbg_msg("Do initial topics sync data");
+            memset(&bus_sync_state, 0, sizeof(bus_sync_state));
         }
 
         while (mode_do_initial_sync) {
@@ -163,7 +181,20 @@ void *eqrb_server_thread(void *p) {
                 // insted of topic_tree_elem structure topic_extract_t is extracted with trailing additional info
                 bus_sync_state.current_tid = ((topic_extract_t *)&topic_tree_elem[topics_num-1])->info.topic_id;
 
-                send_topic(dd, dev, hdr, topic_info->parent_id, event, topics_num);
+                rv = send_topic(dd, dev, hdr, topic_info->parent_id, event, topics_num);
+                switch (rv) {
+                    case eqrb_rv_ok:
+                        break;
+
+                    case eqrb_media_reset_cmd:
+                        TRANSITION_WAIT_CMD();
+                        eqrb_dbg_msg("Server reset requested by client");
+                        break;
+
+                    default:
+                        eqrb_dbg_msg("device recv error: %d", rv);
+                        break;
+                }
             } else {
                 eqrb_dbg_msg("Done sending bus state");
                 mode_do_initial_sync = 0;
@@ -175,26 +206,28 @@ void *eqrb_server_thread(void *p) {
 
         if (mode_do_stream) {
             eqrb_dbg_msg("Streaming data");
-        }
-
-        while (mode_do_stream) {
-            // TODO arm timeout
-            erv = eswb_event_queue_pop(h->evq_td, event);
-            if (erv != eswb_e_ok) {
-                // TODO BREAK_LOOP_AND_RETURN(eqrb_rv_rx_eswb_fatal_err);
-                break;
-            }
-
-            // TODO detect client events (timeout, stop, cancel, and command to restart)
-            rv = send_msg(dd, dev, EQRB_CMD_SERVER_EVENT, hdr, event);
-            switch (rv) {
-                case eqrb_rv_ok:
+            do {
+                // TODO arm timeout
+                erv = eswb_event_queue_pop(h->evq_td, event);
+                if (erv != eswb_e_ok) {
+                    // TODO BREAK_LOOP_AND_RETURN(eqrb_rv_rx_eswb_fatal_err);
                     break;
-                // TODO handle restart situations: transfer cancel, reset
-                default:
-                    eqrb_dbg_msg("send_msg unhandled error: %d", rv);
-                    break;
-            }
+                }
+
+                rv = send_msg(dd, dev, EQRB_CMD_SERVER_EVENT, hdr, event);
+                switch (rv) {
+                    case eqrb_rv_ok:
+                        break;
+
+                    case eqrb_media_reset_cmd:
+                        TRANSITION_WAIT_CMD();
+                        break;
+
+                    default:
+                        eqrb_dbg_msg("send_msg unhandled error: %d", rv);
+                        break;
+                }
+            } while (mode_do_stream);
         }
     } while (mode_wait_cmd);
 
@@ -253,6 +286,8 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
     eqrb_rv_t rv = eqrb_rv_ok;
     const driver_t *dev = h->h.driver;
 
+    eswb_set_thread_name(__func__);
+
 #define RX_BUF_SIZE 1048
     uint8_t *rx_buf = eqrb_alloc(RX_BUF_SIZE);
     eqrb_interaction_header_t *hdr = (eqrb_interaction_header_t *) rx_buf;
@@ -270,40 +305,60 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
         return NULL;
     }
 
+    rv = dev->command(dd, eqrb_cmd_reset_remote);
+    if (rv != eqrb_rv_ok) {
+        eqrb_dbg_msg("device command 'eqrb_cmd_reset_remote' error: %d", rv);
+    }
+
     do {
         while(mode_wait_server) {
+            eqrb_dbg_msg("Sending init command to server");
+
             hdr->msg_code = EQRB_CMD_CLIENT_REQ_SYNC;
             rv = dev->send(dd, hdr, sizeof(*hdr), &bs);
-            if (rv == eqrb_rv_ok) {
-                mode_wait_server = 0;
-                mode_wait_events = -1;
-                break;
-            } else {
-                eqrb_dbg_msg("device send error: %d", rv);
-                return NULL;
+            switch (rv) {
+                case eqrb_rv_ok:
+                    mode_wait_server = 0;
+                    mode_wait_events = -1;
+                    break;
+
+                case eqrb_media_reset_cmd:
+                    rv = dev->command(dd, eqrb_cmd_reset_local_state);
+                    if (rv != eqrb_rv_ok) {
+                        eqrb_dbg_msg("device command 'eqrb_cmd_reset_local_state' error: %d", rv);
+                    }
+                    continue;
+
+                default:
+                    eqrb_dbg_msg("device send error: %d", rv);
+                    return NULL;
             }
         }
 
         while(mode_wait_events) {
             rv = dev->recv(dd, rx_buf, RX_BUF_SIZE, &br);
 
-            if (rv != eqrb_rv_ok) {
-                // TODO detect reset / disconnection
-                mode_wait_events = 0;
-                mode_wait_server = 0;
-                break;
+            switch (rv) {
+                case eqrb_rv_ok:
+                    break;
+
+                case eqrb_media_reset_cmd:
+                    mode_wait_server = -1;
+                    mode_wait_events = 0;
+                    eqrb_dbg_msg("Client reset requested by server");
+                    break;
+
+                default:
+                    // TODO detect reset / disconnection
+                    mode_wait_events = 0;
+                    mode_wait_server = 0;
+                    break;
             }
 
             switch (hdr->msg_code) {
-                case EQRB_CMD_SERVER_RESET:
-                    mode_wait_events = 0;
-                    mode_wait_server = -1;
-                    break;
-
                 case EQRB_CMD_SERVER_EVENT:
                 case EQRB_CMD_SERVER_TOPIC:
-                    ;
-                    event_queue_transfer_t *event = (event_queue_transfer_t *) (rx_buf + (sizeof(*hdr)));
+                    ; event_queue_transfer_t *event = (event_queue_transfer_t *) (rx_buf + (sizeof(*hdr)));
 
                     if (br != sizeof(*hdr) + sizeof(*event) + event->size) {
                         eqrb_dbg_msg("Event size is different from accepted packet size");

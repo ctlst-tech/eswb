@@ -223,6 +223,122 @@ void replication_test(EqrbTestAgent::Basic &server, EqrbTestAgent::Basic &client
     server.stop();
 }
 
+class TestProcess {
+    EqrbTestAgent::Basic &server;
+
+    eswb_topic_descr_t src_bus_td;
+    eswb_topic_descr_t publisher_td;
+    std::string src_bus_full_path;
+
+    periodic_call_t proclaim_call;
+    periodic_call_t update_call;
+
+    timed_caller *proclaimer;
+    timed_caller *updater;
+
+    std::atomic_uint32_t counter;
+
+public:
+    TestProcess(EqrbTestAgent::Basic &server_, const std::string &src_bus) : server(server_) {
+        eswb_set_thread_name("main");
+
+        src_bus_full_path = "itb:/" + src_bus;
+        eswb_rv_t erv;
+
+        erv = eswb_create(src_bus.c_str(), eswb_inter_thread, 20);
+        REQUIRE(erv == eswb_e_ok);
+
+        erv = eswb_connect(src_bus_full_path.c_str(), &src_bus_td);
+        REQUIRE(erv == eswb_e_ok);
+
+        erv = eswb_event_queue_enable(src_bus_td, 40, 1024);
+        REQUIRE(erv == eswb_e_ok);
+
+        proclaim_call = [&] () mutable {
+            eswb_rv_t rv;
+
+            TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 3);
+
+            topic_proclaiming_tree_t *fifo_root = usr_topic_set_fifo(cntx, "fifo", 10);
+            usr_topic_add_child(cntx, fifo_root, "cnt", tt_uint32, 0, 4, TOPIC_FLAG_MAPPED_TO_PARENT);
+
+            rv = eswb_event_queue_order_topic(src_bus_td, src_bus.c_str(), 1 );
+            thread_safe_failure_assert(rv == eswb_e_ok, "eswb_event_queue_order_topic");
+
+            rv = eswb_proclaim_tree_by_path(src_bus_full_path.c_str(), fifo_root, cntx->t_num, &publisher_td);
+            thread_safe_failure_assert(rv == eswb_e_ok, "eswb_proclaim_tree_by_path");
+
+            rv = eswb_event_queue_order_topic(src_bus_td, (src_bus + "/fifo").c_str(), 1 );
+            thread_safe_failure_assert(rv == eswb_e_ok, "eswb_event_queue_order_topic");
+        };
+
+        counter = 0;
+
+        update_call = [&] () mutable {
+            uint32_t cnt = this->counter;
+            eswb_rv_t rv = eswb_fifo_push(publisher_td, &cnt);
+            thread_safe_failure_assert(rv == eswb_e_ok, "eswb_fifo_push");
+            counter++;
+        };
+
+        proclaimer = new timed_caller(proclaim_call, 200, "proclaimer");
+        updater = new timed_caller(update_call, 200, "updater");
+    }
+
+    void server_start() {
+        server.start();
+    }
+
+    void do_proclaim() {
+        proclaimer->start_once(false);
+        proclaimer->wait();
+    }
+
+    void start_updater() {
+        updater->start_loop();
+    }
+
+    void reset_counter() {
+        counter = 0;
+    }
+
+    void stop() {
+        updater->stop();
+        server.stop();
+    }
+};
+
+
+
+void replication_test_client(EqrbTestAgent::Basic &client, const std::string &dst_bus){
+    std::string dst_bus_full_path = "itb:/" + dst_bus;
+    eswb_rv_t erv;
+
+    erv = eswb_create(dst_bus.c_str(), eswb_inter_thread, 20);
+    REQUIRE(erv == eswb_e_ok);
+
+    eswb_topic_descr_t dst_bus_td;
+
+    erv = eswb_connect(dst_bus_full_path.c_str(), &dst_bus_td);
+    REQUIRE(erv == eswb_e_ok);
+
+    client.start();
+
+    eswb_topic_descr_t replicated_fifo_td;
+    erv = eswb_wait_connect_nested(dst_bus_td, "fifo/cnt", &replicated_fifo_td, 200000);
+    REQUIRE(erv == eswb_e_ok);
+
+    uint32_t cnt;
+    uint32_t expected_cnt = 0;
+
+    do {
+        erv = eswb_fifo_pop(replicated_fifo_td, &cnt);
+        CHECK(cnt == expected_cnt);
+        expected_cnt++;
+    } while((erv == eswb_e_ok) && (expected_cnt < 10));
+
+}
+
 typedef struct {
     const char *ch_name;
     sdtl_service_t *service;
@@ -252,19 +368,57 @@ eqrb_rv_t sdtl_media_send (device_descr_t dh, void *data, size_t bts, size_t *bs
     sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
 
     sdtl_rv_t rv = sdtl_channel_send_data(chh, data, bts);
-    if (rv == SDTL_OK) {
-        *bs = bts;
+
+    switch (rv) {
+        case SDTL_OK:
+            *bs = bts;
+            return eqrb_rv_ok;
+
+        case SDTL_REMOTE_RX_NO_CLIENT:
+        case SDTL_APP_RESET:
+            return eqrb_media_reset_cmd;
+
+        default:
+            return eqrb_media_err;
     }
-    return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
 }
 
 eqrb_rv_t sdtl_media_recv (device_descr_t dh, void *data, size_t btr, size_t *br) {
     sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
 
     sdtl_rv_t rv = sdtl_channel_recv_data(chh, data, btr, br);
+    switch (rv) {
+        case SDTL_OK:
+            return eqrb_rv_ok;
+
+        case SDTL_APP_RESET:
+            return eqrb_media_reset_cmd;
+
+        default:
+            return eqrb_media_err;
+    }
+}
+
+eqrb_rv_t sdtl_media_command (device_descr_t dh, eqrb_cmd_t cmd) {
+    sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
+    sdtl_rv_t rv;
+
+    switch (cmd) {
+        case eqrb_cmd_reset_remote:
+            rv = sdtl_channel_send_cmd(chh, SDTL_PKT_CMD_CODE_RESET);
+            break;
+
+        case eqrb_cmd_reset_local_state:
+            rv = sdtl_channel_reset_condition(chh);
+            break;
+
+        default:
+            return eqrb_media_invarg;
+    }
 
     return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
 }
+
 int sdtl_media_disconnect (device_descr_t dh) {
 //    return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
     return SDTL_OK;
@@ -275,6 +429,7 @@ const driver_t eqrb_sdtl_driver = {
         .connect = sdtl_media_connect,
         .send = sdtl_media_send,
         .recv = sdtl_media_recv,
+        .command = sdtl_media_command,
         .disconnect = sdtl_media_disconnect,
 };
 
@@ -325,17 +480,25 @@ protected:
         REQUIRE(rv == SDTL_OK);
     }
 
-
     void sdtl_stop() {
         sdtl_rv_t rv = sdtl_service_stop(sdtl_service);
         REQUIRE(rv == SDTL_OK);
     }
 
-
     sdtl_service_t *init_environment(eqrb_handle_common_t &handle) {
         auto service_bus_name = "sdtl_" + service_name + "_tst_bus";
         eswb_rv_t erv;
-        erv = eswb_create(service_bus_name.c_str(), eswb_inter_thread, 100);
+
+        do {
+            erv = eswb_create(service_bus_name.c_str(), eswb_inter_thread, 100);
+            if (erv == eswb_e_bus_exists) {
+                eswb_rv_t erv2 = eswb_delete(service_bus_name.c_str());
+                continue;
+            } else {
+                break;
+            }
+        } while (1);
+
         REQUIRE(erv == eswb_e_ok);
 
         sdtl_service_t *s_rv = sdtl_init(service_bus_name.c_str(),
@@ -406,7 +569,7 @@ class sdtlMemBridgeClient : public sdtlMemBridgeBasic {
 
 public:
     sdtlMemBridgeClient(const std::string &replicate_to_path_,
-                        SDTLtestBridge &bridge) :
+                        SDTLtestBridge &bridge ) :
             sdtlMemBridgeBasic("client", "up", client_handle.h, bridge),
             replicate_to_path(replicate_to_path_){
         client_handle.h.driver = &eqrb_sdtl_driver;
@@ -421,6 +584,7 @@ public:
 
     void stop() {
         sdtl_stop();
+
         eqrb_rv_t rv = eqrb_service_stop(&client_handle.h);
         REQUIRE(rv == eqrb_rv_ok);
     }
@@ -476,7 +640,6 @@ void repl_factory_serial_init(std::string &src, std::string &dst) {
     /**
      * socat -d -d pty,link=/tmp/vserial1,raw,echo=0 pty,link=/tmp/vserial2,raw,echo=0
      */
-
 
     hrv = eqrb_serial_server_start(SERIAL1, 115200, src.c_str());
     REQUIRE(hrv == eqrb_rv_ok);
@@ -590,17 +753,37 @@ TEST_CASE("EQRB bus state sync") {
 }
 
 
-TEST_CASE("EQBR - mem_bypass") {
+TEST_CASE("EQBR - mem bridge") {
     eswb_local_init(1);
 
     auto bus_from = "src";
     auto bus_to = "dst";
+    auto bus_to2 = "dst2";
 
     SDTLtestBridge bridge;
 
     EqrbTestAgent::sdtlMemBridgeClient client(bus_to, bridge);
     EqrbTestAgent::sdtlMemBridgeServer server(bus_from, 0xFFFFFFFF, bridge);
-    replication_test(server, client, bus_from, bus_to);
+
+    TestProcess process(server, bus_from);
+
+    process.server_start();
+
+    process.do_proclaim();
+    std::this_thread::sleep_for(std::chrono::milliseconds (200));
+    process.start_updater();
+
+    replication_test_client(client, bus_to);
+
+    client.stop();
+
+    std::this_thread::sleep_for(std::chrono::milliseconds (200));
+
+    EqrbTestAgent::sdtlMemBridgeClient client2(bus_to2, bridge);
+    process.reset_counter();
+    replication_test_client(client2, bus_to2);
+
+    process.stop();
 }
 
 

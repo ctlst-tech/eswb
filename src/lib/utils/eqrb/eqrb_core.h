@@ -28,7 +28,8 @@ typedef struct {
     eqrb_rv_t (*connect)(void *param, device_descr_t *dh);
     eqrb_rv_t (*send)(device_descr_t dh, void *data, size_t bts, size_t *bs);
     eqrb_rv_t (*recv)(device_descr_t dh, void *data, size_t btr, size_t *br);
-    int (*disconnect)(device_descr_t dh); // should return non-zero to stop service instance
+    eqrb_rv_t (*command)(device_descr_t dh, eqrb_cmd_t cmd);
+    int (*disconnect)(device_descr_t dh);
 } driver_t;
 
 typedef struct {
