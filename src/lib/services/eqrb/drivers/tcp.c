@@ -4,7 +4,7 @@
 
 
 #include "eswb/api.h"
-#include "../eqrb_core.h"
+#include "../eqrb_priv.h"
 
 #ifndef ESWB_NO_SOCKET
 

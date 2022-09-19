@@ -7,11 +7,11 @@
 #include <stdarg.h>
 #include <pthread.h>
 
-#include "eqrb_core.h"
+#include "eqrb_priv.h"
 
 #include "misc.h"
 
-#include "../../services/sdtl/sdtl.h" // FIXME divide header to public-opaque and private parts
+#include "../sdtl/sdtl.h" // FIXME divide header to public-opaque and private parts
 
 void *eqrb_alloc(size_t s) {
     return malloc(s);
