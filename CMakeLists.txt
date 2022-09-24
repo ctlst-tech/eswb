@@ -53,7 +53,7 @@ target_link_libraries(eswb_test_dummy PUBLIC eswb)
 
 
 add_library(eswb-if INTERFACE)
-target_link_libraries(eswb-if INTERFACE eswb-static eswb-sync-static eswb-eqrb-static)
+target_link_libraries(eswb-if INTERFACE eswb-static eswb-sync-static eswb-eqrb-static eswb-sdtl-static )
 
 add_library(eswb-cpp STATIC cpp/eswb.hpp cpp/eswb.cpp)
 target_link_libraries(eswb-cpp PUBLIC eswb-static eswb-sync-static eswb-eqrb-static)
