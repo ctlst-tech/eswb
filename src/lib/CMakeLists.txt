@@ -54,6 +54,7 @@ set(ESWB_SERVICE_SDTL_SRC
         services/sdtl/sdtl.c
         services/sdtl/sdtl_opaque.h
         include/public/eswb/services/sdtl.h
+        services/sdtl/media_serial.c
         services/sdtl/crc16-ccitt.c
         services/sdtl/crc16-ccitt.h
         services/sdtl/bbee_framing.c

@@ -76,6 +76,14 @@ typedef struct sdtl_channel_cfg sdtl_channel_cfg_t;
 typedef struct sdtl_channel_handle sdtl_channel_handle_t;
 
 /**
+ * Media drivers and theirs parameter structures:
+ */
+typedef struct sdtl_media_serial_params {
+    uint32_t baudrate;
+} sdtl_media_serial_params_t;
+
+extern const sdtl_service_media_t sdtl_media_serial;
+/**
  *
  * @param s
  * @param service_name
