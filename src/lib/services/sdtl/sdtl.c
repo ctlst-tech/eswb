@@ -31,7 +31,7 @@ void sdtl_debug_msg(const char *fn, const char *txt, ...) {
 sdtl_channel_t *resolve_channel_by_id(sdtl_service_t *s, uint8_t ch_id) {
 
     for (int i = 0; i < s->channels_num; i++) {
-        if (s->channels[i].cfg->id == ch_id) {
+        if (s->channels[i].cfg.id == ch_id) {
             return &s->channels[i];
         }
     }
@@ -42,7 +42,7 @@ sdtl_channel_t *resolve_channel_by_id(sdtl_service_t *s, uint8_t ch_id) {
 sdtl_channel_handle_t *resolve_channel_handle_by_id(sdtl_service_t *s, uint8_t ch_id) {
 
     for (int i = 0; i < s->channels_num; i++) {
-        if (s->channel_handles[i]->channel->cfg->id == ch_id) {
+        if (s->channel_handles[i]->channel->cfg.id == ch_id) {
             return s->channel_handles[i];
         }
     }
@@ -53,7 +53,7 @@ sdtl_channel_handle_t *resolve_channel_handle_by_id(sdtl_service_t *s, uint8_t c
 sdtl_channel_t *resolve_channel_by_name(sdtl_service_t *s, const char *name) {
 
     for (int i = 0; i < s->channels_num; i++) {
-        if (strcmp(s->channels[i].cfg->name, name) == 0) {
+        if (strcmp(s->channels[i].cfg.name, name) == 0) {
             return &s->channels[i];
         }
     }
@@ -62,7 +62,7 @@ sdtl_channel_t *resolve_channel_by_name(sdtl_service_t *s, const char *name) {
 }
 
 static int check_rel(sdtl_channel_handle_t *ch) {
-    return (ch->channel->cfg->type == SDTL_CHANNEL_RELIABLE);
+    return (ch->channel->cfg.type == SDTL_CHANNEL_RELIABLE);
 }
 
 
@@ -360,7 +360,7 @@ send_data(sdtl_channel_handle_t *chh, uint8_t pkt_num, uint8_t flags, sdtl_seq_c
     sdtl_data_header_t hdr;
 
     hdr.base.attr = SDTL_PKT_ATTR_PKT_TYPE(SDTL_PKT_ATTR_PKT_TYPE_DATA);
-    hdr.base.ch_id = chh->channel->cfg->id;
+    hdr.base.ch_id = chh->channel->cfg.id;
 
     hdr.sub.seq_code = seq_code;
     hdr.sub.cnt = pkt_num;
@@ -374,7 +374,7 @@ static sdtl_rv_t send_cmd(sdtl_channel_handle_t *chh, uint8_t cmd_code) {
     sdtl_cmd_header_t hdr;
 
     hdr.base.attr = SDTL_PKT_ATTR_PKT_TYPE(SDTL_PKT_ATTR_PKT_TYPE_CMD);
-    hdr.base.ch_id = chh->channel->cfg->id;
+    hdr.base.ch_id = chh->channel->cfg.id;
 
     hdr.cmd_code = cmd_code;
 
@@ -387,7 +387,7 @@ static sdtl_rv_t send_ack(sdtl_channel_handle_t *chh, uint8_t pkt_cnt, sdtl_ack_
 
     hdr.base.attr = SDTL_PKT_ATTR_PKT_TYPE(SDTL_PKT_ATTR_PKT_TYPE_ACK);
 
-    hdr.base.ch_id = chh->channel->cfg->id;
+    hdr.base.ch_id = chh->channel->cfg.id;
 
     hdr.sub.code = ack_code;
     hdr.sub.cnt = pkt_cnt;
@@ -954,7 +954,7 @@ sdtl_rv_t sdtl_service_init(sdtl_service_t **s_rv, const char *service_name, con
     }
 
     s->service_name = service_name;
-    s->mtu = mtu;
+    s->mtu = mtu == 0 ? SDTL_MTU_DEFAULT : mtu;
     s->max_channels_num = max_channels_num;
     s->media = media;
     s->channels = 0;
@@ -997,7 +997,7 @@ sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *me
     }
 
     for (int i = 0; i < s->channels_num; i++) {
-        rv = sdtl_channel_open(s, s->channels[i].cfg->name, &s->channel_handles[i]);
+        rv = sdtl_channel_open(s, s->channels[i].cfg.name, &s->channel_handles[i]);
         if (rv != SDTL_OK) {
             return rv;
         }
@@ -1056,7 +1056,7 @@ sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg) {
         return SDTL_INVALID_MTU;
     }
 
-    ch->cfg = cfg;
+    ch->cfg = *cfg;
     ch->service = s;
     ch->max_payload_size = max_payload_size;
 
@@ -1088,7 +1088,7 @@ sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg) {
         return SDTL_ESWB_ERR;
     }
 
-    if (ch->cfg->type == SDTL_CHANNEL_RELIABLE) {
+    if (ch->cfg.type == SDTL_CHANNEL_RELIABLE) {
         TOPIC_TREE_CONTEXT_LOCAL_RESET(cntx);
         topic_proclaiming_tree_t *ack_fifo_root = usr_topic_set_fifo(cntx, CHANNEL_ACK_FIFO_NAME, FIFO_SIZE);
         usr_topic_add_child(cntx, ack_fifo_root, CHANNEL_ACK_BUF_NAME, tt_plain_data, 0, sizeof(sdtl_ack_sub_header_t),
@@ -1152,7 +1152,7 @@ sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_ch
         return SDTL_ESWB_ERR;
     }
 
-    if (ch->cfg->type == SDTL_CHANNEL_RELIABLE) {
+    if (ch->cfg.type == SDTL_CHANNEL_RELIABLE) {
         erv = open_channel_resource(s->service_eswb_root, channel_name, CHANNEL_ACK_FIFO_NAME, &chh->ack_td);
         if (erv != eswb_e_ok) {
             return SDTL_ESWB_ERR;
@@ -1180,7 +1180,7 @@ sdtl_rv_t sdtl_channel_close(sdtl_channel_handle_t *chh) {
         return SDTL_ESWB_ERR;
     }
 
-    if (chh->channel->cfg->type == SDTL_CHANNEL_RELIABLE) {
+    if (chh->channel->cfg.type == SDTL_CHANNEL_RELIABLE) {
         erv = eswb_disconnect(chh->ack_td);
         if (erv != eswb_e_ok) {
             return SDTL_ESWB_ERR;

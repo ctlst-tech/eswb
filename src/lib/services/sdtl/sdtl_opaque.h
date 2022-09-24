@@ -50,7 +50,7 @@ typedef enum sdtl_rx_state {
 
 
 typedef struct sdtl_channel {
-    sdtl_channel_cfg_t *cfg;
+    sdtl_channel_cfg_t cfg;
     uint32_t max_payload_size; // payload inside data_pkt
     sdtl_service_t *service;
 } sdtl_channel_t;
