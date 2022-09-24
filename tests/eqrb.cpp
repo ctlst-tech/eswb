@@ -7,9 +7,10 @@
 #include "sdtl_tooling.h"
 #include "eswb/api.h"
 
+// TODO separate test for internals of EQRB from API based
 
-#include "../src/lib/utils/eqrb/eqrb_core.h"
-#include "../src/lib/services/sdtl/sdtl.h"
+#include "../src/lib/services/eqrb/eqrb_priv.h"
+#include "public/eswb/services/sdtl.h"
 
 
 TEST_CASE("Topics id map", "[unit]") {
@@ -355,8 +356,8 @@ eqrb_sdtl_params_t *conn_params(const char *n, sdtl_service_t *s) {
 
 eqrb_rv_t sdtl_media_connect (void *param, device_descr_t *dh) {
     eqrb_sdtl_params_t *p = (eqrb_sdtl_params_t *)param;
-    sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) malloc(sizeof(*chh));
-    sdtl_rv_t rv = sdtl_channel_open(p->service, p->ch_name, chh);
+    sdtl_channel_handle_t *chh;
+    sdtl_rv_t rv = sdtl_channel_open(p->service, p->ch_name, &chh);
 
     *dh = chh;
 
@@ -454,10 +455,9 @@ protected:
     sdtl_init(const char *service_mp, const char *service_name, size_t mtu,
               const sdtl_service_media_t *media) {
         sdtl_service_t *sdtl_service;
-        sdtl_service = new sdtl_service_t;
         sdtl_rv_t rv;
 
-        rv = sdtl_service_init(sdtl_service, service_name, service_mp, mtu, 4, media);
+        rv = sdtl_service_init(&sdtl_service, service_name, service_mp, mtu, 4, media);
         REQUIRE(rv == SDTL_OK);
 
         sdtl_channel_cfg_t ch_cfg_template = {

@@ -47,12 +47,13 @@ set(ESWB_UTIL_EQRB_SRC
         services/eqrb/drivers/tcp.c
         services/eqrb/drivers/file.c
         services/eqrb/drivers/serial.c
-        include/public/eswb/eqrb.h
+        include/public/eswb/services/eqrb.h
         )
 
 set(ESWB_SERVICE_SDTL_SRC
         services/sdtl/sdtl.c
-        services/sdtl/sdtl.h
+        services/sdtl/sdtl_opaque.h
+        include/public/eswb/services/sdtl.h
         services/sdtl/crc16-ccitt.c
         services/sdtl/crc16-ccitt.h
         services/sdtl/bbee_framing.c

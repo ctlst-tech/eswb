@@ -12,7 +12,7 @@
 #include "eswb/event_queue.h"
 #include "eswb/errors.h"
 #include "eswb/types.h"
-#include "eswb/eqrb.h"
+#include "eswb/services/eqrb.h"
 
 #include "ids_map.h"
 

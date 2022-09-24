@@ -11,8 +11,6 @@
 
 #include "misc.h"
 
-#include "../sdtl/sdtl.h" // FIXME divide header to public-opaque and private parts
-
 void *eqrb_alloc(size_t s) {
     return malloc(s);
 }

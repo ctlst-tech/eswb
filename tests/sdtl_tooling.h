@@ -1,8 +1,8 @@
 #ifndef SDTL_TOOLING_H
 #define SDTL_TOOLING_H
 
+#include <eswb/services/sdtl.h>
 #include "tooling.h"
-#include "../src/lib/services/sdtl/sdtl.h"
 
 
 class SDTLtestPacket {

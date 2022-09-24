@@ -5,7 +5,7 @@
 #include <eswb/types.h>
 #include <eswb/api.h>
 #include <eswb/event_queue.h>
-#include <eswb/eqrb.h>
+#include "eswb/services/eqrb.h"
 
 namespace eswb {
 

@@ -48,10 +48,8 @@ create_and_start_service_w_channel(const char *service_name, const char *media_c
 
     sdtl_service_t *sdtl_service;
 
-    sdtl_service = new sdtl_service_t;
-
     sdtl_rv_t rv;
-    rv = sdtl_service_init(sdtl_service, service_name, "bus", mtu, 4, &sdtl_test_media);
+    rv = sdtl_service_init(&sdtl_service, service_name, "bus", mtu, 4, &sdtl_test_media);
     REQUIRE(rv == SDTL_OK);
 
     sdtl_channel_cfg_t ch_cfg_template = {
@@ -84,8 +82,8 @@ struct SDTLtestSetup {
     sdtl_service_t *service_up;
     sdtl_service_t *service_down;
 
-    sdtl_channel_handle_t chh_up;
-    sdtl_channel_handle_t chh_down;
+    sdtl_channel_handle_t *chh_up;
+    sdtl_channel_handle_t *chh_down;
 };
 
 void sdtl_test_setup(SDTLtestSetup &setup, size_t mtu, bool reliable, SDTLtestBridge &bridge) {
@@ -158,7 +156,8 @@ TEST_CASE("SDTL unreliable delivery") {
     sdtl_test_setup(setup, mtu, false, testing_bridge);
 
     SECTION("Send " + std::to_string(data2send) + " bytes" + pkt_losses_note(lose_every_n_paket) + " MTU " + std::to_string(mtu)) {
-        size_t payload_per_pkt = setup.chh_up.channel->max_payload_size;
+        size_t payload_per_pkt = sdtl_channel_get_max_payload_size(setup.chh_up);
+
 
         uint pkts_needed = data2send / payload_per_pkt; // full packets
         if (data2send % payload_per_pkt != 0) { // data remnant
@@ -177,7 +176,7 @@ TEST_CASE("SDTL unreliable delivery") {
         // define transmitter
         periodic_call_t sender = [&]() {
             sdtl_rv_t rv;
-            rv = sdtl_channel_send_data(&setup.chh_down, send_buffer, data2send);
+            rv = sdtl_channel_send_data(setup.chh_down, send_buffer, data2send);
 //            CHECK(rv == SDTL_OK);
             thread_safe_failure_assert(rv == SDTL_OK, "rv != SDTL_OK");
         };
@@ -189,8 +188,8 @@ TEST_CASE("SDTL unreliable delivery") {
         sender_thread.start_once();
 
         size_t br;
-        sdtl_channel_recv_arm_timeout(&setup.chh_up, 100000);
-        rv = sdtl_channel_recv_data(&setup.chh_up, rcv_buffer, data2send, &br);
+        sdtl_channel_recv_arm_timeout(setup.chh_up, 100000);
+        rv = sdtl_channel_recv_data(setup.chh_up, rcv_buffer, data2send, &br);
         sdtl_rv_t expected_rv;
 
         // check either transaction supposed to be successful
@@ -244,7 +243,7 @@ TEST_CASE("SDTL reliable delivery") {
     sdtl_test_setup(setup, mtu, true, testing_bridge);
 
     SECTION("Send " + std::to_string(data2send) + " bytes" + pkt_losses_note(lose_every_n_paket) + " MTU " + std::to_string(mtu)) {
-        size_t payload_per_pkt = setup.chh_up.channel->max_payload_size;
+        size_t payload_per_pkt = sdtl_channel_get_max_payload_size(setup.chh_up);
 
         uint pkts_needed = data2send / payload_per_pkt; // full packets
         if (data2send % payload_per_pkt != 0) { // data remnant
@@ -263,7 +262,7 @@ TEST_CASE("SDTL reliable delivery") {
         // define transmitter
         periodic_call_t sender = [&]() {
             sdtl_rv_t rv;
-            rv = sdtl_channel_send_data(&setup.chh_down, send_buffer, data2send);
+            rv = sdtl_channel_send_data(setup.chh_down, send_buffer, data2send);
 //            CHECK(rv == SDTL_OK);
             thread_safe_failure_assert(rv == SDTL_OK, "rv != SDTL_OK");
         };
@@ -276,7 +275,7 @@ TEST_CASE("SDTL reliable delivery") {
 
         size_t br;
 //        sdtl_channel_recv_arm_timeout(&setup.chh_up, 100000);
-        rv = sdtl_channel_recv_data(&setup.chh_up, rcv_buffer, data2send, &br);
+        rv = sdtl_channel_recv_data(setup.chh_up, rcv_buffer, data2send, &br);
         sdtl_rv_t expected_rv;
 
         expected_rv= SDTL_OK;
@@ -318,7 +317,7 @@ TEST_CASE("SDTL consecutive transfers") {
                 + pkt_losses_note(lose_every_n_paket)
                 + " MTU " + std::to_string(mtu)
     ) {
-        size_t payload_per_pkt = setup.chh_up.channel->max_payload_size;
+        size_t payload_per_pkt = sdtl_channel_get_max_payload_size(setup.chh_up);
 
         uint pkts_needed = data2send / payload_per_pkt; // full packets
         if (data2send % payload_per_pkt != 0) { // data remnant
@@ -345,7 +344,7 @@ TEST_CASE("SDTL consecutive transfers") {
             do {
                 uint32_t bytes_per_seq = std::min(l, pkt_size_per_seq);
                 do {
-                    rv = sdtl_channel_send_data(&setup.chh_down, send_buffer + offset, bytes_per_seq);
+                    rv = sdtl_channel_send_data(setup.chh_down, send_buffer + offset, bytes_per_seq);
                 } while ((rv == SDTL_REMOTE_RX_NO_CLIENT) && (usleep(2000) | 1));
 
                 thread_safe_failure_assert(rv == SDTL_OK, "rv != SDTL_OK");
@@ -364,7 +363,7 @@ TEST_CASE("SDTL consecutive transfers") {
 
         do {
             size_t br;
-            rv = sdtl_channel_recv_data(&setup.chh_up, rcv_buffer + offset, data2send - offset, &br);
+            rv = sdtl_channel_recv_data(setup.chh_up, rcv_buffer + offset, data2send - offset, &br);
             REQUIRE(rv == SDTL_OK);
             offset += br;
         } while(offset < data2send);
@@ -406,7 +405,7 @@ TEST_CASE("SDTL transfer reset") {
                 + " MTU " + std::to_string(mtu)
                 + " reset cond on piece " + std::to_string(reset_on_piece)
     ) {
-        size_t payload_per_pkt = setup.chh_up.channel->max_payload_size;
+        size_t payload_per_pkt = sdtl_channel_get_max_payload_size(setup.chh_up);
 
         setup_bridge_losses(testing_bridge, lose_every_n_paket, 0);
 
@@ -430,7 +429,7 @@ TEST_CASE("SDTL transfer reset") {
                 uint32_t bytes_per_seq = std::min(l, pkt_size_per_seq);
                 bool loop = true;
                 do {
-                    rv = sdtl_channel_send_data(&setup.chh_down, send_buffer + offset, bytes_per_seq);
+                    rv = sdtl_channel_send_data(setup.chh_down, send_buffer + offset, bytes_per_seq);
                     switch (rv) {
                         case SDTL_OK:
                             loop = false;
@@ -454,7 +453,7 @@ TEST_CASE("SDTL transfer reset") {
                 piece_num++;
 
                 if (piece_num == reset_on_piece) {
-                    rv = sdtl_channel_send_cmd(&setup.chh_down, SDTL_PKT_CMD_CODE_RESET);
+                    rv = sdtl_channel_send_cmd(setup.chh_down, SDTL_PKT_CMD_CODE_RESET);
                     CHECK(rv == SDTL_OK);
                     had_reset = true;
                 }
@@ -472,11 +471,11 @@ TEST_CASE("SDTL transfer reset") {
 
         do {
             size_t br;
-            rv = sdtl_channel_recv_data(&setup.chh_up, rcv_buffer + offset, data2send - offset, &br);
+            rv = sdtl_channel_recv_data(setup.chh_up, rcv_buffer + offset, data2send - offset, &br);
 
             if (rv == SDTL_APP_RESET) {
                 CHECK(piece_num == reset_on_piece);
-                rv = sdtl_channel_reset_condition(&setup.chh_up);
+                rv = sdtl_channel_reset_condition(setup.chh_up);
                 CHECK(rv == SDTL_OK);
                 reset_nums++;
                 continue;

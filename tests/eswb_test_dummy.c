@@ -5,7 +5,7 @@
 #include "eswb/api.h"
 #include "eswb/bridge.h"
 #include "eswb/event_queue.h"
-#include "eswb/eqrb.h"
+#include "eswb/services/eqrb.h"
 
 int test_event_chain (int verbose, int nonstop);
 
