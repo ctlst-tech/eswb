@@ -55,7 +55,7 @@ create_and_start_service_w_channel(const char *service_name, const char *media_c
     sdtl_channel_cfg_t ch_cfg_template = {
             .name = SDTL_TEST_CHANNEL_NAME,
             .id = 1,
-            .type = rel_ch ? SDTL_CHANNEL_RELIABLE : SDTL_CHANNEL_NONRELIABLE,
+            .type = rel_ch ? SDTL_CHANNEL_RELIABLE : SDTL_CHANNEL_UNRELIABLE,
             .mtu_override = 0,
     };
 

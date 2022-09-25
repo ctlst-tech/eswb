@@ -23,7 +23,7 @@ typedef struct topic_id_map {
 extern "C" {
 #endif
 
-eswb_rv_t map_alloc(topic_id_map_t *map_handle, eswb_size_t map_max_size);
+eswb_rv_t map_alloc(topic_id_map_t **map_handle, eswb_size_t map_max_size);
 eswb_rv_t map_find_index(topic_id_map_t *map_handle, uint32_t src_id_key, uint32_t *mid_rv);
 
 eswb_rv_t map_add_pair(topic_id_map_t *map_handle, uint32_t src_id, eswb_topic_descr_t dst_td);

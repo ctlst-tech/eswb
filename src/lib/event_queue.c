@@ -7,10 +7,25 @@
 #include "eswb/event_queue.h"
 #include "eswb_ctl.h"
 
-
+/**
+ * Subchannes:
+ * 0 - reserved for proclamation sync
+ * 1 .. 15 - reserved for stream 1 (reliable delivery by convention)
+ * 16 .. 31 - reserved for stream 2 (unreliable delivery by convention)
+ *
+ * in order to have proclamation event pass through supposed to be a set of other channel
+ * @param td
+ * @param topics_path_mask
+ * @param subch_ind
+ * @return
+ */
 eswb_rv_t eswb_event_queue_order_topic(eswb_topic_descr_t td, const char *topics_path_mask, eswb_index_t subch_ind) {
 
     // TODO add topic by it's TD
+
+    if (subch_ind == 0) {
+        return eswb_e_invargs;
+    }
 
     eswb_ctl_evq_order_t order;
     order.subch_ind = subch_ind;
@@ -44,7 +59,7 @@ eswb_rv_t eswb_event_queue_subscribe(const char *bus_path, eswb_topic_descr_t *t
 }
 
 eswb_rv_t eswb_event_queue_set_receive_mask(eswb_topic_descr_t td, eswb_event_queue_mask_t mask) {
-    return eswb_ctl(td, eswb_ctl_evq_set_receive_mask, &mask, 0);
+    return eswb_ctl(td, eswb_ctl_evq_set_receive_mask, &mask, sizeof(mask));
 }
 
 
@@ -68,9 +83,9 @@ eswb_rv_t eswb_event_queue_pop(eswb_topic_descr_t td, event_queue_transfer_t *ev
 
 #include "ids_map.h"
 
-eswb_rv_t map_alloc(topic_id_map_t *map_handle, eswb_size_t map_max_size) {
+eswb_rv_t map_alloc(topic_id_map_t **map_handle_rv, eswb_size_t map_max_size) {
 
-    memset(map_handle, 0, sizeof(*map_handle));
+    topic_id_map_t *map_handle = calloc(1, sizeof(*map_handle));
 
     map_handle->size = map_max_size;
     map_handle->map = calloc(map_max_size, sizeof(*map_handle->map));
@@ -78,6 +93,8 @@ eswb_rv_t map_alloc(topic_id_map_t *map_handle, eswb_size_t map_max_size) {
     if (map_handle->map == NULL) {
         return eswb_e_map_no_mem;
     }
+
+    *map_handle_rv = map_handle;
 
     return eswb_e_ok;
 }

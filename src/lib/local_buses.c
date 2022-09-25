@@ -289,6 +289,11 @@ static eswb_rv_t local_event_queue_pack_and_update(topic_local_index_t *li, eswb
             .data = data
     };
 
+    if (ut == upd_proclaim_topic) {
+        v.ch_mask &= 0x0000FFFF;   // any proclaiming go stream 1
+        v.ch_mask |= (1 << 0); // any proclaiming go to channel 0
+    }
+
     return local_event_queue_update(li->bh, &v);
 }
 

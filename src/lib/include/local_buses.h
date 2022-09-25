@@ -35,7 +35,7 @@ typedef struct {
     //eswb_index_t fifo_head;
     fifo_rcvr_state_t rcvr_state;
 
-    eswb_event_queue_mask_t event_queue_mask;
+    eswb_event_queue_mask_t event_queue_mask; // this mask is used by EQ call for check desired topics
 
     uint32_t timeout_us;
 

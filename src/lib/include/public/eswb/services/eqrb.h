@@ -45,10 +45,10 @@ struct eqrb_client_handle;
 
 
 eqrb_rv_t
-eqrb_sdtl_server_start(const char *service_name, const char *sdtl_ch_name, uint32_t ch_mask, const char *bus2replicate,
-                       const char **err_msg);
-eqrb_rv_t eqrb_sdtl_client_connect(const char *service_name, const char *sdtl_ch_name, const char *mount_point,
-                                   uint32_t repl_map_size);
+eqrb_sdtl_server_start(const char *service_name, const char *sdtl_ch1_name, const char *sdtl_ch2_name, uint32_t ch_mask,
+                       const char *bus2replicate, const char **err_msg);
+eqrb_rv_t eqrb_sdtl_client_connect(const char *service_name, const char *sdtl_ch1_name, const char *sdtl_ch2_name,
+                                   const char *mount_point, uint32_t repl_map_size);
 
 
 #ifdef __cplusplus

@@ -44,7 +44,7 @@ typedef enum sdtl_rv {
 } sdtl_rv_t;
 
 typedef enum sdtl_channel_type {
-    SDTL_CHANNEL_NONRELIABLE = 0,
+    SDTL_CHANNEL_UNRELIABLE = 0,
     SDTL_CHANNEL_RELIABLE = 1,
 } sdtl_channel_type_t;
 

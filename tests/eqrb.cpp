@@ -15,27 +15,27 @@
 
 TEST_CASE("Topics id map", "[unit]") {
 
-    topic_id_map_t map;
+    topic_id_map_t *map;
 #define MAX_IDS (100)
     eswb_rv_t rv = map_alloc(&map, MAX_IDS);
 
-#   define LOOKUP(__id) map_find_index(&map, (__id), NULL)
-#   define ADD_ELEM(__e) map_add_pair(&map, (__e), (__e) + 1)
+#   define LOOKUP(__id) map_find_index(map, (__id), NULL)
+#   define ADD_ELEM(__e) map_add_pair(map, (__e), (__e) + 1)
 
 #   define FIRST_SRC_ID 10
 #   define SECOND_SRC_ID 11
 
     SECTION("Map alloc"){
-        REQUIRE(map.map != NULL);
+        REQUIRE(map->map != NULL);
     }
 
     SECTION("Basic container forming and sorting") {
         ADD_ELEM(FIRST_SRC_ID);
         ADD_ELEM(SECOND_SRC_ID);
 
-        REQUIRE(map.records_num == 2);
-        REQUIRE(map.map[0].src_topic_id == FIRST_SRC_ID);
-        REQUIRE(map.map[1].src_topic_id == SECOND_SRC_ID);
+        REQUIRE(map->records_num == 2);
+        REQUIRE(map->map[0].src_topic_id == FIRST_SRC_ID);
+        REQUIRE(map->map[1].src_topic_id == SECOND_SRC_ID);
     }
 
     SECTION("Lookup when no elements") {
@@ -63,7 +63,7 @@ TEST_CASE("Topics id map", "[unit]") {
     ADD_ELEM(LEFT_ID);
 
     SECTION("Add element to first index") {
-        REQUIRE(map.map[0].src_topic_id == LEFT_ID);
+        REQUIRE(map->map[0].src_topic_id == LEFT_ID);
     }
 
 #   define RIGHT_ID 20
@@ -71,7 +71,7 @@ TEST_CASE("Topics id map", "[unit]") {
     ADD_ELEM(RIGHT_ID);
 
     SECTION("Add element to last index") {
-        REQUIRE(map.map[map.records_num-1].src_topic_id == RIGHT_ID);
+        REQUIRE(map->map[map->records_num-1].src_topic_id == RIGHT_ID);
     }
 
     SECTION("Lookup for left elem") {
@@ -94,7 +94,7 @@ TEST_CASE("Topics id map", "[unit]") {
             rv = ADD_ELEM(id);
             id += 2;
         } while (rv == eswb_e_ok);
-        REQUIRE(map.records_num == map.size);
+        REQUIRE(map->records_num == map->size);
 
         SECTION("Add element to full container") {
             REQUIRE(ADD_ELEM(id+1) == eswb_e_map_full);
@@ -113,7 +113,7 @@ TEST_CASE("Topics id map", "[unit]") {
         }
     }
 
-    map_dealloc(&map);
+    map_dealloc(map);
 }
 
 namespace EqrbTestAgent {
@@ -263,13 +263,13 @@ public:
             topic_proclaiming_tree_t *fifo_root = usr_topic_set_fifo(cntx, "fifo", 10);
             usr_topic_add_child(cntx, fifo_root, "cnt", tt_uint32, 0, 4, TOPIC_FLAG_MAPPED_TO_PARENT);
 
-            rv = eswb_event_queue_order_topic(src_bus_td, src_bus.c_str(), 1 );
+            rv = eswb_event_queue_order_topic(src_bus_td, src_bus.c_str(), 16 );
             thread_safe_failure_assert(rv == eswb_e_ok, "eswb_event_queue_order_topic");
 
             rv = eswb_proclaim_tree_by_path(src_bus_full_path.c_str(), fifo_root, cntx->t_num, &publisher_td);
             thread_safe_failure_assert(rv == eswb_e_ok, "eswb_proclaim_tree_by_path");
 
-            rv = eswb_event_queue_order_topic(src_bus_td, (src_bus + "/fifo").c_str(), 1 );
+            rv = eswb_event_queue_order_topic(src_bus_td, (src_bus + "/fifo").c_str(), 16 );
             thread_safe_failure_assert(rv == eswb_e_ok, "eswb_event_queue_order_topic");
         };
 
@@ -343,7 +343,8 @@ void replication_test_client(EqrbTestAgent::Basic &client, const std::string &ds
 extern const driver_t eqrb_drv_sdtl;
 
 
-#define EQRB_SDTL_TEST_CHANEL "test_channel"
+#define EQRB_SDTL_TEST_CHANEL_REL "test_channel_rel"
+#define EQRB_SDTL_TEST_CHANEL_UNREL "test_channel_unrel"
 extern const sdtl_service_media_t sdtl_test_media;
 
 namespace EqrbTestAgent {
@@ -368,16 +369,23 @@ protected:
         rv = sdtl_service_init(&sdtl_service, service_name, service_mp, mtu, 4, media);
         REQUIRE(rv == SDTL_OK);
 
-        sdtl_channel_cfg_t ch_cfg_template = {
-                .name = EQRB_SDTL_TEST_CHANEL,
+        sdtl_channel_cfg_t ch_cfg_rel = {
+                .name = EQRB_SDTL_TEST_CHANEL_REL,
                 .id = 1,
                 .type = SDTL_CHANNEL_RELIABLE,
                 .mtu_override = 0,
         };
+        sdtl_channel_cfg_t ch_cfg_unrel = {
+                .name = EQRB_SDTL_TEST_CHANEL_UNREL,
+                .id = 2,
+                .type = SDTL_CHANNEL_UNRELIABLE,
+                .mtu_override = 0,
+        };
 
-        auto *ch_cfg = new sdtl_channel_cfg_t;
-        memcpy(ch_cfg, &ch_cfg_template, sizeof(*ch_cfg));
-        rv = sdtl_channel_create(sdtl_service, ch_cfg);
+        rv = sdtl_channel_create(sdtl_service, &ch_cfg_rel);
+        REQUIRE(rv == SDTL_OK);
+
+        rv = sdtl_channel_create(sdtl_service, &ch_cfg_unrel);
         REQUIRE(rv == SDTL_OK);
 
         return sdtl_service;
@@ -431,7 +439,7 @@ public:
 class sdtlMemBridgeBasic : public sdtlBasic {
 
 public:
-    sdtlMemBridgeBasic(const std::string &service_name_,
+        sdtlMemBridgeBasic(const std::string &service_name_,
                        const std::string &media_path_,
                        SDTLtestBridge &bridge) :
             sdtlBasic(&sdtl_test_media, service_name_, media_path_, &bridge) {
@@ -454,7 +462,7 @@ public:
     void start() {
         sdtl_start();
 //        eqrb_rv_t rv = eqrb_server_start(&server_handle, bus2replicate.c_str(), mask2replicate, NULL);
-        eqrb_rv_t rv = eqrb_sdtl_server_start(service_name.c_str(), EQRB_SDTL_TEST_CHANEL, 0xFFFFFFF,
+        eqrb_rv_t rv = eqrb_sdtl_server_start(service_name.c_str(), EQRB_SDTL_TEST_CHANEL_REL, EQRB_SDTL_TEST_CHANEL_UNREL, 0xFFFFFFFF,
                                               bus2replicate.c_str(), NULL);
         REQUIRE(rv == eqrb_rv_ok);
     }
@@ -479,7 +487,8 @@ public:
 
     void start() {
         sdtl_start();
-        eqrb_rv_t rv = eqrb_sdtl_client_connect(service_name.c_str(), EQRB_SDTL_TEST_CHANEL, replicate_to_path.c_str(), 100);
+        eqrb_rv_t rv = eqrb_sdtl_client_connect(service_name.c_str(), EQRB_SDTL_TEST_CHANEL_REL, EQRB_SDTL_TEST_CHANEL_UNREL,
+                                                replicate_to_path.c_str(), 100);
         REQUIRE(rv == eqrb_rv_ok);
     }
 
@@ -654,7 +663,7 @@ TEST_CASE("EQRB bus state sync") {
 }
 
 
-TEST_CASE("EQBR - mem bridge") {
+TEST_CASE("EQBR - mem bridge with restart") {
     eswb_local_init(1);
 
     auto bus_from = "src";

@@ -37,6 +37,8 @@ typedef struct {
     const driver_t *driver;
     device_descr_t dd;
     pthread_t tid;
+
+    int stream_only_mode;
 } eqrb_handle_common_t;
 
 typedef struct eqrb_server_handle {
@@ -52,7 +54,7 @@ typedef struct eqrb_client_handle {
     eqrb_handle_common_t h;
 
     eswb_topic_descr_t repl_dst_td;
-    topic_id_map_t ids_map;
+    topic_id_map_t *ids_map;
 
 } eqrb_client_handle_t;
 

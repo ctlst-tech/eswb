@@ -1,5 +1,3 @@
-
-
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
@@ -78,6 +76,12 @@ send_topic(device_descr_t dd, const driver_t *dr, eqrb_interaction_header_t *hdr
     return rv;
 }
 
+/*
+ * TODO:
+ *  1. Shift just streaming functionality sidekick to separate thread implementation
+ *  2. Implement command from main thead to streaming sidekick
+ */
+
 void *eqrb_server_thread(void *p) {
     eqrb_rv_t rv;
 
@@ -110,7 +114,16 @@ void *eqrb_server_thread(void *p) {
     int mode_do_initial_sync = 0;
     int mode_do_stream = 0;
 
-#define TRANSITION_WAIT_CMD() mode_wait_cmd = -1; mode_do_initial_sync = 0; mode_do_stream = 0
+
+    int stream_only = h->h.stream_only_mode;
+    if (stream_only) {
+        mode_wait_cmd = 0;
+        mode_do_initial_sync = 0;
+        mode_do_stream = -1;
+    }
+
+
+#define TRANSITION_TO_WAIT_CMD() mode_wait_cmd = -1; mode_do_initial_sync = 0; mode_do_stream = 0
 
     rv = dev->connect(h->h.connectivity_params, &dd);
     if (rv != eqrb_rv_ok) {
@@ -118,10 +131,12 @@ void *eqrb_server_thread(void *p) {
         return NULL;
     }
 
-    rv = dev->command(dd, eqrb_cmd_reset_remote);
-    if (rv != eqrb_rv_ok) {
-        eqrb_dbg_msg("device command eqrb_cmd_reset_remote error: %d", rv);
-        return NULL;
+    if (!stream_only) {
+        rv = dev->command(dd, eqrb_cmd_reset_remote);
+        if (rv != eqrb_rv_ok) {
+            eqrb_dbg_msg("device command eqrb_cmd_reset_remote error: %d", rv);
+            return NULL;
+        }
     }
 
     do {
@@ -133,6 +148,7 @@ void *eqrb_server_thread(void *p) {
                     break;
 
                 case eqrb_media_reset_cmd:
+                    eqrb_dbg_msg("Got eqrb_media_reset_cmd");
                     dev->command(dd, eqrb_cmd_reset_local_state);
                     continue;
 
@@ -154,50 +170,51 @@ void *eqrb_server_thread(void *p) {
 
                 default:
                     // TODO send: invalid cmd back
+                    eqrb_dbg_msg("Invalid cmd, waiting next");
                     break;
             }
         }
 
-        RESET_BUS_SYNC_STATE();
 
         if (mode_do_initial_sync) {
+            RESET_BUS_SYNC_STATE();
             eqrb_dbg_msg("Do initial topics sync data");
             memset(&bus_sync_state, 0, sizeof(bus_sync_state));
-        }
 
-        while (mode_do_initial_sync) {
-            erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid, &topic_tree_elem[0]);
-            if (erv == eswb_e_ok) {
-                size_t topics_num = 1;
-                if (topic_info->info.type == tt_fifo) {
-                    erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid,&topic_tree_elem[1]);
-                    if (erv == eswb_e_ok) {
-                        topics_num++;
-                        topic_tree_elem[0].first_child_ind = 1;
+            while (mode_do_initial_sync) {
+                erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid, &topic_tree_elem[0]);
+                if (erv == eswb_e_ok) {
+                    size_t topics_num = 1;
+                    if (topic_info->info.type == tt_fifo) {
+                        erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid, &topic_tree_elem[1]);
+                        if (erv == eswb_e_ok) {
+                            topics_num++;
+                            topic_tree_elem[0].first_child_ind = 1;
+                        }
                     }
+                    // insted of topic_tree_elem structure topic_extract_t is extracted with trailing additional info
+                    bus_sync_state.current_tid = ((topic_extract_t *) &topic_tree_elem[topics_num - 1])->info.topic_id;
+
+                    rv = send_topic(dd, dev, hdr, topic_info->parent_id, event, topics_num);
+                    switch (rv) {
+                        case eqrb_rv_ok:
+                            break;
+
+                        case eqrb_media_reset_cmd:
+                            TRANSITION_TO_WAIT_CMD();
+                            eqrb_dbg_msg("Server reset requested by client");
+                            break;
+
+                        default:
+                            eqrb_dbg_msg("device recv error: %d", rv);
+                            break;
+                    }
+                } else {
+                    eqrb_dbg_msg("Done sending bus state");
+                    mode_do_initial_sync = 0;
+                    mode_do_stream = -1; // FIXME programmed somewhere?
+                    break;
                 }
-                // insted of topic_tree_elem structure topic_extract_t is extracted with trailing additional info
-                bus_sync_state.current_tid = ((topic_extract_t *)&topic_tree_elem[topics_num-1])->info.topic_id;
-
-                rv = send_topic(dd, dev, hdr, topic_info->parent_id, event, topics_num);
-                switch (rv) {
-                    case eqrb_rv_ok:
-                        break;
-
-                    case eqrb_media_reset_cmd:
-                        TRANSITION_WAIT_CMD();
-                        eqrb_dbg_msg("Server reset requested by client");
-                        break;
-
-                    default:
-                        eqrb_dbg_msg("device recv error: %d", rv);
-                        break;
-                }
-            } else {
-                eqrb_dbg_msg("Done sending bus state");
-                mode_do_initial_sync = 0;
-                mode_do_stream = -1; // FIXME programmed somewhere?
-                break;
             }
         }
 
@@ -211,6 +228,9 @@ void *eqrb_server_thread(void *p) {
                     // TODO BREAK_LOOP_AND_RETURN(eqrb_rv_rx_eswb_fatal_err);
                     break;
                 }
+                if (!stream_only && event->type != eqr_topic_proclaim) {
+                    eqrb_dbg_msg("sending stream msg");
+                }
 
                 rv = send_msg(dd, dev, EQRB_CMD_SERVER_EVENT, hdr, event);
                 switch (rv) {
@@ -218,7 +238,9 @@ void *eqrb_server_thread(void *p) {
                         break;
 
                     case eqrb_media_reset_cmd:
-                        TRANSITION_WAIT_CMD();
+                        if (!stream_only) {
+                            TRANSITION_TO_WAIT_CMD();
+                        }
                         break;
 
                     default:
@@ -243,7 +265,7 @@ static eqrb_rv_t client_submit_repl_event (eqrb_client_handle_t *handle,
 
     eqrb_dbg_msg("topic_id = %d event_type = %d", event->topic_id, event->type);
 
-    erv = eswb_event_queue_replicate(h->repl_dst_td, &h->ids_map, event);
+    erv = eswb_event_queue_replicate(h->repl_dst_td, h->ids_map, event);
 
     switch (erv) {
         case eswb_e_ok:
@@ -297,15 +319,22 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
     int mode_wait_server = -1;
     int mode_wait_events = -1;
 
+    int stream_only = h->h.stream_only_mode;
+
     rv = dev->connect(h->h.connectivity_params, &dd);
     if (rv != eqrb_rv_ok) {
         eqrb_dbg_msg("device connection error: %d", rv);
         return NULL;
     }
 
-    rv = dev->command(dd, eqrb_cmd_reset_remote);
-    if (rv != eqrb_rv_ok) {
-        eqrb_dbg_msg("device command 'eqrb_cmd_reset_remote' error: %d", rv);
+    if (!stream_only) {
+        rv = dev->command(dd, eqrb_cmd_reset_remote);
+        if (rv != eqrb_rv_ok) {
+            eqrb_dbg_msg("device command 'eqrb_cmd_reset_remote' error: %d", rv);
+        }
+    } else {
+        mode_wait_server = 0;
+        mode_wait_events = -1;
     }
 
     do {
@@ -321,6 +350,7 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
                     break;
 
                 case eqrb_media_reset_cmd:
+                    eqrb_dbg_msg("Got eqrb_media_reset_cmd");
                     rv = dev->command(dd, eqrb_cmd_reset_local_state);
                     if (rv != eqrb_rv_ok) {
                         eqrb_dbg_msg("device command 'eqrb_cmd_reset_local_state' error: %d", rv);
@@ -341,9 +371,13 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
                     break;
 
                 case eqrb_media_reset_cmd:
-                    mode_wait_server = -1;
-                    mode_wait_events = 0;
-                    eqrb_dbg_msg("Client reset requested by server");
+                    if (!stream_only) {
+                        mode_wait_server = -1;
+                        mode_wait_events = 0;
+                        eqrb_dbg_msg("Client reset requested by server");
+                    } else {
+                        dev->command(dd, eqrb_cmd_reset_local_state);
+                    }
                     break;
 
                 default:
@@ -402,10 +436,14 @@ eqrb_rv_t eqrb_service_stop(eqrb_handle_common_t *h) {
 
 eqrb_rv_t eqrb_client_start(eqrb_client_handle_t *h, const char *mount_point, size_t repl_map_size) {
 
-    eswb_rv_t erv = map_alloc(&h->ids_map, repl_map_size);
-    if (erv != eswb_e_ok) {
-        eqrb_dbg_msg("map_alloc failed %s", eswb_strerror(erv));
-        return eqrb_nomem;
+    eswb_rv_t erv;
+
+    if (h->ids_map == NULL) {
+        erv = map_alloc(&h->ids_map, repl_map_size);
+        if (erv != eswb_e_ok) {
+            eqrb_dbg_msg("map_alloc failed %s", eswb_strerror(erv));
+            return eqrb_nomem;
+        }
     }
 
     erv = eswb_connect(mount_point, &h->repl_dst_td);
