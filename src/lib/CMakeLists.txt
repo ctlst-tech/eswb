@@ -44,9 +44,8 @@ target_include_directories(eswb-static PRIVATE
 set(ESWB_UTIL_EQRB_SRC
         services/eqrb/eqrb.c
         services/eqrb/eqrb_priv.h
-        services/eqrb/drivers/tcp.c
+        services/eqrb/drivers/sdtl.c
         services/eqrb/drivers/file.c
-        services/eqrb/drivers/serial.c
         include/public/eswb/services/eqrb.h
         )
 

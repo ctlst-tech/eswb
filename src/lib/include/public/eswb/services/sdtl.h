@@ -27,6 +27,8 @@ typedef enum sdtl_rv {
     SDTL_RX_FIFO_OVERFLOW,
     SDTL_NO_MEM,
     SDTL_CH_EXIST,
+    SDTL_SERVICE_EXIST,
+    SDTL_NO_SERVICE,
     SDTL_INVALID_MTU,
     SDTL_NAMES_TOO_LONG,
     SDTL_SYS_ERR,
@@ -96,6 +98,7 @@ extern const sdtl_service_media_t sdtl_media_serial;
 sdtl_rv_t sdtl_service_init(sdtl_service_t **s, const char *service_name, const char *mount_point, size_t mtu,
                             size_t max_channels_num, const sdtl_service_media_t *media);
 
+sdtl_service_t *sdtl_service_lookup(const char *service_name);
 sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *media_params);
 sdtl_rv_t sdtl_service_stop(sdtl_service_t *s);
 

@@ -943,12 +943,54 @@ static eswb_rv_t open_channel_resource(const char *base_path, const char* ch_nam
 
 
 
+#define SDTL_SERVICE_REG_RECORDS_MAX 4
+
+// FIXME this is not thread safe construction:
+static sdtl_service_t *sdtl_srv_reg[SDTL_SERVICE_REG_RECORDS_MAX];
+
+static void srv_reg_add(sdtl_service_t *s) {
+    for (int i = 0; i < SDTL_SERVICE_REG_RECORDS_MAX; i++) {
+        if (sdtl_srv_reg[i] == NULL) {
+            sdtl_srv_reg[i] = s;
+            break;
+        }
+    }
+}
+
+static void srv_reg_delete(sdtl_service_t *s) {
+    for (int i = 0; i < SDTL_SERVICE_REG_RECORDS_MAX; i++) {
+        if (sdtl_srv_reg[i] == s) {
+            sdtl_srv_reg[i] = NULL;
+            break;
+        }
+    }
+}
+
+/*
+ * FIXME we should not refer to service control structure in order to connect to it
+ */
+sdtl_service_t *sdtl_service_lookup(const char *service_name) {
+    for (int i = 0; i < SDTL_SERVICE_REG_RECORDS_MAX; i++) {
+        if ((sdtl_srv_reg[i] != NULL) && (strcmp(service_name, sdtl_srv_reg[i]->service_name) == 0)) {
+            return sdtl_srv_reg[i];
+        }
+    }
+
+    return NULL;
+}
+
 
 sdtl_rv_t sdtl_service_init(sdtl_service_t **s_rv, const char *service_name, const char *mount_point, size_t mtu,
                             size_t max_channels_num, const sdtl_service_media_t *media) {
 
-    sdtl_service_t *s = sdtl_alloc(sizeof(*s));
+    sdtl_service_t *s;
+    s = sdtl_service_lookup(service_name);
+    if (s != NULL) {
+        *s_rv = s;
+        return SDTL_SERVICE_EXIST;
+    }
 
+    s = sdtl_alloc(sizeof(*s));
     if (s == NULL) {
         return SDTL_NO_MEM;
     }
@@ -1011,6 +1053,8 @@ sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *me
         return SDTL_SYS_ERR;
     }
 
+    srv_reg_add(s);
+
     return SDTL_OK;
 }
 
@@ -1030,6 +1074,8 @@ sdtl_rv_t sdtl_service_stop(sdtl_service_t *s) {
     for (int i = 0; i < s->channels_num; i++) {
         sdtl_channel_close(s->channel_handles[i]);
     }
+
+    srv_reg_delete(s);
 
     return SDTL_OK;
 }
@@ -1116,6 +1162,10 @@ sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg) {
 
 
 sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_channel_handle_t **chh_rv) {
+
+    if (s == NULL) {
+        return SDTL_NO_SERVICE;
+    }
 
     sdtl_channel_t *ch = resolve_channel_by_name(s, channel_name);
     if (ch == NULL) {

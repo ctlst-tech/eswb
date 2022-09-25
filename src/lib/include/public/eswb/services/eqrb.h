@@ -43,16 +43,12 @@ struct eqrb_client_handle;
 
 #define EQRB_ERR_MSG_MAX_LEN 128
 
-eqrb_rv_t eqrb_tcp_server_start(uint16_t port);
-eqrb_rv_t eqrb_tcp_server_stop();
 
-eqrb_rv_t eqrb_tcp_client_create(struct eqrb_client_handle **rv_ch);
-eqrb_rv_t eqrb_tcp_client_connect(struct eqrb_client_handle *ch, const char *addr_str, const char *bus2replicate,
-                                  const char *mount_point, uint32_t repl_map_size, char *err_msg);
-eqrb_rv_t eqrb_tcp_client_close(struct eqrb_client_handle *ch);
-
-eqrb_rv_t eqrb_serial_server_start(const char *path, uint32_t baudrate, const char *bus2replicate);
-eqrb_rv_t eqrb_serial_client_connect(const char *path, uint32_t baudrate, const char *mount_point, uint32_t repl_map_size);
+eqrb_rv_t
+eqrb_sdtl_server_start(const char *service_name, const char *sdtl_ch_name, uint32_t ch_mask, const char *bus2replicate,
+                       const char **err_msg);
+eqrb_rv_t eqrb_sdtl_client_connect(const char *service_name, const char *sdtl_ch_name, const char *mount_point,
+                                   uint32_t repl_map_size);
 
 
 #ifdef __cplusplus

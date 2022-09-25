@@ -340,99 +340,7 @@ void replication_test_client(EqrbTestAgent::Basic &client, const std::string &ds
 
 }
 
-typedef struct {
-    const char *ch_name;
-    sdtl_service_t *service;
-} eqrb_sdtl_params_t;
-
-eqrb_sdtl_params_t *conn_params(const char *n, sdtl_service_t *s) {
-    auto rv = new eqrb_sdtl_params_t;
-
-    rv->ch_name = n;
-    rv->service = s;
-
-    return rv;
-}
-
-eqrb_rv_t sdtl_media_connect (void *param, device_descr_t *dh) {
-    eqrb_sdtl_params_t *p = (eqrb_sdtl_params_t *)param;
-    sdtl_channel_handle_t *chh;
-    sdtl_rv_t rv = sdtl_channel_open(p->service, p->ch_name, &chh);
-
-    *dh = chh;
-
-    return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
-}
-
-eqrb_rv_t sdtl_media_send (device_descr_t dh, void *data, size_t bts, size_t *bs) {
-
-    sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
-
-    sdtl_rv_t rv = sdtl_channel_send_data(chh, data, bts);
-
-    switch (rv) {
-        case SDTL_OK:
-            *bs = bts;
-            return eqrb_rv_ok;
-
-        case SDTL_REMOTE_RX_NO_CLIENT:
-        case SDTL_APP_RESET:
-            return eqrb_media_reset_cmd;
-
-        default:
-            return eqrb_media_err;
-    }
-}
-
-eqrb_rv_t sdtl_media_recv (device_descr_t dh, void *data, size_t btr, size_t *br) {
-    sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
-
-    sdtl_rv_t rv = sdtl_channel_recv_data(chh, data, btr, br);
-    switch (rv) {
-        case SDTL_OK:
-            return eqrb_rv_ok;
-
-        case SDTL_APP_RESET:
-            return eqrb_media_reset_cmd;
-
-        default:
-            return eqrb_media_err;
-    }
-}
-
-eqrb_rv_t sdtl_media_command (device_descr_t dh, eqrb_cmd_t cmd) {
-    sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
-    sdtl_rv_t rv;
-
-    switch (cmd) {
-        case eqrb_cmd_reset_remote:
-            rv = sdtl_channel_send_cmd(chh, SDTL_PKT_CMD_CODE_RESET);
-            break;
-
-        case eqrb_cmd_reset_local_state:
-            rv = sdtl_channel_reset_condition(chh);
-            break;
-
-        default:
-            return eqrb_media_invarg;
-    }
-
-    return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
-}
-
-int sdtl_media_disconnect (device_descr_t dh) {
-//    return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
-    return SDTL_OK;
-}
-
-const driver_t eqrb_sdtl_driver = {
-        .name = "eqrb_sdtl",
-        .connect = sdtl_media_connect,
-        .send = sdtl_media_send,
-        .recv = sdtl_media_recv,
-        .command = sdtl_media_command,
-        .disconnect = sdtl_media_disconnect,
-};
+extern const driver_t eqrb_drv_sdtl;
 
 
 #define EQRB_SDTL_TEST_CHANEL "test_channel"
@@ -445,10 +353,10 @@ class sdtlBasic : public Basic {
     sdtl_service_t *sdtl_service;
     void *media_data_handle;
 
-    std::string service_name;
     std::string media_path;
 
 protected:
+    std::string service_name;
     const sdtl_service_media_t *sdtl_media;
 
     static sdtl_service_t *
@@ -485,7 +393,7 @@ protected:
         REQUIRE(rv == SDTL_OK);
     }
 
-    sdtl_service_t *init_environment(eqrb_handle_common_t &handle) {
+    sdtl_service_t *init_environment() {
         auto service_bus_name = "sdtl_" + service_name + "_tst_bus";
         eswb_rv_t erv;
 
@@ -503,7 +411,6 @@ protected:
 
         sdtl_service_t *s_rv = sdtl_init(service_bus_name.c_str(),
                                           service_name.c_str(), 128, sdtl_media);
-        handle.connectivity_params = conn_params(EQRB_SDTL_TEST_CHANEL, s_rv);
 
         return s_rv;
     }
@@ -512,13 +419,12 @@ public:
     sdtlBasic(const sdtl_service_media_t *sdtl_media_,
               const std::string &service_name_,
               const std::string &media_path_,
-              eqrb_handle_common_t &handle,
               void *media_h) : sdtl_media(sdtl_media_),
                                            service_name(service_name_),
                                            media_path(media_path_),
                                            media_data_handle(media_h) {
 
-        sdtl_service = init_environment(handle);
+        sdtl_service = init_environment();
     }
 };
 
@@ -527,66 +433,61 @@ class sdtlMemBridgeBasic : public sdtlBasic {
 public:
     sdtlMemBridgeBasic(const std::string &service_name_,
                        const std::string &media_path_,
-                       eqrb_handle_common_t &handle,
                        SDTLtestBridge &bridge) :
-            sdtlBasic(&sdtl_test_media, service_name_, media_path_, handle, &bridge) {
+            sdtlBasic(&sdtl_test_media, service_name_, media_path_, &bridge) {
     }
 };
 
 class sdtlMemBridgeServer : public sdtlMemBridgeBasic {
     const std::string bus2replicate;
     uint32_t mask2replicate;
-    eqrb_server_handle_t server_handle;
 
 public:
     sdtlMemBridgeServer(const std::string &bus2replicate_, uint32_t mask2replicate_,
                         SDTLtestBridge &bridge) :
-            sdtlMemBridgeBasic("server", "down", server_handle.h, bridge),
+            sdtlMemBridgeBasic("server", "down", bridge),
             bus2replicate(bus2replicate_),
             mask2replicate(mask2replicate_){
 
-        server_handle.h.driver = &eqrb_sdtl_driver;
     }
 
     void start() {
         sdtl_start();
-
-        eqrb_rv_t rv = eqrb_server_start(&server_handle, bus2replicate.c_str(), mask2replicate, NULL);
+//        eqrb_rv_t rv = eqrb_server_start(&server_handle, bus2replicate.c_str(), mask2replicate, NULL);
+        eqrb_rv_t rv = eqrb_sdtl_server_start(service_name.c_str(), EQRB_SDTL_TEST_CHANEL, 0xFFFFFFF,
+                                              bus2replicate.c_str(), NULL);
         REQUIRE(rv == eqrb_rv_ok);
     }
 
     void stop() {
         sdtl_stop();
-        eqrb_rv_t rv = eqrb_service_stop(&server_handle.h);
-        REQUIRE(rv == eqrb_rv_ok);
+//        eqrb_rv_t rv = eqrb_service_stop(&server_handle.h);
+//        REQUIRE(rv == eqrb_rv_ok);
     }
 };
 
 
 class sdtlMemBridgeClient : public sdtlMemBridgeBasic {
     const std::string &replicate_to_path;
-    eqrb_client_handle_t client_handle;
 
 public:
     sdtlMemBridgeClient(const std::string &replicate_to_path_,
                         SDTLtestBridge &bridge ) :
-            sdtlMemBridgeBasic("client", "up", client_handle.h, bridge),
+            sdtlMemBridgeBasic("client", "up", bridge),
             replicate_to_path(replicate_to_path_){
-        client_handle.h.driver = &eqrb_sdtl_driver;
     }
 
     void start() {
         sdtl_start();
-
-        eqrb_rv_t rv = eqrb_client_start(&client_handle, replicate_to_path.c_str(), 100);
+        eqrb_rv_t rv = eqrb_sdtl_client_connect(service_name.c_str(), EQRB_SDTL_TEST_CHANEL, replicate_to_path.c_str(), 100);
         REQUIRE(rv == eqrb_rv_ok);
     }
 
     void stop() {
         sdtl_stop();
 
-        eqrb_rv_t rv = eqrb_service_stop(&client_handle.h);
-        REQUIRE(rv == eqrb_rv_ok);
+//        eqrb_rv_t rv = eqrb_service_stop(&client_handle.h);
+//        REQUIRE(rv == eqrb_rv_ok);
     }
 };
 
@@ -594,6 +495,7 @@ public:
 
 static eqrb_client_handle_t *repl_factory_ch;
 
+/*
 void repl_factory_tcp_init(std::string &src, std::string &dst) {
     eqrb_rv_t hrv;
 
@@ -637,9 +539,7 @@ void repl_factory_serial_init(std::string &src, std::string &dst) {
         close(fd2);
     }
 
-    /**
-     * socat -d -d pty,link=/tmp/vserial1,raw,echo=0 pty,link=/tmp/vserial2,raw,echo=0
-     */
+     // socat -d -d pty,link=/tmp/vserial1,raw,echo=0 pty,link=/tmp/vserial2,raw,echo=0
 
     hrv = eqrb_serial_server_start(SERIAL1, 115200, src.c_str());
     REQUIRE(hrv == eqrb_rv_ok);
@@ -653,6 +553,7 @@ void repl_factory_serial_init(std::string &src, std::string &dst) {
 void repl_factory_serial_deinit() {
 
 }
+*/
 
 PseudoTopic *create_bus_and_arbitrary_hierarchy(eswb_type_t bus_type, const std::string &bus_name);
 
@@ -690,17 +591,17 @@ TEST_CASE("EQRB bus state sync") {
 
 
     // starting replication facilities
-    rbrv = eqrb_tcp_server_start(0);
+//    rbrv = eqrb_tcp_server_start(0);
     REQUIRE(rbrv == eqrb_rv_ok);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
     eqrb_client_handle_t *client_handle;
-    rbrv = eqrb_tcp_client_create(&client_handle);
+//    rbrv = eqrb_tcp_client_create(&client_handle);
     REQUIRE(rbrv == eqrb_rv_ok);
 
     char err_msg[EQRB_ERR_MSG_MAX_LEN + 1];
-    rbrv = eqrb_tcp_client_connect(client_handle, "127.0.0.1", src_bus->get_full_path().c_str(), mounting_point.c_str(), 100, err_msg);
+//    rbrv = eqrb_tcp_client_connect(client_handle, "127.0.0.1", src_bus->get_full_path().c_str(), mounting_point.c_str(), 100, err_msg);
     if (rbrv != eqrb_rv_ok) {
         FAIL("eqrb_tcp_client_connect error " + std::to_string(rbrv));
     }
@@ -748,8 +649,8 @@ TEST_CASE("EQRB bus state sync") {
     bool comparison = *src_bus == *extracted_bus;
     REQUIRE(comparison == true);
 
-    eqrb_tcp_server_stop();
-    eqrb_tcp_client_close(client_handle);
+//    eqrb_tcp_server_stop();
+//    eqrb_tcp_client_close(client_handle);
 }
 
 
