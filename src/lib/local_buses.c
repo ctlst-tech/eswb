@@ -364,20 +364,25 @@ eswb_rv_t local_get_mounting_point(eswb_topic_descr_t td, char *mp) {
 eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
     topic_local_index_t *li = &local_td_index[td];
 
+    eswb_rv_t rv;
+
     switch(li->t->type) {
         case tt_event_queue:
-            return topic_io_event_queue_pop(li->t, li->event_queue_mask, &li->rcvr_state, data, bus_is_synced(li->bh));
+            rv = topic_io_event_queue_pop(li->t, li->event_queue_mask, &li->rcvr_state, data, bus_is_synced(li->bh),
+                                            li->timeout_us);
+            break;
 
         case tt_fifo:
-            ;
-            eswb_rv_t rv = topic_io_fifo_pop(li->t, &li->rcvr_state, data,
+            rv = topic_io_fifo_pop(li->t, &li->rcvr_state, data,
                                              bus_is_synced(li->bh), do_wait, li->timeout_us);;
-            li->timeout_us = 0;
-            return rv;
+            break;
 
         default:
             return eswb_e_not_fifo;
     }
+
+    li->timeout_us = 0;
+    return rv;
 }
 
 eswb_rv_t local_fifo_flush(topic_local_index_t *li) {

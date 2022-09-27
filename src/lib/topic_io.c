@@ -3,6 +3,7 @@
 //
 
 #include <string.h>
+#include <time.h>
 
 #include "local_buses.h"
 #include "topic_io.h"
@@ -123,17 +124,39 @@ eswb_rv_t topic_io_fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state) {
 }
 
 
-eswb_rv_t topic_io_event_queue_pop (topic_t *t, eswb_event_queue_mask_t mask, fifo_rcvr_state_t *rcvr_state, event_queue_transfer_t *eqt, int synced) {
+eswb_rv_t topic_io_event_queue_pop(topic_t *t, eswb_event_queue_mask_t mask, fifo_rcvr_state_t *rcvr_state,
+                                   event_queue_transfer_t *eqt, int synced, uint32_t timeout_us) {
     eswb_rv_t rv;
 
     event_queue_record_t event;
 
+    struct timespec ts;
+    struct timespec timeout_expiry_time;
+
+    if (timeout_us) {
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        // TODO cover it be test
+        // TODO shift to micro sec call timeoftheday or something?
+        timeout_expiry_time.tv_nsec = ts.tv_nsec + timeout_us * 1000;
+        if (timeout_expiry_time.tv_nsec > 1000000000) {
+            timeout_expiry_time.tv_nsec %= 1000000000;
+            timeout_expiry_time.tv_sec++;
+        }
+    }
+
     if (synced) sync_take(t->sync);
 
     do {
-        rv = fifo_wait_and_read(t, rcvr_state, &event, synced, 1, 0);
+        rv = fifo_wait_and_read(t, rcvr_state, &event, synced, 1, timeout_us);
         if ((rv == eswb_e_ok) || (rv == eswb_e_fifo_rcvr_underrun) && (event.type == eqr_none)) {
             continue;
+        }
+        if (timeout_us) {
+            clock_gettime(CLOCK_MONOTONIC, &ts);
+            if ((ts.tv_sec > timeout_expiry_time.tv_sec) || (ts.tv_nsec > timeout_expiry_time.tv_nsec)) {
+                rv = eswb_e_timedout;
+                break;
+            }
         }
     } while(synced && (!(event.ch_mask & mask))); // && (rv != eswb_e_no_update)
 
