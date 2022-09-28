@@ -28,6 +28,7 @@ typedef enum {
     eqrb_media_stop,
     eqrb_media_invarg,
     eqrb_media_reset_cmd,
+    eqrb_media_remote_need_reset,
 
     eqrb_server_already_launched,
 

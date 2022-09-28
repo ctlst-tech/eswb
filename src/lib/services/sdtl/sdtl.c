@@ -138,7 +138,6 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
         rx_state.rx_state = SDTL_RX_STATE_WAIT_DATA;
     }
 
-#   define HAS_SAME_PARITY(__hdr,__curr_is_odd) (((__hdr)->base.attr & SDTL_PKT_ATTR_ODD_FLAG) && (__curr_is_odd))
     sdtl_data_header_t *dhdr = (sdtl_data_header_t *) base_header;
     sdtl_ack_header_t *ahdr = (sdtl_ack_header_t *) base_header;
     sdtl_cmd_header_t *chdr = (sdtl_cmd_header_t *) base_header;
@@ -149,7 +148,6 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
                 (dhdr->sub.seq_code == rx_state.last_received_seq)) {
                 sdtl_dbg_msg("Got rx state: ack trailing paket from prior seq 0x%04X", rx_state.last_received_seq);
 
-//                rx_state.state = SDTL_RX_STATE_SEQ_DONE; // just a local copy of the state
                 send_ack(chh, dhdr->sub.cnt, SDTL_ACK_GOT_PKT);
             }
 
@@ -168,7 +166,10 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
 
                 case SDTL_RX_STATE_WAIT_DATA:
                     rv = process_data(chh, &dhdr->sub);
-                    sdtl_dbg_msg("Got pkt #%d with %d bytes", dhdr->sub.cnt, dhdr->sub.payload_size);
+                    sdtl_dbg_msg("Got pkt #%d with %d bytes from ch_id #%d seq #%04X", dhdr->sub.cnt,
+                                 dhdr->sub.payload_size,
+                                 dhdr->base.ch_id,
+                                 dhdr->sub.seq_code);
                     break;
             }
             break;
@@ -180,6 +181,8 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
             break;
 
         case SDTL_PKT_ATTR_PKT_TYPE_CMD:
+            sdtl_dbg_msg("Got cmd code 0x%02X", chdr->cmd_code);
+
             if (check_rel(chh)) { ;
                 uint8_t flags = 0;
                 if (chdr->cmd_code == SDTL_PKT_CMD_CODE_RESET) {
@@ -449,6 +452,7 @@ static sdtl_rv_t wait_ack(sdtl_channel_handle_t *chh, uint32_t timeout_us, sdtl_
             break;
 
         default:
+            sdtl_dbg_msg("eswb_fifo_pop unhandled error: %s", eswb_strerror(erv));
             rv = SDTL_ESWB_ERR;
             break;
     }
@@ -582,7 +586,9 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
                 }
             }
             rv = send_data(chh, pktn_in_seq, flags, seq_code, d + offset, dsize);
-            sdtl_dbg_msg("Send %d bytes in pkt #%d in seq 0x%04X", dsize, pktn_in_seq, seq_code);
+            sdtl_dbg_msg("Send %d bytes in pkt #%d in seq 0x%04X ch_id %d | rv == %d", dsize, pktn_in_seq, seq_code,
+                         chh->channel->cfg.id,
+                         rv);
 
             // TODO get timeout from somewhere
             if (rel) {
@@ -678,6 +684,7 @@ static sdtl_rv_t channel_send_cmd(sdtl_channel_handle_t *chh, uint8_t cmd_code) 
                 break;
 
             default:
+                sdtl_dbg_msg("Cmd ack timeout");
                 loop = 0;
                 break;
 
@@ -871,7 +878,8 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
                         prev_pkt_num++;
                     }
 
-                    sdtl_dbg_msg("Send %d bytes in pkt #%d in seq 0x%04X", dsh->payload_size, dsh->cnt, dsh->seq_code);
+                    sdtl_dbg_msg("Recv %d bytes in pkt #%d in seq 0x%04X in ch_id %d",
+                                 dsh->payload_size, dsh->cnt, dsh->seq_code, chh->channel->cfg.id);
 
                     if (dsh->flags & SDTL_PKT_DATA_FLAG_LAST_PKT) {
                         sdtl_dbg_msg("Got SDTL_PKT_DATA_FLAG_LAST_PKT flag");
@@ -1010,6 +1018,10 @@ sdtl_rv_t sdtl_service_init(sdtl_service_t **s_rv, const char *service_name, con
         return SDTL_SERVICE_EXIST;
     }
 
+    if (media == NULL) {
+        return SDTL_INVALID_MEDIA;
+    }
+
     s = sdtl_alloc(sizeof(*s));
     if (s == NULL) {
         return SDTL_NO_MEM;
@@ -1040,19 +1052,32 @@ sdtl_rv_t sdtl_service_init(sdtl_service_t **s_rv, const char *service_name, con
     eswb_rv_t erv;
     erv = eswb_mkdir(mount_point, s->service_name);
     if (erv != eswb_e_ok) {
+        sdtl_dbg_msg("eswb_mkdir failed for %s: %s", mount_point, eswb_strerror(erv));
         return SDTL_ESWB_ERR;
     }
 
     *s_rv = s;
 
+//    sdtl_dbg_msg("Success, media ref == 0x%016X", (uint64_t)s->media);
+
     return SDTL_OK;
+}
+
+sdtl_rv_t sdtl_service_init_w(sdtl_service_t **s_rv, const char *service_name, const char *mount_point, size_t mtu,
+                            size_t max_channels_num, const char *media_name) {
+
+    return sdtl_service_init(s_rv, service_name, mount_point, mtu, max_channels_num, sdtl_lookup_media(media_name));
 }
 
 
 sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *media_params) {
     sdtl_rv_t rv;
 
+//    sdtl_dbg_msg("Entered: path %s", media_path);
+
     rv = s->media->open(media_path, media_params, &s->media_handle);
+
+    sdtl_dbg_msg("Media opened");
 
     if (rv != SDTL_OK) {
         return rv;
@@ -1068,12 +1093,16 @@ sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *me
         }
     }
 
+    sdtl_dbg_msg("Channels inited");
+
     int prv = pthread_create(&s->rx_thread_tid, NULL, (void*)(void*) sdtl_service_rx_thread, s);
     if (prv) {
         return SDTL_SYS_ERR;
     }
 
     srv_reg_add(s);
+
+    sdtl_dbg_msg("Success: \"%s\"", s->service_name);
 
     return SDTL_OK;
 }
@@ -1177,6 +1206,9 @@ sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg) {
 
     s->channels_num++;
 
+    sdtl_dbg_msg("Channel created: \"%s\", id: %d, type: %s", ch->cfg.name, ch->cfg.id,
+                 ch->cfg.type == SDTL_CHANNEL_RELIABLE ? "REL" : "UNREL");
+
     return SDTL_OK;
 }
 
@@ -1219,17 +1251,20 @@ sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_ch
     eswb_rv_t erv;
     erv = open_channel_resource(s->service_eswb_root, channel_name, CHANNEL_DATA_FIFO_NAME, &chh->data_td);
     if (erv != eswb_e_ok) {
+        sdtl_dbg_msg("open_channel_resource %s/%s error: %s", channel_name, CHANNEL_DATA_FIFO_NAME, eswb_strerror(erv));
         return SDTL_ESWB_ERR;
     }
 
     if (ch->cfg.type == SDTL_CHANNEL_RELIABLE) {
         erv = open_channel_resource(s->service_eswb_root, channel_name, CHANNEL_ACK_FIFO_NAME, &chh->ack_td);
         if (erv != eswb_e_ok) {
+            sdtl_dbg_msg("open_channel_resource %w error: %s", CHANNEL_ACK_FIFO_NAME, eswb_strerror(erv));
             return SDTL_ESWB_ERR;
         }
 
         erv = open_channel_resource(s->service_eswb_root, channel_name, CHANNEL_RX_STATE_STRUCT_NAME, &chh->rx_state_td);
         if (erv != eswb_e_ok) {
+            sdtl_dbg_msg("open_channel_resource %s error: %s", CHANNEL_RX_STATE_STRUCT_NAME, eswb_strerror(erv));
             return SDTL_ESWB_ERR;
         }
     }
@@ -1288,10 +1323,24 @@ sdtl_rv_t sdtl_channel_send_cmd(sdtl_channel_handle_t *chh, uint8_t code) {
     return channel_send_cmd(chh, code);
 }
 
+sdtl_rv_t sdtl_channel_check_reset_condition(sdtl_channel_handle_t *chh) {
+    return ch_state_return_condition(chh);
+}
+
 sdtl_rv_t sdtl_channel_reset_condition(sdtl_channel_handle_t *chh) {
     return ch_state_alter_cond_flags(chh, 0xFF, 0);
 }
 
 uint32_t sdtl_channel_get_max_payload_size(sdtl_channel_handle_t *chh) {
     return chh->channel->max_payload_size;
+}
+
+const sdtl_service_media_t *sdtl_lookup_media(const char *mtype) {
+    sdtl_dbg_msg("Look for \"%s\"", mtype);
+
+    if (strcmp(mtype, "serial") == 0) {
+        return &sdtl_media_serial;
+    }
+
+    return NULL;
 }

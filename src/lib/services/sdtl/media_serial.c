@@ -13,9 +13,11 @@ sdtl_rv_t sdtl_media_serial_open(const char *path, void *params, void **h_rv) {
     sdtl_media_serial_params_t *ser_params = (sdtl_media_serial_params_t *) params;
     struct termios 	termios_p;
 
+    sdtl_dbg_msg("entered");
+
     int fd = open(path, O_RDWR);
     if (fd == -1) {
-        sdtl_debug_msg("Failed to connect to \"%s\": %s", path, strerror(errno));
+        sdtl_dbg_msg("Failed to connect to \"%s\": %s", path, strerror(errno));
 
         if (errno == ENOENT) {
             return SDTL_MEDIA_NO_ENTITY;
@@ -26,7 +28,7 @@ sdtl_rv_t sdtl_media_serial_open(const char *path, void *params, void **h_rv) {
 
     int rv = tcgetattr(fd, &termios_p);
     if (rv) {
-        sdtl_debug_msg("tcgetattr failed: %s", path, strerror(errno));
+        sdtl_dbg_msg("tcgetattr failed: %s", path, strerror(errno));
         return SDTL_MEDIA_ERR;
     }
 
@@ -34,7 +36,7 @@ sdtl_rv_t sdtl_media_serial_open(const char *path, void *params, void **h_rv) {
     cfsetospeed(&termios_p, ser_params->baudrate);
     rv = tcsetattr(fd, TCSANOW, &termios_p);
     if (rv) {
-        sdtl_debug_msg("tcsetattr failed: %s", path, strerror(errno));
+        sdtl_dbg_msg("tcsetattr failed: %s", path, strerror(errno));
         return SDTL_MEDIA_ERR;
     }
 

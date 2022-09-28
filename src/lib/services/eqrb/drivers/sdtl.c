@@ -13,8 +13,14 @@ eqrb_rv_t eqrb_drv_sdtl_connect (void *param, device_descr_t *dh) {
     sdtl_channel_handle_t *chh;
 
     sdtl_service_t *service = sdtl_service_lookup(p->service_name);
+    if (service == NULL){
+        eqrb_dbg_msg("service \"%s\" not found", p->service_name);
+    }
 
     sdtl_rv_t rv = sdtl_channel_open(service, p->ch_name, &chh);
+    if (rv != SDTL_OK) {
+        eqrb_dbg_msg("sdtl_channel_open failed: %d", rv);
+    }
 
     *dh = chh;
 
@@ -33,6 +39,8 @@ eqrb_rv_t eqrb_drv_sdtl_send (device_descr_t dh, void *data, size_t bts, size_t 
             return eqrb_rv_ok;
 
         case SDTL_REMOTE_RX_NO_CLIENT:
+            return eqrb_media_remote_need_reset;
+
         case SDTL_APP_RESET:
             return eqrb_media_reset_cmd;
 
@@ -74,12 +82,32 @@ eqrb_rv_t eqrb_drv_sdtl_command (device_descr_t dh, eqrb_cmd_t cmd) {
             return eqrb_media_invarg;
     }
 
+    if (rv != SDTL_OK) {
+        eqrb_dbg_msg("failed: %d", rv);
+    }
+
     return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
 }
 
-int eqrb_drv_sdtl_disconnect (device_descr_t dh) {
+eqrb_rv_t eqrb_drv_sdtl_check_state (device_descr_t dh) {
+    sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
+    sdtl_rv_t rv = sdtl_channel_check_reset_condition(chh);
+    switch (rv) {
+        case SDTL_APP_RESET:
+        case SDTL_APP_CANCEL:
+            return eqrb_media_reset_cmd;
+
+        case SDTL_OK:
+            return eqrb_rv_ok;
+
+        default:
+            return eqrb_media_err;
+    }
+}
+
+eqrb_rv_t eqrb_drv_sdtl_disconnect (device_descr_t dh) {
 //    return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
-    return SDTL_OK;
+    return eqrb_rv_ok;
 }
 
 const driver_t eqrb_drv_sdtl = {
@@ -88,6 +116,7 @@ const driver_t eqrb_drv_sdtl = {
         .send = eqrb_drv_sdtl_send,
         .recv = eqrb_drv_sdtl_recv,
         .command = eqrb_drv_sdtl_command,
+        .check_state = eqrb_drv_sdtl_check_state,
         .disconnect = eqrb_drv_sdtl_disconnect,
 };
 

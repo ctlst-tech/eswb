@@ -2,7 +2,6 @@
 #define SDTL_H
 
 #include <eswb/api.h>
-#include <pthread.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,6 +29,7 @@ typedef enum sdtl_rv {
     SDTL_SERVICE_EXIST,
     SDTL_NO_SERVICE,
     SDTL_INVALID_MTU,
+    SDTL_INVALID_MEDIA,
     SDTL_NAMES_TOO_LONG,
     SDTL_SYS_ERR,
     SDTL_INVALID_CH_TYPE,
@@ -97,6 +97,8 @@ extern const sdtl_service_media_t sdtl_media_serial;
  */
 sdtl_rv_t sdtl_service_init(sdtl_service_t **s, const char *service_name, const char *mount_point, size_t mtu,
                             size_t max_channels_num, const sdtl_service_media_t *media);
+sdtl_rv_t sdtl_service_init_w(sdtl_service_t **s_rv, const char *service_name, const char *mount_point, size_t mtu,
+                              size_t max_channels_num, const char *media_name);
 
 sdtl_service_t *sdtl_service_lookup(const char *service_name);
 sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *media_params);
@@ -117,8 +119,10 @@ sdtl_rv_t sdtl_channel_send_data(sdtl_channel_handle_t *chh, void *d, uint32_t l
 
 sdtl_rv_t sdtl_channel_send_cmd(sdtl_channel_handle_t *chh, uint8_t code);
 sdtl_rv_t sdtl_channel_reset_condition(sdtl_channel_handle_t *chh);
+sdtl_rv_t sdtl_channel_check_reset_condition(sdtl_channel_handle_t *chh);
 
 uint32_t sdtl_channel_get_max_payload_size(sdtl_channel_handle_t *chh);
+const sdtl_service_media_t *sdtl_lookup_media(const char *mtype);
 
 #ifdef __cplusplus
 }
