@@ -137,7 +137,9 @@ eswb_rv_t topic_io_event_queue_pop(topic_t *t, eswb_event_queue_mask_t mask, fif
         clock_gettime(CLOCK_MONOTONIC, &ts);
         // TODO cover it be test
         // TODO shift to micro sec call timeoftheday or something?
-        timeout_expiry_time.tv_nsec = ts.tv_nsec + timeout_us * 1000;
+
+        timeout_expiry_time.tv_sec = ts.tv_sec + timeout_us > 1000000 ? (timeout_us / 1000000) : 0;
+        timeout_expiry_time.tv_nsec = ts.tv_nsec + (timeout_us % 1000000) * 1000;
         if (timeout_expiry_time.tv_nsec > 1000000000) {
             timeout_expiry_time.tv_nsec %= 1000000000;
             timeout_expiry_time.tv_sec++;
