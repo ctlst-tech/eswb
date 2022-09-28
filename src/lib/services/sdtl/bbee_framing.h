@@ -36,6 +36,14 @@ typedef struct {
     int got_end_char;
     int got_command_code;
     int payload_started;
+
+    uint32_t stat_processings;
+    uint32_t stat_good_frames;
+    uint32_t stat_buf_overflow;
+    uint32_t stat_inv_crc;
+    uint32_t stat_got_empty_frame;
+    uint32_t stat_frame_restart;
+
 } bbee_frm_rx_state_t;
 
 typedef struct {

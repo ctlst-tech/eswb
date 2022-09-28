@@ -223,6 +223,9 @@ sdtl_rv_t bbee_frm_process_rx_buf(sdtl_service_t *s,
 
     size_t bp = 0;
     size_t total_br = 0;
+
+    rx_state->stat_processings++;
+
     do {
         frv = bbee_frm_rx_iteration(rx_state, rx_buf + total_br,
                                     rx_buf_lng - total_br, &bp);
@@ -235,8 +238,14 @@ sdtl_rv_t bbee_frm_process_rx_buf(sdtl_service_t *s,
             case bbee_frm_buf_overflow:
             case bbee_frm_inv_crc:
             case bbee_frm_got_empty_frame:
+                switch (frv) {
+                    case bbee_frm_buf_overflow:     rx_state->stat_buf_overflow++; break;
+                    case bbee_frm_inv_crc:          rx_state->stat_inv_crc++; break;
+                    case bbee_frm_got_empty_frame:  rx_state->stat_got_empty_frame++; break;
+                    default: break;
+                }
                 bbee_frm_reset_state(rx_state);
-//                        eqrb_dbg_msg("bbee_frm_reset_state (%d)", rv);
+                sdtl_dbg_msg("bbee_frm_rx_iteration reset event (%d)", frv);
                 break;
 
             case bbee_frm_got_frame:
@@ -245,7 +254,18 @@ sdtl_rv_t bbee_frm_process_rx_buf(sdtl_service_t *s,
                                      rx_state->current_payload_size);
 //                        eqrb_dbg_msg("rx_got_frame_handler");
                 bbee_frm_reset_state(rx_state);
+                rx_state->stat_good_frames++;
                 break;
+        }
+
+        if (frv != bbee_frm_ok) {
+            sdtl_dbg_msg("Stat: CALLS=%05d GOOD=%05d RESTART=%05d INVCRC=%05d EMPTY=%05d OVFLW=%05d",
+                         rx_state->stat_processings,
+                         rx_state->stat_good_frames,
+                         rx_state->stat_frame_restart,
+                         rx_state->stat_inv_crc,
+                         rx_state->stat_got_empty_frame,
+                         rx_state->stat_buf_overflow);
         }
 
         total_br += bp;

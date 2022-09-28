@@ -127,6 +127,9 @@ bbee_frm_rv_t bbee_frm_rx_iteration(bbee_frm_rx_state_t *s, const uint8_t *rx_bu
 
         if (b == BBEE_FRM_FRAME_BEGIN_CHAR) {
             if (s->got_begin_char) {
+                if (s->payload_started) {
+                    s->stat_frame_restart++;
+                }
                 bbee_frm_reset_state(s);
                 s->payload_started = -1;
             } else {
@@ -140,6 +143,7 @@ bbee_frm_rv_t bbee_frm_rx_iteration(bbee_frm_rx_state_t *s, const uint8_t *rx_bu
                         s->payload_buffer_ptr -= 2;
                         crc16_ccitt_finalize(&s->crc);
                         memcpy(&frame_crc, s->payload_buffer_ptr, 2);
+                        s->payload_started = 0; // for frame restart detection wo full state reset
                         if (s->crc == frame_crc) {
                             rv = bbee_frm_got_frame;
                         } else {
