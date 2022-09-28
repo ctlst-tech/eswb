@@ -687,7 +687,7 @@ TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
 
     struct structure receiver_st = {0};
 
-    topic_id_map_t tid_map;
+    topic_id_map_t *tid_map;
     rv = map_alloc(&tid_map, 10);
     REQUIRE(rv == eswb_e_ok);
 
@@ -697,7 +697,7 @@ TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
 
     rv = eswb_event_queue_pop(ev_q_td, event);
     REQUIRE(rv == eswb_e_ok);
-    rv = eswb_event_queue_replicate(dst_td, &tid_map, event);
+    rv = eswb_event_queue_replicate(dst_td, tid_map, event);
     REQUIRE(rv == eswb_e_ok);
 
     eswb_topic_descr_t td_a;
@@ -713,7 +713,7 @@ TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
 
     rv = eswb_event_queue_pop(ev_q_td, event);
     REQUIRE(rv == eswb_e_ok);
-    rv = eswb_event_queue_replicate(dst_td, &tid_map, event);
+    rv = eswb_event_queue_replicate(dst_td, tid_map, event);
     REQUIRE(rv == eswb_e_ok);
 
     double value;
@@ -729,7 +729,7 @@ TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
 
     rv = eswb_event_queue_pop(ev_q_td, event);
     REQUIRE(rv == eswb_e_ok);
-    rv = eswb_event_queue_replicate(dst_td, &tid_map, event);
+    rv = eswb_event_queue_replicate(dst_td, tid_map, event);
     REQUIRE(rv == eswb_e_ok);
 
     rv = eswb_get_update(td_a, &value);

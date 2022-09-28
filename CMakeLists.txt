@@ -24,6 +24,7 @@ set(TEST_SRC_COMMON
 add_executable(eswb_test_basic tests/tests.cpp tests/tests.h tests/event_chain.c ${TEST_SRC_COMMON})
 add_executable(eswb_test_eqrb tests/eqrb.cpp  ${TEST_SRC_COMMON})
 add_executable(eswb_test_sdtl tests/sdtl.cpp ${TEST_SRC_COMMON})
+add_executable(eswb_test_bbee_framing tests/bbee_framing.cpp ${TEST_SRC_COMMON})
 
 
 add_executable(eswb_test_all
@@ -46,6 +47,9 @@ target_link_libraries(eswb_test_sdtl PUBLIC eswb-static eswb-sdtl-static eswb-sy
 
 target_include_directories(eswb_test_all PRIVATE src/lib/include)
 target_link_libraries(eswb_test_all PUBLIC eswb-static eswb-eqrb-static eswb-sdtl-static eswb-sync-static Catch2::Catch2WithMain)
+
+target_include_directories(eswb_test_bbee_framing PRIVATE src/lib/include)
+target_link_libraries(eswb_test_bbee_framing PUBLIC eswb-static eswb-eqrb-static eswb-sdtl-static eswb-sync-static Catch2::Catch2WithMain)
 
 add_executable(eswb_test_dummy tests/eswb_test_dummy.c tests/event_chain.c)
 target_link_libraries(eswb_test_dummy PUBLIC m)

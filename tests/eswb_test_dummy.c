@@ -9,9 +9,9 @@
 
 int test_event_chain (int verbose, int nonstop);
 
-int start_eqrb_server() {
-    return eqrb_tcp_server_start(0) == eqrb_rv_ok ? 0 : 1;
-}
+//int start_eqrb_server() {
+//    return eqrb_tcp_server_start(0) == eqrb_rv_ok ? 0 : 1;
+//}
 
 int main(int argc, char *argv[]) {
     int non_stop = -1;
@@ -28,12 +28,12 @@ int main(int argc, char *argv[]) {
         }
     }
 
-    if (tcp_server) {
-        int trv = start_eqrb_server();
-        if (trv) {
-            fprintf(stderr, "start_eqrb_server failed\n");
-        }
-    }
+//    if (tcp_server) {
+//        int trv = start_eqrb_server();
+//        if (trv) {
+//            fprintf(stderr, "start_eqrb_server failed\n");
+//        }
+//    }
 
     return test_event_chain(verbose, non_stop);;
 }
