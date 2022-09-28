@@ -14,7 +14,7 @@ static sdtl_rv_t ch_state_read(sdtl_channel_handle_t *chh, sdtl_channel_state_t 
 static sdtl_rv_t ch_state_alter_cond_flags(sdtl_channel_handle_t *chh, uint8_t cond_flags, int set);
 static sdtl_rv_t ch_state_return_condition(sdtl_channel_handle_t *chh);
 
-static sdtl_rv_t send_ack(sdtl_channel_handle_t *chh, uint8_t pkt_cnt, uint32_t ack_code);
+static sdtl_rv_t send_ack(sdtl_channel_handle_t *chh, uint8_t pkt_cnt, sdtl_ack_code_t ack_code);
 
 void sdtl_debug_msg(const char *fn, const char *txt, ...) {
     va_list (args);
@@ -856,6 +856,7 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
                 sequence_started = -1;
                 prev_pkt_num = 0;
                 // no break here
+                // fall through
 
             case SDTL_OK:
                 if (sequence_started) {
