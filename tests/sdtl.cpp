@@ -355,7 +355,7 @@ TEST_CASE("SDTL consecutive transfers") {
         };
 
         timed_caller sender_thread(sender, 50, "sending client");
-        pthread_setname_np("receiving client");
+        eswb_set_thread_name("receiving client");
 
         sdtl_rv_t rv;
         sender_thread.start_once();
@@ -461,7 +461,7 @@ TEST_CASE("SDTL transfer reset") {
         };
 
         timed_caller sender_thread(sender, 50, "sending client");
-        pthread_setname_np("receiving client");
+        eswb_set_thread_name("receiving client");
 
         sdtl_rv_t rv;
         sender_thread.start_once();

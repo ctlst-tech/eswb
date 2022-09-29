@@ -171,7 +171,7 @@ class timed_caller {
     std::string name;
 
     void set_name() {
-        pthread_setname_np(name.c_str());
+        eswb_set_thread_name(name.c_str());
     }
 
     void loop() {
