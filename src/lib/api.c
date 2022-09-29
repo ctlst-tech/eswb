@@ -148,6 +148,13 @@ eswb_rv_t eswb_proclaim_tree_by_path(const char *mount_point, topic_proclaiming_
 }
 
 
+eswb_rv_t eswb_proclaim_plain(const char *mount_point, const char *topic_name, size_t data_size, eswb_topic_descr_t *new_td) {
+    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 2);
+    topic_proclaiming_tree_t *plain_root = usr_topic_set_root(cntx, topic_name, tt_plain_data, data_size);
+
+    return eswb_proclaim_tree_by_path(mount_point, plain_root, cntx->t_num, new_td);
+}
+
 
 eswb_rv_t eswb_mkdir(const char *path, const char *dir_name) {
     char new_path[ESWB_TOPIC_MAX_PATH_LEN + 1];

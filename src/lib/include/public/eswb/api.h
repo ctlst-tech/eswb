@@ -83,6 +83,16 @@ eswb_rv_t eswb_proclaim_tree_by_path(const char *mount_point, topic_proclaiming_
                                      eswb_topic_descr_t *new_td);
 
 /**
+ * Proclaim plain data
+ * @param mount_point path to the topic the root to publish, must have type tt_dir
+ * @param topic_name name of the plain topic
+ * @param data_size size of the plain data to allocate
+ * @param new_td pointer to topic descriptor variable assigned to the just published topic in case of success, might NULL
+ * @return
+ */
+eswb_rv_t eswb_proclaim_plain(const char *mount_point, const char *topic_name, size_t data_size, eswb_topic_descr_t *new_td);
+
+/**
  * Update topic value and notify blocked subscribers
  * @param td topic descriptor
  * @param data data to publish; must have a size according to the topic size
