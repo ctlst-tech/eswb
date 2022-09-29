@@ -326,7 +326,7 @@ void replication_test_client(EqrbTestAgent::Basic &client, const std::string &ds
     client.start();
 
     eswb_topic_descr_t replicated_fifo_td;
-    erv = eswb_wait_connect_nested(dst_bus_td, "fifo/cnt", &replicated_fifo_td, 200000);
+    erv = eswb_wait_connect_nested(dst_bus_td, "fifo/cnt", &replicated_fifo_td, 2000);
     REQUIRE(erv == eswb_e_ok);
 
     uint32_t cnt;
@@ -340,7 +340,7 @@ void replication_test_client(EqrbTestAgent::Basic &client, const std::string &ds
 
 }
 
-extern const driver_t eqrb_drv_sdtl;
+extern const eqrb_media_driver_t eqrb_drv_sdtl;
 
 
 #define EQRB_SDTL_TEST_CHANEL_REL "test_channel_rel"
@@ -462,8 +462,14 @@ public:
     void start() {
         sdtl_start();
 //        eqrb_rv_t rv = eqrb_server_start(&server_handle, bus2replicate.c_str(), mask2replicate, NULL);
-        eqrb_rv_t rv = eqrb_sdtl_server_start(service_name.c_str(), EQRB_SDTL_TEST_CHANEL_REL, EQRB_SDTL_TEST_CHANEL_UNREL, 0xFFFFFFFF,
-                                              bus2replicate.c_str(), NULL);
+        eqrb_rv_t rv = eqrb_sdtl_server_start(
+                "test_eqrb",
+                service_name.c_str(),
+                EQRB_SDTL_TEST_CHANEL_REL,
+                EQRB_SDTL_TEST_CHANEL_UNREL,
+                0xFFFFFFFF,
+                bus2replicate.c_str(), NULL);
+
         REQUIRE(rv == eqrb_rv_ok);
     }
 

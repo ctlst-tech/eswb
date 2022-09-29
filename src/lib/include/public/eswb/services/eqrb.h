@@ -22,6 +22,7 @@ typedef enum {
     eqrb_invarg,
     eqrb_nomem,
     eqrb_inv_size,
+    eqrb_eswb_err,
 
     eqrb_os_based_err,
     eqrb_media_err,
@@ -40,14 +41,14 @@ typedef enum {
     eqrb_cmd_reset_local_state,
 } eqrb_cmd_t;
 
-struct eqrb_client_handle;
-
 #define EQRB_ERR_MSG_MAX_LEN 128
 
 
 eqrb_rv_t
-eqrb_sdtl_server_start(const char *service_name, const char *sdtl_ch1_name, const char *sdtl_ch2_name, uint32_t ch_mask,
+eqrb_sdtl_server_start(const char *eqrb_service_name,
+                       const char *sdtl_service_name, const char *sdtl_ch1_name, const char *sdtl_ch2_name, uint32_t ch_mask,
                        const char *bus2replicate, const char **err_msg);
+
 eqrb_rv_t eqrb_sdtl_client_connect(const char *service_name, const char *sdtl_ch1_name, const char *sdtl_ch2_name,
                                    const char *mount_point, uint32_t repl_map_size);
 

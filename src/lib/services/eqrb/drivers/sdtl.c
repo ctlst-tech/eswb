@@ -110,7 +110,7 @@ eqrb_rv_t eqrb_drv_sdtl_disconnect (device_descr_t dh) {
     return eqrb_rv_ok;
 }
 
-const driver_t eqrb_drv_sdtl = {
+const eqrb_media_driver_t eqrb_drv_sdtl = {
         .name = "eqrb_sdtl",
         .connect = eqrb_drv_sdtl_connect,
         .send = eqrb_drv_sdtl_send,
@@ -120,7 +120,7 @@ const driver_t eqrb_drv_sdtl = {
         .disconnect = eqrb_drv_sdtl_disconnect,
 };
 
-static eqrb_rv_t init_handle(eqrb_handle_common_t *h, const char *service_name, const char *sdtl_ch_name) {
+static eqrb_rv_t init_media_params(void **media_params, const char *service_name, const char *sdtl_ch_name) {
 
     eqrb_drv_sdtl_params_t *params = calloc(1, sizeof(*params));
 
@@ -131,50 +131,83 @@ static eqrb_rv_t init_handle(eqrb_handle_common_t *h, const char *service_name, 
     params->service_name = strdup(service_name);
     params->ch_name = strdup(sdtl_ch_name);
 
-    h->driver = &eqrb_drv_sdtl;
-    h->connectivity_params = params;
+    *media_params = params;
 
     return eqrb_rv_ok;
 }
 
-static eqrb_rv_t
-instantiate_server(const char *service_name, const char *sdtl_ch_name, const char *bus2replicate, uint32_t ch_mask,
-                   int stream_only, const char **err_msg) {
-    eqrb_server_handle_t *sh = calloc(1, sizeof(*sh));
+//
+//static eqrb_rv_t
+//instantiate_server(const char *service_name, const char *sdtl_ch_name, const char *bus2replicate, uint32_t ch_mask,
+//                   int stream_only, const char **err_msg) {
+//    eqrb_server_handle_t *sh = calloc(1, sizeof(*sh));
+//
+//    if (sh == NULL) {
+//        return eqrb_rv_nomem;
+//    }
+//
+//    eqrb_rv_t rv = init_handle(&sh->h, service_name, sdtl_ch_name);
+//    if (rv != eqrb_rv_ok) {
+//        return rv;
+//    }
+//
+//    if (stream_only) {
+//        sh->h.stream_only_mode = -1;
+//    }
+//
+//    return eqrb_server_start(sh, bus2replicate, ch_mask, err_msg);
+//}
 
-    if (sh == NULL) {
-        return eqrb_rv_nomem;
-    }
+eqrb_rv_t
+eqrb_sdtl_server_start(const char *eqrb_service_name,
+                       const char *sdtl_service_name, const char *sdtl_ch1_name, const char *sdtl_ch2_name, uint32_t ch_mask,
+                       const char *bus2replicate, const char **err_msg) {
 
-    eqrb_rv_t rv = init_handle(&sh->h, service_name, sdtl_ch_name);
+    void *mp;
+    void *mp_sk = NULL;
+    eqrb_rv_t rv;
+    eqrb_server_handle_t *sh;
+
+    rv = init_media_params(&mp, sdtl_service_name, sdtl_ch1_name);
     if (rv != eqrb_rv_ok) {
         return rv;
     }
 
-    if (stream_only) {
-        sh->h.stream_only_mode = -1;
+    if (sdtl_ch2_name != NULL) {
+        rv = init_media_params(&mp_sk, sdtl_service_name, sdtl_ch2_name);
+        if (rv != eqrb_rv_ok) {
+            return rv;
+        }
     }
 
-    return eqrb_server_start(sh, bus2replicate, ch_mask, err_msg);
+    eqrb_server_instance_init(eqrb_service_name,
+                              &eqrb_drv_sdtl, mp, mp_sk, &sh);
+
+
+    uint32_t ch_mask_main = (ch_mask & 0xFFFF) | 0x0001;
+    uint32_t ch_mask_sk = ch_mask & 0xFFFF0000;
+
+    if (sdtl_ch2_name != NULL && ch_mask_sk) {
+
+    }
+
+    return eqrb_server_start(sh, bus2replicate, ch_mask_main, ch_mask_sk, err_msg);
 }
 
-eqrb_rv_t
-eqrb_sdtl_server_start(const char *service_name, const char *sdtl_ch1_name, const char *sdtl_ch2_name, uint32_t ch_mask,
-                       const char *bus2replicate, const char **err_msg) {
 
-    eqrb_rv_t rv = instantiate_server(service_name, sdtl_ch1_name, bus2replicate, ch_mask & 0xFFFF | 0x0001, 0,
-                                      err_msg);
-    if (rv != eqrb_rv_ok) {
-       return rv;
+static eqrb_rv_t init_handle(eqrb_handle_common_t *h, const char *service_name, const char *sdtl_ch_name) {
+
+    eqrb_drv_sdtl_params_t *params = calloc(1, sizeof(*params));
+
+    if (params == NULL) {
+        return eqrb_rv_nomem;
     }
 
-    if (sdtl_ch2_name != NULL) {
-       rv = instantiate_server(service_name, sdtl_ch2_name, bus2replicate, ch_mask & 0xFFFF0000, -1,
-                               err_msg);
-       if (rv != eqrb_rv_ok) {
-           return rv;
-       }
-    }
+    h->driver = &eqrb_drv_sdtl;
+    h->connectivity_params = params;
+
+    params->service_name = strdup(service_name);
+    params->ch_name = strdup(sdtl_ch_name);
 
     return eqrb_rv_ok;
 }
@@ -196,7 +229,7 @@ instantiate_client(const char *service_name, const char *sdtl_ch_name, const cha
     if (stream_only) {
         // FIXME sidekick will use common ids_map in READ ONLY mode, but still it is not  thread safe
         // FIXME the whole design decision is VERY questionable
-        ch->h.stream_only_mode = -1;
+        ch->launch_sidekick = -1;
         ch->ids_map = (*sidekick_ch)->ids_map;
     } else {
         *sidekick_ch = ch;
