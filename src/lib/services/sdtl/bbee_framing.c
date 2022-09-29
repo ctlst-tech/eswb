@@ -109,6 +109,7 @@ void bbee_frm_reset_state(bbee_frm_rx_state_t *s) {
 }
 
 void bbee_frm_init_state(bbee_frm_rx_state_t *s, uint8_t *buffer_origin, size_t buffer_size) {
+    memset(s, 0, sizeof(*s));
     s->payload_buffer_origin = buffer_origin;
     s->payload_buffer_max_size = buffer_size;
     bbee_frm_reset_state(s);
