@@ -91,6 +91,10 @@ std::string Topic::value_str() {
         case tt_string: rv = "\"" + std::string((const char *)data_ref) + "\""; break;
     }
 
+    if (rv[0] != '-') {
+        rv = " " + rv;
+    }
+
     return rv;
 }
 
