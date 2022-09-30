@@ -94,7 +94,7 @@ static void *eqrb_server_sidekick_thread(void *p) {
 
     eswb_set_thread_name(__func__);
 
-#   define EVENT_BUF_SIZE 1024
+#   define EVENT_BUF_SIZE 2048
     uint8_t *event_buf = eqrb_alloc(EVENT_BUF_SIZE);
     eqrb_interaction_header_t *hdr = (eqrb_interaction_header_t *) event_buf;
 
@@ -109,7 +109,7 @@ static void *eqrb_server_sidekick_thread(void *p) {
     }
 
     erv = eswb_connect(sk->cmd_topic_path, &cmd_td);
-    if (rv != eqrb_rv_ok) {
+    if (erv != eswb_e_ok) {
         eqrb_dbg_msg("eswb_connect error: %s", eswb_strerror(erv));
         return NULL;
     }
@@ -120,6 +120,7 @@ static void *eqrb_server_sidekick_thread(void *p) {
     do {
         while (eswb_get_update(cmd_td, &cmd) == eswb_e_ok && cmd.code == SK_PAUSE);
 
+        erv = eswb_fifo_flush(cmd_td);
         while (eswb_read(cmd_td, &cmd) == eswb_e_ok && cmd.code == SK_RUN) {
             erv = eswb_event_queue_pop(eq_td, event);
             switch (erv) {
