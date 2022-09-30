@@ -153,7 +153,7 @@ typedef struct __attribute__((packed)) sdtl_cmd_header {
 
 void sdtl_debug_msg(const char *fn, const char *txt, ...);
 
-#define SDTL_DEBUG
+//#define SDTL_DEBUG
 
 #ifdef SDTL_DEBUG
 #define sdtl_dbg_msg(txt,...) sdtl_debug_msg(__func__, txt, ##__VA_ARGS__)

@@ -55,6 +55,7 @@ eqrb_rv_t eqrb_drv_sdtl_recv (device_descr_t dh, void *data, size_t btr, size_t 
     sdtl_rv_t rv = sdtl_channel_recv_data(chh, data, btr, br);
     switch (rv) {
         case SDTL_OK:
+        case SDTL_RX_FIFO_OVERFLOW:
             return eqrb_rv_ok;
 
         case SDTL_APP_RESET:

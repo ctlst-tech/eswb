@@ -47,7 +47,7 @@ sdtl_rv_t sdtl_media_serial_open(const char *path, void *params, void **h_rv) {
     return SDTL_OK;
 }
 
-sdtl_rv_t sdtl_test_media_read(void *h, void *data, size_t l, size_t *lr) {
+sdtl_rv_t sdtl_media_serial_read(void *h, void *data, size_t l, size_t *lr) {
     int fd = CHEAT_CAST(h);
 
     int rv = read(fd, data, (int)l);
@@ -78,7 +78,7 @@ sdtl_rv_t sdtl_media_serial_close(void *h) {
 
 const sdtl_service_media_t sdtl_media_serial = {
     .open = sdtl_media_serial_open,
-    .read = sdtl_test_media_read,
+    .read = sdtl_media_serial_read,
     .write = sdtl_media_serial_write,
     .close = sdtl_media_serial_close
 };

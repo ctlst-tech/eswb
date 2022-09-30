@@ -16,13 +16,13 @@ static eqrb_rv_t client_submit_repl_event (eqrb_client_handle_t *handle,
     eswb_rv_t erv;
 
 
-    eqrb_dbg_msg("topic_id = %d event_type = %d", event->topic_id, event->type);
+//    eqrb_dbg_msg("topic_id = %d event_type = %d", event->topic_id, event->type);
 
     erv = eswb_event_queue_replicate(h->repl_dst_td, h->ids_map, event);
 
     switch (erv) {
         case eswb_e_ok:
-            eqrb_dbg_msg("eswb_e_ok");
+//            eqrb_dbg_msg("eswb_e_ok");
             break;
 
         case eswb_e_repl_prtree_fraiming_error:
@@ -159,8 +159,9 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
 
                 default:
                     // TODO detect reset / disconnection
-                    mode_wait_events = 0;
-                    mode_wait_server = 0;
+//                    mode_wait_events = 0;
+//                    mode_wait_server = 0;
+                    eqrb_dbg_msg("recv error: %d", rv);
                     break;
             }
 
@@ -171,14 +172,15 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
 
                     if (br != sizeof(*hdr) + sizeof(*event) + event->size) {
                         eqrb_dbg_msg("Event size is different from accepted packet size");
-                        mode_wait_events = 0;
+//                        mode_wait_events = 0;
                         break;
                     }
 
                     rv = client_submit_repl_event (h, event);
                     if (rv != eqrb_rv_ok) {
-                        mode_wait_events = 0;
-                        mode_wait_server = 0;
+                        eqrb_dbg_msg("Uclient_submit_repl_event failure: %d", rv);
+//                        mode_wait_events = 0;
+//                        mode_wait_server = 0;
                     }
                     break;
 
