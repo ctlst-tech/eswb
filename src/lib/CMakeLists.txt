@@ -28,7 +28,9 @@ set(ESWB_LIB_SRC
         include/domain_switching.h
         include/topic_io.h
         include/sync.h
-        include/ids_map.h)
+        include/ids_map.h
+
+        platformic/posix/posix_sync.c) # FIXME supposed to be linked via cmake config
 
 add_library(eswb-static STATIC ${ESWB_LIB_SRC})
 
