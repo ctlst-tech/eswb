@@ -94,8 +94,8 @@ static void *eqrb_server_sidekick_thread(void *p) {
 
     eswb_set_thread_name(__func__);
 
-#   define EVENT_BUF_SIZE 2048
-    uint8_t *event_buf = eqrb_alloc(EVENT_BUF_SIZE);
+#   define EVENT_BUF_SIZE_SIDEKICK 2048
+    uint8_t *event_buf = eqrb_alloc(EVENT_BUF_SIZE_SIDEKICK);
     eqrb_interaction_header_t *hdr = (eqrb_interaction_header_t *) event_buf;
 
     event_queue_transfer_t *event = (event_queue_transfer_t*)(event_buf + sizeof(*hdr));
