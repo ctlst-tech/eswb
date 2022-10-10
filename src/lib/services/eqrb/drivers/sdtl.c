@@ -38,6 +38,7 @@ eqrb_rv_t eqrb_drv_sdtl_send (device_descr_t dh, void *data, size_t bts, size_t 
             *bs = bts;
             return eqrb_rv_ok;
 
+        case SDTL_REMOTE_RX_CANCELED:
         case SDTL_REMOTE_RX_NO_CLIENT:
             return eqrb_media_remote_need_reset;
 

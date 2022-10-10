@@ -34,8 +34,17 @@ send_topic(device_descr_t dd, const eqrb_media_driver_t *dr, eqrb_interaction_he
     eqrb_rv_t rv;
 
     rv = send_msg(dd, dr, EQRB_CMD_SERVER_TOPIC, hdr, event);
-    if (rv != eqrb_rv_ok) {
-        eqrb_dbg_msg("send_msg for EQRB_CMD_SERVER_TOPIC error: %d", rv);
+    switch (rv) {
+        case eqrb_rv_ok:
+        case eqrb_media_reset_cmd:
+            break;
+
+        case eqrb_media_remote_need_reset:
+            // TODO send restart request?
+            break;
+
+        default:
+            eqrb_dbg_msg("send_msg for EQRB_CMD_SERVER_TOPIC error: %d", rv);
     }
 
     return rv;
@@ -96,6 +105,10 @@ static void *eqrb_server_sidekick_thread(void *p) {
 
 #   define EVENT_BUF_SIZE_SIDEKICK 2048
     uint8_t *event_buf = eqrb_alloc(EVENT_BUF_SIZE_SIDEKICK);
+    if (event_buf == NULL) {
+        eqrb_dbg_msg("Buffer allocation error");
+        return NULL;
+    }
     eqrb_interaction_header_t *hdr = (eqrb_interaction_header_t *) event_buf;
 
     event_queue_transfer_t *event = (event_queue_transfer_t*)(event_buf + sizeof(*hdr));
@@ -138,6 +151,7 @@ static void *eqrb_server_sidekick_thread(void *p) {
                             eqrb_dbg_msg("send_msg unhandled error: %d", rv);
                             break;
                     }
+                    break;
 
                 default:
                     break;
@@ -289,6 +303,7 @@ static void *eqrb_server_thread(void *p) {
     int mode_wait_cmd = -1;
     int mode_do_initial_sync = 0;
     int mode_do_stream = 0;
+    int keep_sending = 0;
 
     eqrb_streaming_sideckick_t sk;
 
@@ -402,20 +417,25 @@ static void *eqrb_server_thread(void *p) {
                     // insted of topic_tree_elem structure topic_extract_t is extracted with trailing additional info
                     bus_sync_state.current_tid = ((topic_extract_t *) &topic_tree_elem[topics_num - 1])->info.topic_id;
 
-                    rv = send_topic(dd, dev, hdr, topic_info->parent_id, event, topics_num);
-                    switch (rv) {
-                        case eqrb_rv_ok:
-                            break;
+                    keep_sending = -1;
+                    do {
+                        rv = send_topic(dd, dev, hdr, topic_info->parent_id, event, topics_num);
+                        switch (rv) {
+                            case eqrb_rv_ok:
+                                keep_sending = 0;
+                                break;
 
-                        case eqrb_media_reset_cmd:
-                        TRANSITION_TO_WAIT_CMD();
-                            eqrb_dbg_msg("Server reset requested by client");
-                            break;
+                            case eqrb_media_reset_cmd:
+                                TRANSITION_TO_WAIT_CMD();
+                                keep_sending = 0;
+                                eqrb_dbg_msg("Server reset requested by client");
+                                break;
 
-                        default:
-                            eqrb_dbg_msg("device recv error: %d", rv);
-                            break;
-                    }
+                            default:
+                                eqrb_dbg_msg("send topic error: %d", rv);
+                                break;
+                        }
+                    } while (keep_sending);
                 } else {
                     eqrb_dbg_msg("Done sending bus state");
                     mode_do_initial_sync = 0;
