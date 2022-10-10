@@ -185,6 +185,8 @@ bbee_frm_rv_t bbee_frm_rx_iteration(bbee_frm_rx_state_t *s, const uint8_t *rx_bu
                     //eqrb_reset_state(s);
                     rv = bbee_frm_buf_overflow;
                 }
+            } else {
+                s->stat_non_framed_bytes++;
             }
         }
         i++;

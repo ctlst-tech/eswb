@@ -43,6 +43,7 @@ typedef struct {
     uint32_t stat_inv_crc;
     uint32_t stat_got_empty_frame;
     uint32_t stat_frame_restart;
+    uint32_t stat_non_framed_bytes;
 
 } bbee_frm_rx_state_t;
 
