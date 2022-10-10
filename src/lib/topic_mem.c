@@ -82,11 +82,11 @@ void *topic_write_byte_buffer(topic_t *t, void *data, eswb_size_t size) {
 
     void *data_origin = t->data + t->fifo_ext->state.head;
 
-    ssize_t btw = MIN(size, t->fifo_ext->fifo_size - t->fifo_ext->state.head);
+    size_t btw = MIN(size, t->fifo_ext->fifo_size - t->fifo_ext->state.head);
     memcpy(data_origin, data, btw);
 
     if (btw < size) {
-        ssize_t offset = btw;
+        size_t offset = btw;
         btw = size - btw;
         memcpy(t->data, data + offset, btw);
         t->fifo_ext->state.head = btw; // circling back to the buffer beginning
@@ -135,7 +135,7 @@ eswb_rv_t topic_mem_event_queue_write(topic_t *t, const event_queue_record_t *r)
     event_queue_record_t rts = *r;
     // push data
     // reposition data associated with event record
-    rts.data = topic_write_byte_buffer(data_buf_topic, rts.data, rts.size);
+    rts.data = topic_write_byte_buffer(data_buf_topic, r->data, r->size);
 
 #   define CALC_INDEX(__i,__s) ((__i) > (__s) ? (__i) - (__s) : (__i))
 
