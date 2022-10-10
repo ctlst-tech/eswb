@@ -30,7 +30,7 @@ static eqrb_rv_t client_submit_repl_event (eqrb_client_handle_t *handle,
             break;
 
         case eswb_e_topic_exist:
-            eqrb_dbg_msg("eswb_e_topic_exist");
+            eqrb_dbg_msg("eswb_e_topic_exist (tid %d)", event->topic_id);
             break;
 
         case eswb_e_map_full:
