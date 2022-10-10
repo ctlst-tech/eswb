@@ -114,34 +114,37 @@ static sdtl_rv_t
 rx_process_data(sdtl_channel_handle_t *chh, sdtl_data_header_t *dhdr, sdtl_channel_state_t *rx_state) {
     sdtl_rv_t rv;
 
-    if ((dhdr->sub.flags & (SDTL_PKT_DATA_FLAG_LAST_PKT)) &&
-        (dhdr->sub.seq_code == rx_state->last_received_seq)) {
-        sdtl_dbg_msg("Got rx state: ack trailing paket from prior seq 0x%04X", rx_state->last_received_seq);
+    do {
+        if ((dhdr->sub.flags & (SDTL_PKT_DATA_FLAG_LAST_PKT)) &&
+            (dhdr->sub.seq_code == rx_state->last_received_seq)) {
+            sdtl_dbg_msg("Got rx state: ack trailing paket from prior seq 0x%04X", rx_state->last_received_seq);
 
-        send_ack(chh, dhdr->sub.cnt, SDTL_ACK_GOT_PKT);
-    }
-
-    switch (rx_state->rx_state) {
-        default:
-        case SDTL_RX_STATE_RCV_CANCELED:
-            rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_CANCELED);
-            sdtl_dbg_msg("Got rx state: SDTL_RX_STATE_RCV_CANCELED");
+            rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_GOT_PKT);
             break;
+        }
 
-        case SDTL_RX_STATE_SEQ_DONE:
-        case SDTL_RX_STATE_IDLE:
-            rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_NO_RECEIVER);
-            sdtl_dbg_msg("Got rx state: SDTL_RX_STATE_IDLE");
-            break;
+        switch (rx_state->rx_state) {
+            default:
+            case SDTL_RX_STATE_RCV_CANCELED:
+                rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_CANCELED);
+                sdtl_dbg_msg("Got rx state: SDTL_RX_STATE_RCV_CANCELED");
+                break;
 
-        case SDTL_RX_STATE_WAIT_DATA:
-            rv = process_data(chh, &dhdr->sub);
-            sdtl_dbg_msg("Got pkt #%d with %d bytes from ch_id #%d seq #%04X", dhdr->sub.cnt,
-                         dhdr->sub.payload_size,
-                         dhdr->base.ch_id,
-                         dhdr->sub.seq_code);
-            break;
-    }
+            case SDTL_RX_STATE_SEQ_DONE:
+            case SDTL_RX_STATE_IDLE:
+                rv = send_ack(chh, dhdr->sub.cnt, SDTL_ACK_NO_RECEIVER);
+                sdtl_dbg_msg("Got rx state: SDTL_RX_STATE_IDLE");
+                break;
+
+            case SDTL_RX_STATE_WAIT_DATA:
+                rv = process_data(chh, &dhdr->sub);
+                sdtl_dbg_msg("Got pkt #%d with %d bytes from ch_id #%d seq #%04X", dhdr->sub.cnt,
+                             dhdr->sub.payload_size,
+                             dhdr->base.ch_id,
+                             dhdr->sub.seq_code);
+                break;
+        }
+    } while(0);
 
     return rv;
 }
