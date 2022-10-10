@@ -559,6 +559,9 @@ wait_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, sdtl_data_sub_header_
 //}
 
 
+// TODO timeout value must be calculated based on specivied interface speed
+#define ACK_WAIT_TIMEOUT_uS_PER_BYTE (2 * 2 * 1000000 / (57600 / 10))
+
 static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d, size_t l) {
     sdtl_pkt_payload_size_t dsize;
     uint32_t offset = 0;
@@ -606,7 +609,7 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
             // TODO get timeout from somewhere
             if (rel) {
                 sdtl_ack_sub_header_t ack_sh;
-                rv = wait_ack(chh, 100000, &ack_sh);
+                rv = wait_ack(chh, ACK_WAIT_TIMEOUT_uS_PER_BYTE * dsize, &ack_sh);
 
                 switch (rv) {
                     case SDTL_OK:
@@ -676,8 +679,7 @@ static sdtl_rv_t channel_send_cmd(sdtl_channel_handle_t *chh, uint8_t cmd_code) 
             return rv;
         }
 
-        // TODO timeout value must be calculated
-        rv = wait_ack(chh, 100000, &ack_sh);
+        rv = wait_ack(chh, ACK_WAIT_TIMEOUT_uS_PER_BYTE * 20, &ack_sh);
 
         switch (rv) {
             case SDTL_APP_RESET:
