@@ -109,6 +109,10 @@ eswb_rv_t eswb_proclaim_tree(eswb_topic_descr_t parent_td, topic_proclaiming_tre
                                      eswb_topic_descr_t *new_td) {
     eswb_rv_t rv;
 
+    if (bp == NULL) {
+        return eswb_e_invargs;
+    }
+
     rv = do_update(parent_td, upd_proclaim_topic, bp, tree_size);
     if (rv != eswb_e_ok) {
         return rv;
@@ -296,6 +300,9 @@ const char *eswb_get_bus_prefix(eswb_type_t type) {
 }
 
 eswb_rv_t eswb_path_split(const char *full_path, char *path, char *topic_name) {
+    if (full_path == NULL) {
+        return eswb_e_invargs;
+    }
     char *path_delim = strrchr(full_path,'/');
     if (path_delim == NULL) {
         return eswb_e_invargs;

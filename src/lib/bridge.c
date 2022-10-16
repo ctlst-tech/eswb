@@ -122,7 +122,7 @@ eswb_rv_t eswb_bridge_connect_vector(eswb_bridge_t *b, const char *dest_mnt) {
 
 eswb_rv_t eswb_bridge_connect_scalar(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const char *dest_topic) {
 
-    if ((b->tds_num > 1) || (b->tds_num < 1)) {
+    if (b->tds_num != 1) {
         return eswb_e_invargs;
     }
 
@@ -138,7 +138,6 @@ eswb_rv_t eswb_bridge_connect_scalar(eswb_bridge_t *b, eswb_topic_descr_t mtd_td
 
     char topic_name[ESWB_TOPIC_NAME_MAX_LEN + 1];
     char topic_path[ESWB_TOPIC_MAX_PATH_LEN + 1];
-
 
     if (mtd_td == 0) {
         rv = eswb_path_split(dest_topic, topic_path, topic_name);
