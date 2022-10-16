@@ -30,7 +30,7 @@ void sdtl_debug_msg(const char *fn, const char *txt, ...) {
 
 sdtl_channel_t *resolve_channel_by_id(sdtl_service_t *s, uint8_t ch_id) {
 
-    for (int i = 0; i < s->channels_num; i++) {
+    for (unsigned i = 0; i < s->channels_num; i++) {
         if (s->channels[i].cfg.id == ch_id) {
             return &s->channels[i];
         }
@@ -52,7 +52,7 @@ sdtl_channel_handle_t *resolve_channel_handle_by_id(sdtl_service_t *s, uint8_t c
 
 sdtl_channel_t *resolve_channel_by_name(sdtl_service_t *s, const char *name) {
 
-    for (int i = 0; i < s->channels_num; i++) {
+    for (unsigned i = 0; i < s->channels_num; i++) {
         if (strcmp(s->channels[i].cfg.name, name) == 0) {
             return &s->channels[i];
         }
@@ -1099,7 +1099,7 @@ sdtl_rv_t sdtl_service_start(sdtl_service_t *s, const char *media_path, void *me
         return rv;
     }
 
-    for (int i = 0; i < s->channels_num; i++) {
+    for (unsigned i = 0; i < s->channels_num; i++) {
         rv = sdtl_channel_open(s, s->channels[i].cfg.name, &s->channel_handles[i]);
         if (rv != SDTL_OK) {
             return rv;
@@ -1136,7 +1136,7 @@ sdtl_rv_t sdtl_service_stop(sdtl_service_t *s) {
         return SDTL_SYS_ERR;
     }
 
-    for (int i = 0; i < s->channels_num; i++) {
+    for (unsigned i = 0; i < s->channels_num; i++) {
         sdtl_channel_close(s->channel_handles[i]);
     }
 

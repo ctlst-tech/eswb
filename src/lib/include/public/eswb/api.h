@@ -148,7 +148,7 @@ eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next
 /**
  * Retrieve full path of the topic by its descriptor
  * @param td topic descriptor
- * @param path string with a size of ESWB_TOPIC_MAX_PATH_LEN
+ * @param path string with a size of ESWB_TOPIC_MAX_PATH_LEN + 1
  * @return eswb_e_ok on success
  */
 eswb_rv_t eswb_get_topic_path (eswb_topic_descr_t td, char *path);
