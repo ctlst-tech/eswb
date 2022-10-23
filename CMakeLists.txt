@@ -62,7 +62,7 @@ target_link_libraries(eswb-if INTERFACE eswb-static eswb-sync-static eswb-eqrb-s
 add_library(eswb-cpp STATIC cpp/eswb.hpp cpp/eswb.cpp)
 target_link_libraries(eswb-cpp PUBLIC eswb-static eswb-sync-static eswb-eqrb-static eswb-sdtl-static)
 
-add_executable(eswbutil cpp/main.cpp)
+add_executable(eswbutil cpp/eswbutil.cpp)
 target_link_libraries(eswbutil eswb-cpp)
 
 install(TARGETS eswbutil RUNTIME)
