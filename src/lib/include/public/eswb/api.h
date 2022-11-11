@@ -60,6 +60,14 @@ eswb_rv_t eswb_delete_by_td(eswb_topic_descr_t td);
 eswb_rv_t eswb_mkdir(const char *path, const char *dir_name);
 
 /**
+ * Create directory as a child to a specified descriptor
+ * @param parent_td
+ * @param dir_name
+ * @return
+ */
+eswb_rv_t eswb_mkdir_nested(eswb_topic_descr_t parent_td, const char *dir_name, eswb_topic_descr_t *new_dir_td);
+
+/**
  * Publish tree of the topics to the topic with a specified descriptor
  * @param parent_td topic descriptor of the root, must have type tt_dir
  * @param bp tree initialized by usr_topic_* calls

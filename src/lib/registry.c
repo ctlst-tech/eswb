@@ -309,8 +309,23 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
         new->fifo_ext = parent->fifo_ext; // dont care if it is null
         new->flags |= TOPIC_FLAG_MAPPED_TO_PARENT;
     } else {
-        eswb_rv_t rv;
         do {
+            // topics might be added created only inside directories
+            switch (parent->type) {
+                case tt_dir:
+                case tt_fifo:
+                case tt_event_queue:
+                    break;
+
+                default:
+                    rv = eswb_e_notdir;
+                    break;
+            }
+
+            if (rv != eswb_e_ok) {
+                break;
+            }
+
             switch (new->type) {
                 default:
                     rv = alloc_topic_data(new);

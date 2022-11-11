@@ -10,6 +10,7 @@ const char *eswb_strerror(eswb_rv_t e) {
     switch (e) {
         case eswb_e_ok:                     return "OK";
         case eswb_e_invargs:                return "Invalid arguments";
+        case eswb_e_notdir:                 return "Mount point is not a directory";
         case eswb_e_path_too_long:          return "Path is too long";
         case eswb_e_timedout:               return "Call is timed out";
         case eswb_e_sync_init:              return "Sync init failed";
@@ -25,7 +26,7 @@ const char *eswb_strerror(eswb_rv_t e) {
 
         case eswb_e_mem_data_na:            return "Topic's data allocation failed";
         case eswb_e_mem_static_exceeded:    return "eswb_e_mem_static_exceeded";
-        case eswb_e_inv_naming:                 return "Naming error";
+        case eswb_e_inv_naming:             return "Naming error";
         case eswb_e_no_topic:               return "No such topic";
         case eswb_e_topic_exist:            return "Topic exists";
         case eswb_e_topic_is_not_dir:       return "Topic is not a directory";

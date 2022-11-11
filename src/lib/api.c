@@ -179,6 +179,14 @@ eswb_rv_t eswb_mkdir(const char *path, const char *dir_name) {
     return eswb_proclaim_tree_by_path(path, rt, cntx->t_num, NULL);
 }
 
+eswb_rv_t eswb_mkdir_nested(eswb_topic_descr_t parent_td, const char *dir_name, eswb_topic_descr_t *new_dir_td) {
+
+    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 2);
+    topic_proclaiming_tree_t *rt = usr_topic_set_root(cntx, dir_name, tt_dir, 0);
+
+    return eswb_proclaim_tree(parent_td, rt, cntx->t_num, new_dir_td);
+}
+
 
 eswb_rv_t eswb_update_topic (eswb_topic_descr_t td, void *data) {
     return do_update(td, upd_update_topic, data, 0);
