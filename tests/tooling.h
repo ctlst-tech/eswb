@@ -1,7 +1,3 @@
-//
-// Created by Ivan Makarov on 23/3/22.
-//
-
 #ifndef ESWB_TOOLING_H
 #define ESWB_TOOLING_H
 

@@ -1,7 +1,3 @@
-//
-// Created by goofy on 06.12.2020.
-//
-
 #include <string.h>
 
 #include <pthread.h>

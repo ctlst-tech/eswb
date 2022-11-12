@@ -1,7 +1,3 @@
-//
-// Created by goofy on 1/4/22.
-//
-
 #ifndef ESWB_EQRB_CORE_H
 #define ESWB_EQRB_CORE_H
 

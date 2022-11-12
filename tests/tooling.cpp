@@ -1,7 +1,3 @@
-//
-// Created by Ivan Makarov on 23/3/22.
-//
-
 #include "tooling.h"
 
 std::string gen_name() {

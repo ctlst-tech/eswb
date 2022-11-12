@@ -1,8 +1,3 @@
-//
-// Created by goofy on 1/6/22.
-//
-
-
 #include <string.h>
 #include "bbee_framing.h"
 

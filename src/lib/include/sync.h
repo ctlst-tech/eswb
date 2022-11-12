@@ -1,7 +1,3 @@
-//
-// Created by goofy on 12/25/21.
-//
-
 #ifndef ESWB_SYNC_H
 #define ESWB_SYNC_H
 

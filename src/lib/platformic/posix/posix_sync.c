@@ -1,7 +1,3 @@
-//
-// Created by goofy on 12/25/21.
-//
-
 #include <pthread.h>
 #include <stdlib.h> // for malloc
 #include <errno.h>

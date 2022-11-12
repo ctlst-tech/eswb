@@ -1,7 +1,3 @@
-//
-// Created by goofy on 1/6/22.
-//
-
 #include <string>
 #include "tooling.h"
 #include "sdtl_tooling.h"

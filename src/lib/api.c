@@ -1,7 +1,3 @@
-//
-// Created by goofy on 10/23/21.
-//
-
 #include <string.h>
 
 #include "eswb/api.h"

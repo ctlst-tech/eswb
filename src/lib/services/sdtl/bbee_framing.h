@@ -1,7 +1,3 @@
-//
-// Created by goofy on 1/6/22.
-//
-
 #ifndef ESWB_FRAMING_H
 #define ESWB_FRAMING_H
 

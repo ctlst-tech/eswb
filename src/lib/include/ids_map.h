@@ -1,7 +1,3 @@
-//
-// Created by goofy on 12/29/21.
-//
-
 #ifndef ESWB_IDS_MAP_H
 #define ESWB_IDS_MAP_H
 

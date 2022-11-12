@@ -1,7 +1,3 @@
-//
-// Created by goofy on 12/25/21.
-//
-
 #ifndef ESWB_TOPIC_IO_H
 #define ESWB_TOPIC_IO_H
 

@@ -1,7 +1,3 @@
-//
-// Created by goofy on 27.11.2020.
-//
-
 #include "eswb/errors.h"
 
 

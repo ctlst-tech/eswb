@@ -1,10 +1,3 @@
-//
-// Created by Ivan Makarov on 28/10/21.
-//
-
-
-
-
 #include <unistd.h>
 #include <math.h>
 #include <string.h>
