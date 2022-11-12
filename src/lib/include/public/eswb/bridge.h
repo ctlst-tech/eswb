@@ -20,6 +20,7 @@ typedef struct {
     eswb_size_t buffer2post_size;
 
     eswb_topic_descr_t dest_td;
+
     struct topics_subsriptions {
         eswb_topic_descr_t td;
         topic_data_type_t type;

@@ -31,11 +31,7 @@ eswb_rv_t eswb_bridge_create(const char *name, eswb_size_t max_tds, eswb_bridge_
     }
 
     strncpy(br->name, name, BRIDGE_NAME_MAX);
-    /*
-     * 1. crete and init eswb_bridge_t instance
-     * 2. define bridge behaviour
-     */
-    
+
     *rv = br;
     
     return eswb_e_ok;
