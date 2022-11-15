@@ -1168,6 +1168,7 @@ sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg) {
     }
 
     ch->cfg = *cfg;
+    ch->cfg.name = strdup(cfg->name); // otherwise we keep original name
     ch->service = s;
     ch->max_payload_size = max_payload_size;
 
