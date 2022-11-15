@@ -1360,3 +1360,41 @@ const sdtl_service_media_t *sdtl_lookup_media(const char *mtype) {
 
     return NULL;
 }
+
+const char *sdtl_strerror(sdtl_rv_t ecode) {
+    switch (ecode) {
+        case SDTL_OK:   return "SDTL_OK";
+        case SDTL_TIMEDOUT: return "SDTL_TIMEDOUT";
+        case SDTL_OK_FIRST_PACKET:  return "SDTL_OK_FIRST_PACKET";
+        case SDTL_OK_OMIT:  return "SDTL_OK_OMIT";
+        case SDTL_OK_REPEATED:  return "SDTL_OK_REPEATED";
+        case SDTL_OK_MISSED_PKT_IN_SEQ: return "SDTL_OK_MISSED_PKT_IN_SEQ";
+        case SDTL_REMOTE_RX_CANCELED:   return "SDTL_REMOTE_RX_CANCELED";
+        case SDTL_REMOTE_RX_NO_CLIENT:  return "SDTL_REMOTE_RX_NO_CLIENT";
+        case SDTL_RX_BUF_SMALL: return "SDTL_RX_BUF_SMALL";
+        case SDTL_TX_BUF_SMALL: return "SDTL_TX_BUF_SMALL";
+        case SDTL_NON_CONSIST_FRM_LEN:  return "SDTL_NON_CONSIST_FRM_LEN";
+        case SDTL_INVALID_FRAME_TYPE:   return "SDTL_INVALID_FRAME_TYPE";
+        case SDTL_NO_CHANNEL_REMOTE:    return "SDTL_NO_CHANNEL_REMOTE";
+        case SDTL_NO_CHANNEL_LOCAL: return "SDTL_NO_CHANNEL_LOCAL";
+        case SDTL_ESWB_ERR: return "SDTL_ESWB_ERR";
+        case SDTL_RX_FIFO_OVERFLOW: return "SDTL_RX_FIFO_OVERFLOW";
+        case SDTL_NO_MEM:   return "SDTL_NO_MEM";
+        case SDTL_CH_EXIST: return "SDTL_CH_EXIST";
+        case SDTL_SERVICE_EXIST:    return "SDTL_SERVICE_EXIST";
+        case SDTL_NO_SERVICE:   return "SDTL_NO_SERVICE";
+        case SDTL_INVALID_MTU:  return "SDTL_INVALID_MTU";
+        case SDTL_INVALID_MEDIA:    return "SDTL_INVALID_MEDIA";
+        case SDTL_NAMES_TOO_LONG:   return "SDTL_NAMES_TOO_LONG";
+        case SDTL_SYS_ERR:  return "SDTL_SYS_ERR";
+        case SDTL_INVALID_CH_TYPE:  return "SDTL_INVALID_CH_TYPE";
+        case SDTL_MEDIA_NO_ENTITY:  return "SDTL_MEDIA_NO_ENTITY";
+        case SDTL_MEDIA_NOT_SUPPORTED:  return "SDTL_MEDIA_NOT_SUPPORTED";
+        case SDTL_MEDIA_ERR:    return "SDTL_MEDIA_ERR";
+        case SDTL_MEDIA_EOF:    return "SDTL_MEDIA_EOF";
+        case SDTL_APP_CANCEL:   return "SDTL_APP_CANCEL";
+        case SDTL_APP_RESET:    return "SDTL_APP_RESET";
+        default:
+            return "Unhandled error code";
+    }
+}

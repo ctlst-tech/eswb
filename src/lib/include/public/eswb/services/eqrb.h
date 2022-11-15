@@ -52,6 +52,7 @@ eqrb_sdtl_server_start(const char *eqrb_service_name,
 eqrb_rv_t eqrb_sdtl_client_connect(const char *service_name, const char *sdtl_ch1_name, const char *sdtl_ch2_name,
                                    const char *mount_point, uint32_t repl_map_size);
 
+const char *eqrb_strerror(eqrb_rv_t ecode);
 
 #ifdef __cplusplus
 }

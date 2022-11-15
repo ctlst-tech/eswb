@@ -124,6 +124,8 @@ sdtl_rv_t sdtl_channel_check_reset_condition(sdtl_channel_handle_t *chh);
 uint32_t sdtl_channel_get_max_payload_size(sdtl_channel_handle_t *chh);
 const sdtl_service_media_t *sdtl_lookup_media(const char *mtype);
 
+const char *sdtl_strerror(sdtl_rv_t ecode);
+
 #ifdef __cplusplus
 }
 #endif
