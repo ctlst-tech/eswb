@@ -365,13 +365,16 @@ sdtl_rv_t sdtl_service_rx_thread(sdtl_service_t *s) {
                 break;
         }
 
-//      eqrb_dbg_msg("recv | rx_buf_lng == %d rv == %d", rx_buf_lng, rv);
-
 #       ifdef EQRB_DEBUG
         print_debug_data(rx_buf, rx_buf_lng);
 #       endif
 
         bbee_frm_process_rx_buf(s, rx_buf, rx_buf_lng, &rx_state, sdtl_got_frame_handler);
+        s->rx_stat.bytes_received += rx_buf_lng;
+        s->rx_stat.non_framed_bytes = rx_state.stat_non_framed_bytes;
+        s->rx_stat.frames_received = rx_state.stat_good_frames;
+        s->rx_stat.bad_crc_frames = rx_state.stat_inv_crc;
+        eswb_update_topic(s->rx_stat_td, &s->rx_stat);
     } while (loop);
 
     return SDTL_OK;
@@ -588,10 +591,12 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
         wait_ack_reset(chh);
     }
 
+    chh->tx_stat.sequences++;
+
     do {
         dsize = my_min(chh->channel->max_payload_size, l);
 
-        flags|= dsize == l ? SDTL_PKT_DATA_FLAG_LAST_PKT : 0;
+        flags |= dsize == l ? SDTL_PKT_DATA_FLAG_LAST_PKT : 0;
 
         do {
             if (rel) {
@@ -634,6 +639,7 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
 
                     case SDTL_TIMEDOUT:
                         sdtl_dbg_msg("Ack timeout");
+                        chh->tx_stat.retries++;
                         break;
 
                     case SDTL_APP_RESET:
@@ -654,6 +660,10 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
 
         l -= dsize;
         offset += dsize;
+
+        chh->tx_stat.bytes += dsize;
+        chh->tx_stat.packets++;
+        eswb_update_topic(chh->tx_stat_td, &chh->tx_stat);
     } while (l > 0);
 
     chh->tx_seq_num++;
@@ -859,6 +869,7 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
             case SDTL_OK_REPEATED:
                 if (rel) {
                     rv_ack = send_ack(chh, dsh->cnt, SDTL_ACK_GOT_PKT);
+                    chh->rx_stat.acks++;
                 }
                 sdtl_dbg_msg("Got repeated pkt #%d", dsh->cnt);
                 break;
@@ -867,6 +878,8 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
                 break;
 
             case SDTL_OK_FIRST_PACKET:
+                chh->rx_stat.sequences++;
+
                 sdtl_dbg_msg("Got SDTL_OK_FIRST_PACKET state");
                 sequence_started = -1;
                 prev_pkt_num = 0;
@@ -877,6 +890,7 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
                 if (sequence_started) {
                     if (rel) {
                         rv_ack = send_ack(chh, dsh->cnt, SDTL_ACK_GOT_PKT);
+                        chh->rx_stat.acks++;
                         if (rv_ack != SDTL_OK) {
                             sdtl_dbg_msg("Got send_ack err: %d", rv_ack);
                         }
@@ -889,6 +903,9 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
 
                     offset += dsh->payload_size;
                     l -= dsh->payload_size;
+
+                    chh->rx_stat.packets++;
+                    chh->rx_stat.bytes += dsh->payload_size;
 
                     if (rv_rcv == SDTL_OK) {
                         prev_pkt_num++;
@@ -914,10 +931,8 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
                 }
                 sdtl_dbg_msg("Got missed pkt in seq (pkt #%d, prev #%d)", dsh->cnt, prev_pkt_num);
                 break;
-
-
         }
-
+        eswb_update_topic(chh->rx_stat_td, &chh->rx_stat);
     } while (loop);
 
     // we want to keep timeout for sequentially arriving packets
@@ -945,6 +960,8 @@ static sdtl_rv_t channel_recv_data(sdtl_channel_handle_t *chh, int rel, void *d,
 #define CHANNEL_DATA_BUF_NAME "data_buf"
 #define CHANNEL_ACK_BUF_NAME "ack_buf"
 #define CHANNEL_RX_STATE_STRUCT_NAME "rx_state"
+#define CHANNEL_RX_STAT_NAME "rx_stat"
+#define CHANNEL_TX_STAT_NAME "tx_stat"
 //#define CHANNEL_RX_STATE_NAME "state"
 
 #define CHANNEL_DATA_SUBPATH CHANNEL_DATA_FIFO_NAME "/" CHANNEL_DATA_BUF_NAME
@@ -1072,6 +1089,20 @@ sdtl_rv_t sdtl_service_init(sdtl_service_t **s_rv, const char *service_name, con
         return SDTL_ESWB_ERR;
     }
 
+    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 5);
+
+    topic_proclaiming_tree_t *rx_stat_root = usr_topic_set_struct(cntx, s->rx_stat, "rx_stat");
+
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_rx_stat_t, frames_received, "frames_received", tt_uint32);
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_rx_stat_t, bytes_received, "bytes_received", tt_uint32);
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_rx_stat_t, bad_crc_frames, "bad_crc_frames", tt_uint32);
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_rx_stat_t, non_framed_bytes, "non_framed_bytes", tt_uint32);
+
+    erv = eswb_proclaim_tree_by_path(s->service_eswb_root, rx_stat_root, cntx->t_num, &s->rx_stat_td);
+    if (erv != eswb_e_ok) {
+        sdtl_dbg_msg("eswb_proclaim_tree_by_path failed: %s", eswb_strerror(erv));
+    }
+
     *s_rv = s;
 
 //    sdtl_dbg_msg("Success, media ref == 0x%016X", (uint64_t)s->media);
@@ -1192,7 +1223,30 @@ sdtl_rv_t sdtl_channel_create(sdtl_service_t *s, sdtl_channel_cfg_t *cfg) {
     // TODO fifo size supposed to be tuned according the speed of interface and overall service latency
 #   define FIFO_SIZE 8
 
-    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 4);
+    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx,6);
+
+    topic_proclaiming_tree_t *rx_stat_root = usr_topic_set_struct(cntx, sdtl_channel_rx_stat_t, CHANNEL_RX_STAT_NAME);
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_channel_rx_stat_t, sequences, "sequences", tt_uint32);
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_channel_rx_stat_t, packets, "packets", tt_uint32);
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_channel_rx_stat_t, bytes, "bytes", tt_uint32);
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_channel_rx_stat_t, acks, "acks", tt_uint32);
+    erv = eswb_proclaim_tree_by_path(path, rx_stat_root, cntx->t_num, NULL);
+    if (erv != eswb_e_ok) {
+        return SDTL_ESWB_ERR;
+    }
+
+    TOPIC_TREE_CONTEXT_LOCAL_RESET(cntx);
+    topic_proclaiming_tree_t *tx_stat_root = usr_topic_set_struct(cntx, sdtl_channel_tx_stat_t, CHANNEL_TX_STAT_NAME);
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_channel_tx_stat_t, sequences, "sequences", tt_uint32);
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_channel_tx_stat_t, packets, "packets", tt_uint32);
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_channel_tx_stat_t, bytes, "bytes", tt_uint32);
+    usr_topic_add_struct_child(cntx, rx_stat_root, sdtl_channel_tx_stat_t, retries, "retries", tt_uint32);
+    erv = eswb_proclaim_tree_by_path(path, tx_stat_root, cntx->t_num, NULL);
+    if (erv != eswb_e_ok) {
+        return SDTL_ESWB_ERR;
+    }
+
+    TOPIC_TREE_CONTEXT_LOCAL_RESET(cntx);
     topic_proclaiming_tree_t *data_fifo_root = usr_topic_set_fifo(cntx, CHANNEL_DATA_FIFO_NAME, FIFO_SIZE);
     usr_topic_add_child(cntx, data_fifo_root, CHANNEL_DATA_BUF_NAME, tt_plain_data, 0, mtu, 0);
     erv = eswb_proclaim_tree_by_path(path, data_fifo_root, cntx->t_num, NULL);
@@ -1269,6 +1323,18 @@ sdtl_rv_t sdtl_channel_open(sdtl_service_t *s, const char *channel_name, sdtl_ch
     erv = open_channel_resource(s->service_eswb_root, channel_name, CHANNEL_DATA_FIFO_NAME, &chh->data_td);
     if (erv != eswb_e_ok) {
         sdtl_dbg_msg("open_channel_resource %s/%s error: %s", channel_name, CHANNEL_DATA_FIFO_NAME, eswb_strerror(erv));
+        return SDTL_ESWB_ERR;
+    }
+
+    erv = open_channel_resource(s->service_eswb_root, channel_name, CHANNEL_RX_STAT_NAME, &chh->rx_stat_td);
+    if (erv != eswb_e_ok) {
+        sdtl_dbg_msg("open_channel_resource %s/%s error: %s", channel_name, CHANNEL_RX_STAT_NAME, eswb_strerror(erv));
+        return SDTL_ESWB_ERR;
+    }
+
+    erv = open_channel_resource(s->service_eswb_root, channel_name, CHANNEL_TX_STAT_NAME, &chh->tx_stat_td);
+    if (erv != eswb_e_ok) {
+        sdtl_dbg_msg("open_channel_resource %s/%s error: %s", channel_name, CHANNEL_TX_STAT_NAME, eswb_strerror(erv));
         return SDTL_ESWB_ERR;
     }
 

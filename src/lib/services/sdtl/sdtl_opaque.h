@@ -11,6 +11,18 @@ typedef uint8_t sdtl_pkt_cnt_t;
 typedef uint16_t sdtl_pkt_payload_size_t;
 typedef uint16_t sdtl_seq_code_t;
 
+typedef struct sdtl_rx_stat {
+    uint32_t    frames_received;
+    uint32_t    bytes_received;
+    uint32_t    bad_crc_frames;
+    uint32_t    non_framed_bytes;
+} sdtl_rx_stat_t;
+
+typedef struct sdtl_tx_stat {
+    uint32_t    bytes_sent;
+    uint32_t    frames_sent;
+} sdtl_tx_stat_t;
+
 typedef struct sdtl_service {
     const char *service_name;
     char *service_eswb_root;
@@ -27,6 +39,9 @@ typedef struct sdtl_service {
     size_t channels_num;
 
     pthread_t rx_thread_tid;
+
+    sdtl_rx_stat_t rx_stat;
+    eswb_topic_descr_t rx_stat_td;
 
 } sdtl_service_t;
 
@@ -48,7 +63,19 @@ typedef enum sdtl_rx_state {
     SDTL_RX_STATE_RCV_CANCELED = 3,
 } sdtl_rx_state_t;
 
+typedef struct sdtl_channel_rx_stat {
+    uint32_t sequences;
+    uint32_t packets;
+    uint32_t bytes;
+    uint32_t acks;
+} sdtl_channel_rx_stat_t;
 
+typedef struct sdtl_channel_tx_stat {
+    uint32_t sequences;
+    uint32_t packets;
+    uint32_t bytes;
+    uint32_t retries;
+} sdtl_channel_tx_stat_t;
 
 typedef struct sdtl_channel {
     sdtl_channel_cfg_t cfg;
@@ -78,6 +105,9 @@ typedef struct sdtl_channel_handle {
     eswb_topic_descr_t ack_td;
     eswb_topic_descr_t rx_state_td;
 
+    eswb_topic_descr_t rx_stat_td;
+    eswb_topic_descr_t tx_stat_td;
+
     sdtl_channel_t *channel;
 
     void *rx_dafa_fifo_buf; // mtu size
@@ -89,8 +119,10 @@ typedef struct sdtl_channel_handle {
 
     uint32_t armed_timeout_us; // microseconds timeout
 
-    int tx_seq_num;
+    sdtl_channel_rx_stat_t rx_stat;
+    sdtl_channel_tx_stat_t tx_stat;
 
+    int tx_seq_num;
 
 } sdtl_channel_handle_t;
 

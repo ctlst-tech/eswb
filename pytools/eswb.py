@@ -3,7 +3,7 @@
 from ctypes import *
 import platform
 import os
-from typing import List
+from typing import List, Union
 
 import c_eswb_wrappers as ce
 
@@ -120,6 +120,21 @@ class Topic:
         self.children: List[Topic] = []
         self.parent: Topic = None
 
+    def find(self, path: Union[str, List[str]]):
+        if isinstance(path, str):
+            path = path.split('/')
+
+        if path[0] == self.name:
+            if len(path) > 1:
+                for t in self.children:
+                    rv = t.find(path[1:])
+                    if rv:
+                        return rv
+            else:
+                return self
+
+        return None
+
     def add_child(self, t):
         self.children.append(t)
 
@@ -131,7 +146,7 @@ class Topic:
     def raw_value(self):
         return get_value_from_buf(self.type, self.data_ref)
 
-    def print(self, show_types=False):
+    def print(self, *, show_types=False, indent=0):
         def print_node(t, indent=0):
             spaces = ' ' * indent * 2
             value = t.raw_value()
@@ -158,7 +173,7 @@ class Topic:
             for t in t.children:
                 print_node(t, indent+1)
 
-        print_node(self)
+        print_node(self, indent=indent)
 
 
 class Bus:
@@ -297,7 +312,7 @@ class SDTLserialService:
         self.service_name = service_name
         self.c_service_name = cstr(service_name)  # need to be persistent pointer
         self.device_path = device_path
-        self.channels = channels
+        self.channels: List[SDTLchannel] = channels
         self.mtu = mtu
         self.baudrate = baudrate
 
@@ -319,7 +334,24 @@ class SDTLserialService:
         for c in self.channels:
             c.register(self.service_ref)
 
+        self.service_bus.update_tree()
+
+        service_root_path = f'{self.service_bus_name}/{service_name}'
+
+        self.stat_topics_trees = {
+            'sdtl_rx_stat': self.service_bus.topic_tree.find(f'{service_root_path}/rx_stat')
+        }
+
+        for c in self.channels:
+            self.stat_topics_trees = {
+                **self.stat_topics_trees,
+                **{
+                    f'{c.name}/rx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/rx_stat'),
+                    f'{c.name}/tx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/tx_stat')
+                }
+            }
         pass
+
 
     def start(self):
         media_params = ce.sdtl_media_serial_params_t()
@@ -332,6 +364,11 @@ class SDTLserialService:
 
         if rv != 0:
             raise SDTLexception(f'sdtl_service_start failed', rv)
+
+    def print_stat(self):
+        for c in self.stat_topics_trees.keys():
+            print(c)
+            self.stat_topics_trees[c].print(indent=1)
 
     def stop(self):
         pass
@@ -393,6 +430,8 @@ def main(command_line=None):
     subdir = re.sub('.+:/', '', bus2request)
     b.mkdir(subdir)
 
+    sdtl = None
+
     if args.mtype == 'serial':
         (path, baudrate) = args.path.split(':')
 
@@ -424,6 +463,8 @@ def main(command_line=None):
             if not args.debug:
                 print(chr(27) + "[2J")
             b.topic_tree.print(show_types=show_types)
+            if sdtl:
+                sdtl.print_stat()
 
 
 if __name__ == "__main__":

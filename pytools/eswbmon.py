@@ -119,6 +119,7 @@ class ewChart(ewBasic):
                 self.graph.addItem(self.no_data_message)
                 self.no_data_message_is_there = True
 
+
 class ApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self, bus: e.Bus = None):
         super().__init__()
