@@ -5,6 +5,10 @@ from eswbmon import *
 
 mon = Monitor(sys.argv)
 
+#
+# socat -d -d pty,link=/tmp/vserial1,raw,echo=0 pty,link=/tmp/vserial2,raw,echo=0
+#
+
 mon.bridge(bus2replicate='itb:/conversions')
 mon.bridge(bus2replicate='itb:/generators')
 

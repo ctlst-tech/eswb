@@ -1,44 +1,14 @@
+# Python based tools for ESWB
 
-TODO
+## eswb.py 
 
-```puml
-@startuml
+Works as library and standalone tool to read ESWB bus via EQRB protocol.
 
-class TopicBasic {
-    union: value
-    str: name
-    bool: pinned
-}
+## eswbmon.py
 
-class TopicESWB
-class TopicDemo
+Library for displaying ESWB parameters via PyQt5.
 
-class WidgetBasic {
-    TopicBasic : topics[]
-}
+## eswb_test_dummy_demo.py
 
-class WidgetChart
-
-WidgetBasic "*" o-- TopicBasic
-
-WidgetBasic <|-- WidgetChart
-
-TopicBasic <|-- TopicESWB
-TopicBasic <|-- TopicDemo
-
-class ConnectionBasic
-class ConnectionTcp
-class ConnectionSerial
-class ConnectionDemo
-
-ConnectionBasic <|-- ConnectionTcp
-ConnectionBasic <|-- ConnectionSerial
-ConnectionBasic <|-- ConnectionDemo
-
-class Session
-
-Session "*" o-- ConnectionBasic
-Session "*" o-- WidgetBasic
-
-@enduml
-```
+Sample script that using eswbmon.py for interacting with eswb_test_dummy 
+installable testing executable (TODO need to be acuatlized for SDTL based EQRB).
