@@ -404,11 +404,13 @@ static void *eqrb_server_thread(void *p) {
             eqrb_dbg_msg("Do initial topics sync data");
 
             while (mode_do_initial_sync) {
-                erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid, &topic_tree_elem[0]);
+                erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid,
+                                               /*This is nasty but efficient >> */(topic_extract_t *) &topic_tree_elem[0]);
                 if (erv == eswb_e_ok) {
                     size_t topics_num = 1;
                     if (topic_info->info.type == tt_fifo) {
-                        erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid, &topic_tree_elem[1]);
+                        erv = eswb_get_next_topic_info(h->repl_root, &bus_sync_state.next_tid,
+                                                       /*This is nasty but efficient >> */(topic_extract_t *) &topic_tree_elem[1]);
                         if (erv == eswb_e_ok) {
                             topics_num++;
                             topic_tree_elem[0].first_child_ind = 1;

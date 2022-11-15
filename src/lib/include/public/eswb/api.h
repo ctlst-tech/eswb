@@ -144,14 +144,16 @@ eswb_rv_t eswb_get_topic_params (eswb_topic_descr_t td, topic_params_t *params);
 /**
  * Retrieve topics
  * @param td topic descriptor of the root to retrieve its children topics
- * @param next2tid pointer to the id value for the topic, preceeding the desired. At the first call value at this ref must be zero.
+ * @param next2tid pointer to the id value for the topic, preceeding the desired.
+ *              At the first call value at this ref (e.g. as local variable) must be zero.
  *              After successfull return it contains the id of just retrieved topic info
  * @param info retrieved information on success must be pointer to topic_extract_t
-
-* @return eswb_e_ok on success
+ * @return
+ * eswb_e_ok on success
+ * eswb_e_no_topic when there is no next topic (retrieve sequence is ended)
  */
 
-eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next2tid, void *info);
+eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next2tid, struct topic_extract *info);
 
 /**
  * Retrieve full path of the topic by its descriptor

@@ -43,7 +43,7 @@ typedef struct __attribute__((packed)) {
     int16_t            next_sibling_ind;
 } topic_proclaiming_tree_t;
 
-typedef struct {
+typedef struct topic_extract {
     topic_proclaiming_tree_t info;
     eswb_topic_id_t          parent_id;
 } topic_extract_t;
