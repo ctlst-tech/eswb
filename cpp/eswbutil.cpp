@@ -109,7 +109,7 @@ void read_sdtl_bridge_serial(const std::string &path, unsigned baudrate) {
     sdtl_bridge.start();
 
     while(1) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
         monitor_bus.update_tree();
         clrsrc();
         monitor_bus.print_tree();
