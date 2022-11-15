@@ -26,6 +26,8 @@ sdtl_rv_t sdtl_media_serial_open(const char *path, void *params, void **h_rv) {
         }
     }
 
+    sdtl_dbg_msg("opened");
+
     int rv = tcgetattr(fd, &termios_p);
     if (rv) {
         sdtl_dbg_msg("tcgetattr failed: %s", path, strerror(errno));
@@ -34,13 +36,17 @@ sdtl_rv_t sdtl_media_serial_open(const char *path, void *params, void **h_rv) {
 
     cfsetispeed(&termios_p, ser_params->baudrate);
     cfsetospeed(&termios_p, ser_params->baudrate);
+    cfmakeraw(&termios_p);
     rv = tcsetattr(fd, TCSANOW, &termios_p);
     if (rv) {
-        sdtl_dbg_msg("tcsetattr failed: %s", path, strerror(errno));
+        sdtl_dbg_msg("tcsetattr failed for \"%s\": %s", path, strerror(errno));
         return SDTL_MEDIA_ERR;
     }
+    sdtl_dbg_msg("baudrate set");
 
     tcflush(fd, TCIOFLUSH);
+
+    sdtl_dbg_msg("flushed");
 
     *h_rv = (void *) ((size_t) fd);  // cheating for not allocating 4 bytes
 
