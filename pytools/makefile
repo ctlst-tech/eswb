@@ -1,31 +1,26 @@
-
 LIB_ROOT="../src/lib"
 
-# TODO
-# libraries['FIXME_STUB'] explanation
-# As you did not list (-l libraryname.so) a library that exports this function
-# This is a non-working stub instead.
-# You can either re-run clan2py with -l /path/to/library.so
-# Or manually fix this by comment the ctypes.CDLL loading
+TARGET=c_eswb_wrappers.py
 
-TARGET=c_eswb.py
-
-# TODO use path to system's include dirs (after removing non API topics readings)
+BUILD_PATH=$(shell cd ../..; pwd)
 
 $(TARGET):
-	clang2py --clang-args="-I $(LIB_ROOT)/include/public" \
+	ctypesgen -leswb --strip-build-path=$(BUILD_PATH) \
+			$(LIB_ROOT)/include/public/eswb/api.h \
+			$(LIB_ROOT)/include/public/eswb/errors.h \
 			$(LIB_ROOT)/include/public/eswb/types.h \
+			$(LIB_ROOT)/include/public/eswb/event_queue.h \
+			$(LIB_ROOT)/include/public/eswb/services/eqrb.h \
+			$(LIB_ROOT)/include/public/eswb/services/sdtl.h \
 			$(LIB_ROOT)/include/topic_mem.h \
 			$(LIB_ROOT)/include/registry.h \
-			$(LIB_ROOT)/include/public/eswb/api.h \
-			$(LIB_ROOT)/include/public/eswb/eqrb.h \
 			-o $@
 
-install_clang2py:
-	pip3 install ctypeslib2
+install_tools:
+	pip3 install ctypesgen
 
 clean:
 	-rm $(TARGET)
 
-update: clean $(TARGET)
+update_wrappers: clean $(TARGET)
 	@echo Done!
