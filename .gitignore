@@ -3,3 +3,4 @@ build
 build2
 cmake-build-debug
 cmake-build-debug-coverage
+.DS_Store
