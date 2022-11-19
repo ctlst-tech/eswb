@@ -135,6 +135,16 @@ class Topic:
 
         return None
 
+    def get_path(self):
+        path = ''
+        t = self
+        while t:
+            leading_slash = '/' if t.parent else ''
+            path = leading_slash + t.name + path
+            t = t.parent
+
+        return path
+
     def add_child(self, t):
         self.children.append(t)
 
@@ -338,20 +348,13 @@ class SDTLserialService:
 
         service_root_path = f'{self.service_bus_name}/{service_name}'
 
-        self.stat_topics_trees = {
-            'sdtl_rx_stat': self.service_bus.topic_tree.find(f'{service_root_path}/rx_stat')
-        }
-
+        self.stat_topics_service_tree = self.service_bus.topic_tree.find(f'{service_root_path}/rx_stat')
+        self.stat_topics_channels_trees = {}
         for c in self.channels:
-            self.stat_topics_trees = {
-                **self.stat_topics_trees,
-                **{
-                    f'{c.name}/rx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/rx_stat'),
-                    f'{c.name}/tx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/tx_stat')
+            self.stat_topics_channels_trees[c.name] = {
+                    'rx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/rx_stat'),
+                    'tx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/tx_stat')
                 }
-            }
-        pass
-
 
     def start(self):
         media_params = ce.sdtl_media_serial_params_t()
@@ -366,9 +369,9 @@ class SDTLserialService:
             raise SDTLexception(f'sdtl_service_start failed', rv)
 
     def print_stat(self):
-        for c in self.stat_topics_trees.keys():
+        for c in self.stat_topics_channel_trees.keys():
             print(c)
-            self.stat_topics_trees[c].print(indent=1)
+            self.stat_topics_channel_trees[c].print(indent=1)
 
     def stop(self):
         pass

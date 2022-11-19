@@ -1,82 +1,248 @@
 #!/usr/bin/env python3
-
+import time
 # TODO https://github.com/pyqt/examples
 
 from abc import abstractmethod
 from time import sleep
-from typing import List
+from typing import List, Union
 import sys
+import math
 
 from PyQt5 import QtWidgets, QtCore
 
 import pyqtgraph as pg
 from random import randint
 
-from PyQt5.QtWidgets import QTableWidget
+from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 from pyqtgraph.Qt import QtGui
 
 import eswb as e
 import os
 
-service_bus_name = 'monitor'
+
+
+class NoDataStub:
+    def __init__(self, err_msg):
+        self.err_msg = err_msg
+
+
+class DataSourceBasic:
+    def __init__(self, name, *, mult=1.0, range=None, demo_mode=False):
+        self.name = name
+        self.range = range
+        self.mult = mult
+        self.demo_mode = demo_mode
+
+    @abstractmethod
+    def connect(self):
+        pass
+
+    @abstractmethod
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        pass
+
+
+class DataSourceCalcFilteredRate(DataSourceBasic):
+    def __init__(self, name, data_source: DataSourceBasic, **kwargs):
+        super().__init__(name, **kwargs)
+        self.data_source = data_source
+        self.initial = False
+        self.filtered_value = 0
+        self.previous_value = 0
+        self.previous_time = 0
+
+    def connect(self):
+        self.data_source.connect()
+
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        current_value = self.data_source.read()
+
+        if isinstance(current_value, NoDataStub):
+            return current_value
+
+        curr_time = time.time()
+
+        if not self.initial:
+            self.initial = True
+            self.filtered_value = 0
+        else:
+            delta_time = curr_time - self.previous_time
+            deriative = (current_value - self.previous_value) / delta_time
+            self.filtered_value = self.filtered_value - 0.01 * (self.filtered_value - deriative)
+
+        self.previous_value = current_value
+        self.previous_time = curr_time
+
+        return self.filtered_value
+
+
+class DataSourceSinus(DataSourceBasic):
+    def __init__(self, name, *, omega=1.0, iphase=0.0, **kwargs):
+        super().__init__(name, **kwargs)
+        self.time = 0
+        self.delta_time = 0.01
+        self.omega = omega
+        self.initial_phase = iphase
+
+    def connect(self):
+        pass
+
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        self.time += self.delta_time
+        return self.mult * math.sin(self.initial_phase + self.omega * self.time)
+
+
+class DataSourceEswbTopic(DataSourceBasic):
+
+    def __init__(self, name, path, **kwargs):
+        super().__init__(name, **kwargs)
+        self.topic_handle: e.TopicHandle = e.TopicHandle(name, path)
+
+    def connect(self):
+        self.topic_handle.connect()
+
+    def read(self):
+        try:
+            value = self.mult * self.topic_handle.value()
+        except Exception as E:
+            value = NoDataStub(E.args[0])
+            try:
+                self.topic_handle.connect()
+            except Exception as E:
+                # redefine message
+                value.err_msg = E.args[0]
+
+        return value
 
 
 class ewBasic(QtWidgets.QWidget):
-    def __init__(self, path, mult=1.0, name=None, abs_path=False, *args, **kwargs):
-        super(ewBasic, self).__init__(*args, **kwargs)
+    def __init__(self, data_sources: List[DataSourceBasic], *, layout_vertical=True, **kwargs):
+        super(ewBasic, self).__init__(**kwargs)
 
-        self.topic_handles: List[e.TopicHandle] = []
+        self.data_sources: List[DataSourceBasic] = data_sources
 
-        if not abs_path:
-            path = service_bus_name + '/' + path
-
-        if not name:
-            name = os.path.basename(os.path.normpath(path))
-
-        self.mult = mult
-
-        self.topic_handles.append(e.TopicHandle(name, path))
-        self.layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.LeftToRight)
+        self.layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.TopToBottom if layout_vertical else QtWidgets.QBoxLayout.LeftToRight)
         self.setLayout(self.layout)
 
+        self.nested_widgets: List[ewBasic] = []
+
+    def add_nested(self, w):
+        self.nested_widgets.append(w)
+
     @abstractmethod
-    def update_handler(self, vals: List[float], no_data_state=False, no_data_error_msg=''):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
         pass
 
-    def connect(self):
-        for t in self.topic_handles:
-            t.connect()
+    def redraw(self):
+        for w in self.nested_widgets:
+            w.redraw()
 
-    def update(self):
         vals = []
-        no_data = False
-        err_msg = ''
-        for t in self.topic_handles:
-            try:
-                value = self.mult * t.value()
-            except Exception as E:
-                value = 0
-                err_msg = E.args[0]
-                no_data = True
-                try:
-                    t.connect()
-                except Exception as E:
-                    err_msg = E.args[0]
+        for ds in self.data_sources:
+            vals.append(ds.read())
 
-            vals.append(value)
-
-        self.update_handler(vals, no_data_state=no_data, no_data_error_msg=err_msg)
+        self.radraw_handler(vals)
 
 
 class ewTable(ewBasic):
-    def __init__(self, *args, **kwargs):
-        super(ewChart, self).__init__(*args, **kwargs)
+    def __init__(self, *, caption='', data_sources: List[DataSourceBasic], **kwargs):
+        super().__init__(data_sources, **kwargs)
 
-        self.table = QTableWidget
+        self.table = QTableWidget()
+
+        self.table.setRowCount(len(data_sources))
+        self.table.setColumnCount(2)
+        # self.table.setColumnCount(3)
+
+        for i in range(0, len(self.data_sources)):
+            self.table.setItem(i, 0, QTableWidgetItem(data_sources[i].name))
+            self.table.setItem(i, 1, QTableWidgetItem(''))
+            # self.table.setItem(i, 2, QTableWidgetItem(''))
+
+        self.table.horizontalHeader().setStretchLastSection(True)
+        self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.horizontalHeader().setVisible(False)
+        # self.table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        self.table.verticalHeader().setVisible(False)
+
+        height = 0
+        # height = self.table.horizontalScrollBar().height() + self.table.horizontalHeader().height()
+        for i in range(self.table.rowCount()):
+            height += self.table.verticalHeader().sectionSize(i)
+
+        self.table.setMinimumHeight(height)
+
+        if caption:
+            self.layout.addWidget(QLabel(caption))
+
+        self.layout.addWidget(self.table)
+
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+        for i in range(0, len(self.data_sources)):
+            value_item = self.table.item(i, 1)
+            color_item = self.table.item(i, 1)
+            prev_val = value_item.text()
+            new_val = str(vals[i])
+            if prev_val == new_val:
+                color = list(color_item.background().color().getRgb())
+                if color[1] > 0:
+                    color[1] -= min(1, color[1])
+                color_item.setBackground(QtGui.QColor(color[0], color[1], color[2]))
+            else:
+                color_item.setBackground(QtGui.QColor(0, 100, 0))
+
+            value_item.setText(new_val)
+
+
 
 class ewChart(ewBasic):
-    def __init__(self, data_range=None, *args, **kwargs):
-        super(ewChart, self).__init__(*args, **kwargs)
+    colors_series=[
+        (255, 0, 0),
+        (0, 200, 0),
+        (0, 0, 255),
+        (0, 0, 0),
+    ]
+
+    class Plot:
+        def __init__(self, *, label, graph, color=None, window=600, **kwargs):
+            self.label = label
+            self.x = list(range(window))
+            self.y = [0.0] * window
+
+            self.parent_graph = graph
+
+            if not color:
+                color = ewChart.colors_series[0]
+
+            pen = pg.mkPen(color=color, width=4)
+            self.data_line = graph.plot(self.x, self.y, pen=pen)
+
+            self.no_data_message_is_there = False
+            self.no_data_message = pg.TextItem('', anchor=(0.5, 0.5), color=color)
+            self.no_data_message.setPos(100, 100)
+            # self.no_data_message.setZValue(50)
+            self.no_data_message.setFont(QtGui.QFont("Arial", 14))
+
+        def update(self, val):
+            if isinstance(val, NoDataStub):
+                if not self.no_data_message_is_there:
+                    self.no_data_message.setText(val.err_msg)
+                    self.parent_graph.addItem(self.no_data_message)
+                    self.no_data_message_is_there = True
+            else:
+                self.data_line.setData(self.x, self.y)
+                if self.no_data_message_is_there:
+                    self.parent_graph.removeItem(self.no_data_message)
+                    self.no_data_message_is_there = False
+
+                self.x = self.x[1:]
+                self.x.append(self.x[-1] + 1)
+
+                self.y = self.y[1:]
+                self.y.append(val)
+
+    def __init__(self, data_sources: List[DataSourceBasic], data_range=None, *args, **kwargs):
+        super().__init__(data_sources, *args, **kwargs)
         self.graph = pg.PlotWidget(**kwargs)
 
         if data_range:
@@ -84,40 +250,20 @@ class ewChart(ewBasic):
 
         self.layout.addWidget(self.graph)
 
-        window = 600
+        # window = 600
+        # self.graph.setBackground(QtGui.QColor('white'))
 
-        self.x = list(range(window))
-        self.y = [0.0] * window
+        self.plots: List[ewChart.Plot] = []
 
-        pen = pg.mkPen(color=(0, 0, 0), width=2)
-        self.data_line = self.graph.plot(self.x, self.y, pen=pen)
+        color_i = 0
+        for ds in data_sources:
+            self.plots.append(ewChart.Plot(label=ds.name, graph=self.graph, color=self.colors_series[color_i]))
+            if color_i < len(self.colors_series):
+                color_i += 1
 
-
-        self.graph.setBackground(QtGui.QColor('white'))
-
-        self.no_data_message_is_there = False
-        self.no_data_message = pg.TextItem('', anchor=(0.5, 0.5), color=(255, 0, 0))
-        self.no_data_message.setPos(100, 100)
-        # self.no_data_message.setZValue(50)
-        self.no_data_message.setFont(QtGui.QFont("Arial", 14))
-
-    def update_handler(self, vals: List[float], no_data_state=False, no_data_error_msg=''):
-        self.x = self.x[1:]
-        self.x.append(self.x[-1] + 1)
-
-        self.y = self.y[1:]
-        self.y.append(vals[0])
-
-        if not no_data_state:
-            self.data_line.setData(self.x, self.y)
-            if self.no_data_message_is_there:
-                self.graph.removeItem(self.no_data_message)
-                self.no_data_message_is_there = False
-        else:
-            if not self.no_data_message_is_there:
-                self.no_data_message.setText(no_data_error_msg)
-                self.graph.addItem(self.no_data_message)
-                self.no_data_message_is_there = True
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+        for i in range(0, len(self.plots)):
+            self.plots[i].update(vals[i])
 
 
 class ApplicationWindow(QtWidgets.QMainWindow):
@@ -164,16 +310,58 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def redraw(self):
         for w in self.widgets:
-            w.update()
+            w.redraw()
 
 
-class Monitor():
-    def __init__(self, argv=None):
+def find_data_source(lst: List[DataSourceBasic], name: str):
+    for s in lst:
+        if s.name == name:
+            return s
+
+    return None
+
+
+class SdtlTelemetryWidget(ewBasic):
+    def __init__(self, sdtl_ref: e.SDTLserialService):
+        super().__init__(data_sources=[], layout_vertical=False)
+        data_service_rx_stat = [DataSourceEswbTopic(name=t.name, path=t.get_path()) for t in sdtl_ref.stat_topics_service_tree.children]
+
+        bytes_receive_source = find_data_source(data_service_rx_stat, 'bytes_received')
+
+        data_service_channels_stat = {}
+        for k in sdtl_ref.stat_topics_channels_trees.keys():
+            data_service_channels_stat[k] = \
+                [DataSourceEswbTopic(name=f'rx_{t.name}', path=t.get_path()) for t in sdtl_ref.stat_topics_channels_trees[k]['rx'].children]
+            data_service_channels_stat[k] += \
+                [DataSourceEswbTopic(name=f'tx_{t.name}', path=t.get_path()) for t in sdtl_ref.stat_topics_channels_trees[k]['tx'].children]
+
+        self.rx_stat_table = ewTable(caption='SDTL RX', data_sources=data_service_rx_stat)
+        self.add_nested(self.rx_stat_table)
+        self.layout.addWidget(self.rx_stat_table)
+
+        self.channels_subwidgets = []
+
+        for cw in data_service_channels_stat.items():
+            self.channels_subwidgets.append(ewTable(caption=cw[0], data_sources=cw[1]))
+            self.add_nested(self.channels_subwidgets[-1])
+            self.layout.addWidget(self.channels_subwidgets[-1])
+
+        self.rx_rate_chart_widget = ewChart([
+            DataSourceCalcFilteredRate('rx_speed', bytes_receive_source),
+            DataSourceCalcFilteredRate('tx_speed', bytes_receive_source)
+        ], data_range=(0, 10000))
+        self.add_nested(self.rx_rate_chart_widget)
+        self.layout.addWidget(self.rx_rate_chart_widget)
+
+
+class Monitor:
+    def __init__(self, *, monitor_bus_name='monitor', argv=None):
         super().__init__()
+        self.service_bus_name = monitor_bus_name
         self.app = QtWidgets.QApplication(argv)
-        self.bus = e.Bus(service_bus_name)
+        self.bus = e.Bus(monitor_bus_name)
         self.app_window = ApplicationWindow(self.bus)
-        self.eqrb_clients = []
+        self.sdtl_service: e.SDTLserialService = None
         pass
 
     def connect(self):
@@ -192,7 +380,7 @@ class Monitor():
 
     def bridge_sdtl(self, *, path, baudrate, bridge_to):
         sdtl_service_name = 'sdtl_serial'
-        sdtl = e.SDTLserialService(service_name=sdtl_service_name, device_path=path, mtu=0,
+        self.sdtl_service = e.SDTLserialService(service_name=sdtl_service_name, device_path=path, mtu=0,
                                  baudrate=int(baudrate),
                                  channels=[
                                      e.SDTLchannel(name='bus_sync', ch_id=1, ch_type=e.SDTLchannelType.rel),
@@ -200,15 +388,17 @@ class Monitor():
                                  ]
                                  )
 
-        sdtl.start()
+        self.sdtl_service.start()
 
         eqrb = e.EQRB_SDTL(sdtl_service_name=sdtl_service_name,
-                         replicate_to_path=f'{service_bus_name}/{bridge_to}',
+                         replicate_to_path=f'{self.service_bus_name}/{bridge_to}',
                          ch1='bus_sync',
                          ch2='bus_sync_sk')
 
         eqrb.start()
 
+    def get_stat_widget(self):
+        return SdtlTelemetryWidget(self.sdtl_service)
+
     def add_widget(self, w):
         self.app_window.add_ew(w)
-
