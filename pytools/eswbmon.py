@@ -42,6 +42,27 @@ class DataSourceBasic:
         pass
 
 
+class DataSourceSum(DataSourceBasic):
+    def __init__(self, name, sources: List[DataSourceBasic], **kwargs):
+        super().__init__(name, **kwargs)
+        self.data_sources = sources
+
+    def connect(self):
+        for s in self.data_sources:
+            s.connect()
+
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        rv = 0
+        for s in self.data_sources:
+            v = s.read()
+            if isinstance(v, NoDataStub):
+                return v
+            else:
+                rv += v
+
+        return rv
+
+
 class DataSourceCalcFilteredRate(DataSourceBasic):
     def __init__(self, name, data_source: DataSourceBasic, **kwargs):
         super().__init__(name, **kwargs)
@@ -227,19 +248,21 @@ class ewChart(ewBasic):
             if isinstance(val, NoDataStub):
                 if not self.no_data_message_is_there:
                     self.no_data_message.setText(val.err_msg)
-                    self.parent_graph.addItem(self.no_data_message)
+                    # self.parent_graph.addItem(self.no_data_message)
                     self.no_data_message_is_there = True
+                val = 0.0
             else:
-                self.data_line.setData(self.x, self.y)
                 if self.no_data_message_is_there:
-                    self.parent_graph.removeItem(self.no_data_message)
+                    # self.parent_graph.removeItem(self.no_data_message)
                     self.no_data_message_is_there = False
 
-                self.x = self.x[1:]
-                self.x.append(self.x[-1] + 1)
+            self.x = self.x[1:]
+            self.x.append(self.x[-1] + 1)
 
-                self.y = self.y[1:]
-                self.y.append(val)
+            self.y = self.y[1:]
+            self.y.append(val)
+
+            self.data_line.setData(self.x, self.y)
 
     def __init__(self, data_sources: List[DataSourceBasic], data_range=None, *args, **kwargs):
         super().__init__(data_sources, *args, **kwargs)
@@ -341,15 +364,21 @@ class SdtlTelemetryWidget(ewBasic):
 
         self.channels_subwidgets = []
 
+        tx_bytes_sum_sources = []
+
         for cw in data_service_channels_stat.items():
             self.channels_subwidgets.append(ewTable(caption=cw[0], data_sources=cw[1]))
+            ds = find_data_source(cw[1], 'tx_bytes')
+            if ds:
+                tx_bytes_sum_sources.append(ds)
             self.add_nested(self.channels_subwidgets[-1])
             self.layout.addWidget(self.channels_subwidgets[-1])
 
         self.rx_rate_chart_widget = ewChart([
             DataSourceCalcFilteredRate('rx_speed', bytes_receive_source),
-            DataSourceCalcFilteredRate('tx_speed', bytes_receive_source)
+            DataSourceCalcFilteredRate('tx_speed', DataSourceSum('tx_bytes_sum', tx_bytes_sum_sources))
         ], data_range=(0, 10000))
+
         self.add_nested(self.rx_rate_chart_widget)
         self.layout.addWidget(self.rx_rate_chart_widget)
 

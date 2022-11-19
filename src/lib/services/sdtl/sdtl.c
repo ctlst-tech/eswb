@@ -388,7 +388,10 @@ static sdtl_rv_t media_tx(sdtl_channel_handle_t *chh, void *header, uint32_t hl,
         return rv;
     }
 
-    return chh->channel->service->media->write(chh->channel->service->media_handle, chh->tx_frame_buf, composed_frame_len);
+    rv = chh->channel->service->media->write(chh->channel->service->media_handle, chh->tx_frame_buf, composed_frame_len);
+    chh->tx_stat.bytes += composed_frame_len;
+
+    return rv;
 }
 
 
@@ -661,7 +664,6 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
         l -= dsize;
         offset += dsize;
 
-        chh->tx_stat.bytes += dsize;
         chh->tx_stat.packets++;
         eswb_update_topic(chh->tx_stat_td, &chh->tx_stat);
     } while (l > 0);
