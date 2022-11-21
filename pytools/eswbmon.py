@@ -175,10 +175,15 @@ class ewTable(ewBasic):
         self.table.setColumnCount(2)
         # self.table.setColumnCount(3)
 
+        active_color = [0, 100, 0, 255]
+        idle_color = self.table.palette().color(QtGui.QPalette.Base).getRgb()
+
+        self.color_blenders: List[colorInterp] = []
         for i in range(0, len(self.data_sources)):
             self.table.setItem(i, 0, QTableWidgetItem(data_sources[i].name))
             self.table.setItem(i, 1, QTableWidgetItem(''))
-            # self.table.setItem(i, 2, QTableWidgetItem(''))
+            self.color_blenders.append(colorInterp(idle_color, active_color, 0.01))
+
 
         self.table.horizontalHeader().setStretchLastSection(True)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
@@ -198,6 +203,8 @@ class ewTable(ewBasic):
 
         self.layout.addWidget(self.table)
 
+
+
     def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
         for i in range(0, len(self.data_sources)):
             value_item = self.table.item(i, 1)
@@ -205,15 +212,58 @@ class ewTable(ewBasic):
             prev_val = value_item.text()
             new_val = str(vals[i])
             if prev_val == new_val:
-                color = list(color_item.background().color().getRgb())
-                if color[1] > 0:
-                    color[1] -= min(1, color[1])
-                color_item.setBackground(QtGui.QColor(color[0], color[1], color[2]))
+                self.color_blenders[i].shift_to_left()
+                color_item.setBackground(self.color_blenders[i].color_get())
             else:
-                color_item.setBackground(QtGui.QColor(0, 100, 0))
+                color_item.setBackground(self.color_blenders[i].set_right())
 
             value_item.setText(new_val)
 
+
+class colorInterp:
+    def __init__(self, c0, c1, step=0.01):
+        self.left = c0
+        self.right = c1
+        self.current = [0.0, 0.0, 0.0, 0.0]
+        self.mixture_lever = 0.0
+        self.step = step
+
+        self.color_delta = [c1[0] - c0[0],
+                          c1[1] - c0[1],
+                          c1[2] - c0[2],
+                          c1[3] - c0[3]
+                            ]
+
+    @staticmethod
+    def qcolor(clr):
+        return QtGui.QColor(QtGui.qRgba(
+            int(clr[0]),
+            int(clr[1]),
+            int(clr[2]),
+            int(clr[3])))
+
+    def color_get(self):
+        self.current[0] = self.left[0] + self.color_delta[0] * self.mixture_lever
+        self.current[1] = self.left[1] + self.color_delta[1] * self.mixture_lever
+        self.current[2] = self.left[2] + self.color_delta[2] * self.mixture_lever
+        self.current[3] = self.left[3] + self.color_delta[3] * self.mixture_lever
+        return self.qcolor(self.current)
+
+    def shift_to_right(self):
+        self.mixture_lever += self.step
+        self.mixture_lever = 1.0 if self.mixture_lever > 1.0 else self.mixture_lever
+
+    def shift_to_left(self):
+        self.mixture_lever -= self.step
+        self.mixture_lever = 0.0 if self.mixture_lever < 0.0 else self.mixture_lever
+
+    def set_left(self):
+        self.mixture_lever = 0.0
+        return self.color_get()
+
+    def set_right(self):
+        self.mixture_lever = 1.0
+        return self.color_get()
 
 
 class ewChart(ewBasic):
