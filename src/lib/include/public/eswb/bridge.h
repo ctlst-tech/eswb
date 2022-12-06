@@ -10,6 +10,10 @@
 #include "types.h"
 #include "errors.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define BRIDGE_NAME_MAX 30
 
 typedef struct {
@@ -31,6 +35,7 @@ typedef struct {
 } eswb_bridge_t;
 
 eswb_rv_t eswb_bridge_create(const char *name, eswb_size_t max_tds, eswb_bridge_t **rv);
+
 /**
  *
  * @param b
@@ -42,9 +47,12 @@ eswb_rv_t eswb_bridge_create(const char *name, eswb_size_t max_tds, eswb_bridge_
  */
 eswb_rv_t
 eswb_bridge_add_topic(eswb_bridge_t *b, eswb_topic_descr_t mnt_td, const char *src_path, const char *dest_name);
-eswb_rv_t eswb_bridge_connect_vector(eswb_bridge_t *b, const char *dest_mnt);
-eswb_rv_t eswb_bridge_connect_scalar(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const char *dest_topic);
+eswb_rv_t eswb_bridge_connect(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const char *dest_mnt);
 eswb_rv_t eswb_bridge_read(eswb_bridge_t *b, void *data);
 eswb_rv_t eswb_bridge_update(eswb_bridge_t *b);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif //ESWB_BRIDGE_H

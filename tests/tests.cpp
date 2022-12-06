@@ -5,6 +5,7 @@
 #include "tooling.h"
 
 #include "eswb/api.h"
+#include "eswb/bridge.h"
 #include "tests.h"
 
 #include "ids_map.h"
@@ -788,6 +789,270 @@ TEST_CASE("Retrieve tree struct") {
 //    }
 
 }
+
+std::string add_path(std::string s1, std::string s2) {
+    return s1 + "/" + s2;
+}
+
+typedef struct test_structure {
+    double a;
+    double b;
+    double c;
+} test_structure_t;
+
+TEST_CASE("ESWB bridge") {
+    eswb_local_init(1);
+
+    eswb_rv_t rv;
+
+    std::string src_bus_name = "src_bus";
+    rv = eswb_create(src_bus_name.c_str(), eswb_inter_thread, 256);
+    REQUIRE(rv == eswb_e_ok);
+
+    test_structure_t st = {};
+
+    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 10);
+
+    std::string struct1_name = "struct1";
+    eswb_topic_descr_t struct1_td;
+    topic_proclaiming_tree_t *rt = usr_topic_set_struct(cntx, st, struct1_name.c_str());
+    usr_topic_add_struct_child(cntx, rt, test_structure_t, a, "a", tt_double);
+    usr_topic_add_struct_child(cntx, rt, test_structure_t, b, "b", tt_double);
+    usr_topic_add_struct_child(cntx, rt, test_structure_t, c, "c", tt_double);
+
+    rv = eswb_proclaim_tree_by_path(src_bus_name.c_str(), rt, cntx->t_num, &struct1_td);
+    REQUIRE(rv == eswb_e_ok);
+
+
+    TOPIC_TREE_CONTEXT_LOCAL_RESET(cntx);
+    std::string struct2_name = "struct2";
+    eswb_topic_descr_t struct2_td;
+    topic_proclaiming_tree_t *rt2 = usr_topic_set_struct(cntx, st, struct2_name.c_str());
+    usr_topic_add_struct_child(cntx, rt, test_structure_t, a, "e", tt_double);
+    usr_topic_add_struct_child(cntx, rt, test_structure_t, b, "f", tt_double);
+    usr_topic_add_struct_child(cntx, rt, test_structure_t, c, "g", tt_double);
+
+    rv = eswb_proclaim_tree_by_path(src_bus_name.c_str(), rt2, cntx->t_num, &struct2_td);
+    REQUIRE(rv == eswb_e_ok);
+
+    std::string scalar1_name = "scalar1";
+    eswb_topic_descr_t scalar1_td;
+    TOPIC_TREE_CONTEXT_LOCAL_RESET(cntx);
+    topic_proclaiming_tree_t *rt3 = usr_topic_set_root(cntx, scalar1_name.c_str(), tt_double, sizeof(double));
+    rv = eswb_proclaim_tree_by_path(src_bus_name.c_str(), rt3, cntx->t_num, &scalar1_td);
+    REQUIRE(rv == eswb_e_ok);
+
+    std::string scalar2_name = "scalar2";
+    eswb_topic_descr_t scalar2_td;
+    TOPIC_TREE_CONTEXT_LOCAL_RESET(cntx);
+    topic_proclaiming_tree_t *rt4 = usr_topic_set_root(cntx, scalar2_name.c_str(), tt_double, sizeof(double));
+    rv = eswb_proclaim_tree_by_path(src_bus_name.c_str(), rt4, cntx->t_num, &scalar2_td);
+    REQUIRE(rv == eswb_e_ok);
+
+
+    // destination bus
+    std::string dst_bus_name = "dst_bus";
+    rv = eswb_create(dst_bus_name.c_str(), eswb_inter_thread, 256);
+    REQUIRE(rv == eswb_e_ok);
+
+    eswb_bridge_t *br;
+    eswb_topic_descr_t dst_td;
+    eswb_topic_descr_t dst2_td;
+
+    SECTION("Scalar via path") {
+        rv = eswb_bridge_create("scalar", 1, &br);
+        REQUIRE(rv == eswb_e_ok);
+        rv = eswb_bridge_add_topic(br, 0, add_path(src_bus_name, scalar1_name).c_str(), NULL);
+        REQUIRE(rv == eswb_e_ok);
+        std::string scalar1_at_dst_path = add_path(dst_bus_name, scalar1_name);
+        rv = eswb_bridge_connect(br, 0, scalar1_at_dst_path.c_str());
+        REQUIRE(rv == eswb_e_ok);
+        double value_src = 123.456;
+        rv = eswb_update_topic(scalar1_td, &value_src);
+        REQUIRE(rv == eswb_e_ok);
+        rv = eswb_bridge_update(br);
+        REQUIRE(rv == eswb_e_ok);
+
+        rv = eswb_connect(add_path(dst_bus_name, scalar1_name).c_str(), &dst_td);
+        REQUIRE(rv == eswb_e_ok);
+        double value_dst = 0;
+        rv = eswb_read(dst_td, &value_dst);
+        REQUIRE(value_dst == value_src);
+    }
+
+
+    SECTION("Scalar via mouting topic descriptor") {
+        int i = 0;
+        // iterate through combination of explicitly specifying bridging destination name
+        for (const char *p : {"", "scalar1_explicit_name"}) {
+            const char *dst_name = strlen(p) == 0 ? NULL : p;
+            std::string section_name = "dst_name == " + (dst_name == NULL ? "NULL" : std::string(dst_name));
+            SECTION(section_name) {
+                rv = eswb_bridge_create("scalar", 1, &br);
+                REQUIRE(rv == eswb_e_ok);
+
+                eswb_topic_descr_t src_mtd;
+                rv = eswb_connect(src_bus_name.c_str(), &src_mtd);
+
+                eswb_topic_descr_t dst_mtd;
+                rv = eswb_connect(dst_bus_name.c_str(), &dst_mtd);
+                REQUIRE(rv == eswb_e_ok);
+
+                rv = eswb_bridge_add_topic(br, src_mtd, scalar1_name.c_str(), dst_name);
+                REQUIRE(rv == eswb_e_ok);
+
+                std::string scalar1_at_dst_path = add_path(dst_bus_name, scalar1_name);
+                rv = eswb_bridge_connect(br, dst_mtd, scalar1_name.c_str());
+                REQUIRE(rv == eswb_e_ok);
+
+                double value_src = dst_name == NULL ? 123.456 : 654.321;
+
+                rv = eswb_update_topic(scalar1_td, &value_src);
+                REQUIRE(rv == eswb_e_ok);
+                rv = eswb_bridge_update(br);
+                REQUIRE(rv == eswb_e_ok);
+
+                rv = eswb_connect(add_path(dst_bus_name, dst_name == NULL ? scalar1_name : dst_name).c_str(), &dst_td);
+                REQUIRE(rv == eswb_e_ok);
+                double value_dst = 0;
+                rv = eswb_read(dst_td, &value_dst);
+                REQUIRE(value_dst == value_src);
+            }
+        }
+    }
+
+
+    SECTION("Two scalars") {
+        std::string bridge_name = "two_scalars";
+        rv = eswb_bridge_create(bridge_name.c_str(), 2, &br);
+        REQUIRE(rv == eswb_e_ok);
+        rv = eswb_bridge_add_topic(br, 0, add_path(src_bus_name, scalar1_name).c_str(), NULL);
+        REQUIRE(rv == eswb_e_ok);
+        rv = eswb_bridge_add_topic(br, 0, add_path(src_bus_name, scalar2_name).c_str(), NULL);
+        REQUIRE(rv == eswb_e_ok);
+
+        rv = eswb_bridge_connect(br, 0, dst_bus_name.c_str());
+        REQUIRE(rv == eswb_e_ok);
+
+        double value1_src = 123.456;
+        double value2_src = 777.777;
+
+        rv = eswb_update_topic(scalar1_td, &value1_src);
+        REQUIRE(rv == eswb_e_ok);
+
+        rv = eswb_update_topic(scalar2_td, &value2_src);
+        REQUIRE(rv == eswb_e_ok);
+
+        rv = eswb_bridge_update(br);
+        REQUIRE(rv == eswb_e_ok);
+
+        std::string scalar1_at_dst_path = add_path(add_path(dst_bus_name, bridge_name), scalar1_name);
+        std::string scalar2_at_dst_path = add_path(add_path(dst_bus_name, bridge_name), scalar2_name);
+
+        rv = eswb_connect(scalar1_at_dst_path.c_str(), &dst_td);
+        REQUIRE(rv == eswb_e_ok);
+        rv = eswb_connect(scalar2_at_dst_path.c_str(), &dst2_td);
+        REQUIRE(rv == eswb_e_ok);
+
+        double value1_dst = 0;
+        rv = eswb_read(dst_td, &value1_dst);
+        REQUIRE(value1_dst == value1_src);
+
+        double value2_dst = 0;
+        rv = eswb_read(dst2_td, &value2_dst);
+        REQUIRE(value2_dst == value2_src);
+    }
+
+
+
+    SECTION("Scalars and structure") {
+        std::string bridge_name = "composite";
+        rv = eswb_bridge_create(bridge_name.c_str(), 4, &br);
+        REQUIRE(rv == eswb_e_ok);
+        rv = eswb_bridge_add_topic(br, 0, add_path(src_bus_name, scalar1_name).c_str(), NULL);
+        REQUIRE(rv == eswb_e_ok);
+        rv = eswb_bridge_add_topic(br, 0, add_path(src_bus_name, scalar2_name).c_str(), NULL);
+        REQUIRE(rv == eswb_e_ok);
+        rv = eswb_bridge_add_topic(br, 0, add_path(src_bus_name, struct1_name).c_str(), NULL);
+        REQUIRE(rv == eswb_e_ok);
+        rv = eswb_bridge_add_topic(br, 0, add_path(src_bus_name, struct2_name).c_str(), NULL);
+        REQUIRE(rv == eswb_e_ok);
+
+        rv = eswb_bridge_connect(br, 0, dst_bus_name.c_str());
+        REQUIRE(rv == eswb_e_ok);
+
+        double value1_src = 123.456;
+        double value2_src = 777.777;
+        rv = eswb_update_topic(scalar1_td, &value1_src);
+        REQUIRE(rv == eswb_e_ok);
+        rv = eswb_update_topic(scalar2_td, &value2_src);
+        REQUIRE(rv == eswb_e_ok);
+
+        SECTION("Values match" ) {
+            test_structure_t src_struct1 = {
+                    .a = 1.0,
+                    .b = 2.0,
+                    .c = 3.0,
+            };
+
+            test_structure_t src_struct2 = {
+                    .a = 10.0,
+                    .b = 20.0,
+                    .c = 30.0,
+            };
+
+            rv = eswb_update_topic(struct1_td, &src_struct1);
+            REQUIRE(rv == eswb_e_ok);
+            rv = eswb_update_topic(struct2_td, &src_struct2);
+            REQUIRE(rv == eswb_e_ok);
+
+            rv = eswb_bridge_update(br);
+            REQUIRE(rv == eswb_e_ok);
+
+            std::string scalar1_at_dst_path = add_path(add_path(dst_bus_name, bridge_name), scalar1_name);
+            std::string scalar2_at_dst_path = add_path(add_path(dst_bus_name, bridge_name), scalar2_name);
+
+            rv = eswb_connect(scalar1_at_dst_path.c_str(), &dst_td);
+            REQUIRE(rv == eswb_e_ok);
+            rv = eswb_connect(scalar2_at_dst_path.c_str(), &dst2_td);
+            REQUIRE(rv == eswb_e_ok);
+
+            double value1_dst = 0;
+            rv = eswb_read(dst_td, &value1_dst);
+            REQUIRE(value1_dst == value1_src);
+
+            double value2_dst = 0;
+            rv = eswb_read(dst2_td, &value2_dst);
+            REQUIRE(value2_dst == value2_src);
+
+            test_structure_t dst_struct1;
+            test_structure_t dst_struct2;
+
+            std::string struct1_at_dst_path = add_path(add_path(dst_bus_name, bridge_name), struct1_name);
+            std::string struct2_at_dst_path = add_path(add_path(dst_bus_name, bridge_name), struct2_name);
+
+
+            eswb_topic_descr_t test_struct_dst1_td;
+            eswb_topic_descr_t test_struct_dst2_td;
+            rv = eswb_connect(struct1_at_dst_path.c_str(), &test_struct_dst1_td);
+            REQUIRE(rv == eswb_e_ok);
+            rv = eswb_connect(struct2_at_dst_path.c_str(), &test_struct_dst2_td);
+            REQUIRE(rv == eswb_e_ok);
+
+            rv = eswb_read(test_struct_dst1_td, &dst_struct1);
+            REQUIRE(rv == eswb_e_ok);
+            REQUIRE(memcmp(&src_struct1, &dst_struct1, sizeof(dst_struct1)) == 0);
+            rv = eswb_read(test_struct_dst2_td, &dst_struct2);
+            REQUIRE(rv == eswb_e_ok);
+            REQUIRE(memcmp(&src_struct2, &dst_struct2, sizeof(dst_struct2)) == 0);
+        }
+
+        SECTION("Structure match" ) {
+            FAIL("Not implemented");
+        }
+    }
+}
+
 
 extern "C" int test_event_chain (int verbose, int nonstop);
 
