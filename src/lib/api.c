@@ -218,7 +218,9 @@ eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next
     eswb_rv_t rv;
     rv = eswb_ctl(td, eswb_ctl_get_next_proclaiming_info, &data, sizeof(data));
     if (rv == eswb_e_ok) {
-        memcpy(info, &data.xtract, sizeof(data.xtract));
+        if (info != NULL) {
+            memcpy(info, &data.xtract, sizeof(data.xtract));
+        }
         *next2tid = data.xtract.info.topic_id;
     }
 

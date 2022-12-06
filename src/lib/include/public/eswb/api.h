@@ -147,7 +147,7 @@ eswb_rv_t eswb_get_topic_params (eswb_topic_descr_t td, topic_params_t *params);
  * @param next2tid pointer to the id value for the topic, preceeding the desired.
  *              At the first call value at this ref (e.g. as local variable) must be zero.
  *              After successfull return it contains the id of just retrieved topic info
- * @param info retrieved information on success must be pointer to topic_extract_t
+ * @param info retrieved information on success must be pointer to topic_extract_t (might be NULL, for e.g. calc of nested topics)
  * @return
  * eswb_e_ok on success
  * eswb_e_no_topic when there is no next topic (retrieve sequence is ended)

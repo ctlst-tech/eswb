@@ -469,7 +469,7 @@ eswb_rv_t local_bus_get_next_topic_info(topic_local_index_t *li, eswb_topic_id_t
     if (tid == 0) {
         tid = li->t->id;
     }
-    return reg_get_next_topic_info(li->bh->registry, tid, info, bus_is_synced(li->bh));
+    return reg_get_next_topic_info(li->bh->registry, li->t, tid, info, bus_is_synced(li->bh));
 }
 
 eswb_rv_t local_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int size) {

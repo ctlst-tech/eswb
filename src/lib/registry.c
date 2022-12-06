@@ -534,8 +534,17 @@ topic_t *topic_tree_next_filtered(topic_t *r) {
     return r;
 }
 
+int parent_has_child(topic_t *parent, topic_t *child) {
+    for (topic_t *n = child; n != NULL; n = n->parent) {
+        if (parent == n->parent) {
+            return -1;
+        }
+    }
+    return 0;
+}
 
-eswb_rv_t reg_get_next_topic_info(registry_t *reg, eswb_topic_id_t id, topic_extract_t *extract, int synced) {
+eswb_rv_t
+reg_get_next_topic_info(registry_t *reg, topic_t *parent, eswb_topic_id_t id, topic_extract_t *extract, int synced) {
     eswb_rv_t rv = eswb_e_ok;
 
     if (synced) sync_take(reg->sync);
@@ -548,7 +557,7 @@ eswb_rv_t reg_get_next_topic_info(registry_t *reg, eswb_topic_id_t id, topic_ext
         }
 
         t = topic_tree_next_filtered(t);
-        if (t == NULL) {
+        if (t == NULL || parent_has_child(parent, t) == 0) {
             rv = eswb_e_no_topic;
             break;
         }
