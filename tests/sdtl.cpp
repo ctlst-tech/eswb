@@ -3,7 +3,7 @@
 
 
 
-TEST_CASE("SDPL testing bridge standalone test") {
+TEST_CASE("SDTL testing bridge standalone test") {
     auto bridge = new SDTLtestBridge();
 
     auto m = &sdtl_test_media;
