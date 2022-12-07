@@ -4,15 +4,17 @@ import time
 
 from abc import abstractmethod
 from time import sleep
-from typing import List, Union
+from typing import List, Union, Tuple
 import sys
 import math
 
 from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtCore import Qt
 
 import pyqtgraph as pg
 from random import randint
 
+from PyQt5.QtGui import QPainter, QPen
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 from pyqtgraph.Qt import QtGui
 
@@ -136,16 +138,20 @@ class DataSourceEswbTopic(DataSourceBasic):
         return value
 
 
-class ewBasic(QtWidgets.QWidget):
-    def __init__(self, data_sources: List[DataSourceBasic], *, layout_vertical=True, **kwargs):
-        super(ewBasic, self).__init__(**kwargs)
-
-        self.data_sources: List[DataSourceBasic] = data_sources
-
+class myQtWidget(QtWidgets.QWidget):
+    def __init__(self, layout_vertical=True, **kwargs):
+        super().__init__(**kwargs)
         self.layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.TopToBottom if layout_vertical else QtWidgets.QBoxLayout.LeftToRight)
         self.setLayout(self.layout)
 
+
+class ewBasic:
+    def __init__(self):
+        self.data_sources: List[DataSourceBasic] = []
         self.nested_widgets: List[ewBasic] = []
+
+    def set_data_sources(self, data_sources: List[DataSourceBasic]):
+        self.data_sources = data_sources
 
     def add_nested(self, w):
         self.nested_widgets.append(w)
@@ -165,9 +171,12 @@ class ewBasic(QtWidgets.QWidget):
         self.radraw_handler(vals)
 
 
-class ewTable(ewBasic):
+class ewTable(myQtWidget, ewBasic):
     def __init__(self, *, caption='', data_sources: List[DataSourceBasic], **kwargs):
-        super().__init__(data_sources, **kwargs)
+        myQtWidget.__init__(self, **kwargs)
+        ewBasic.__init__(self)
+
+        self.set_data_sources(data_sources)
 
         self.table = QTableWidget()
 
@@ -266,8 +275,9 @@ class colorInterp:
         return self.color_get()
 
 
-class ewChart(ewBasic):
-    colors_series=[
+class ewChart(myQtWidget, ewBasic):
+
+    colors_series = [
         (255, 0, 0),
         (0, 200, 0),
         (0, 0, 255),
@@ -314,8 +324,12 @@ class ewChart(ewBasic):
 
             self.data_line.setData(self.x, self.y)
 
-    def __init__(self, data_sources: List[DataSourceBasic], data_range=None, *args, **kwargs):
-        super().__init__(data_sources, *args, **kwargs)
+    def __init__(self, data_sources: List[DataSourceBasic], data_range=None, **kwargs):
+        myQtWidget.__init__(self, **kwargs)
+        ewBasic.__init__(self)
+
+        self.set_data_sources(data_sources)
+
         self.graph = pg.PlotWidget(**kwargs)
 
         if data_range:
@@ -337,6 +351,101 @@ class ewChart(ewBasic):
     def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
         for i in range(0, len(self.plots)):
             self.plots[i].update(vals[i])
+
+
+class ewCursor(myQtWidget, ewBasic):
+    colors_series=[
+        (255, 0, 0),
+        (0, 200, 0),
+        (0, 0, 255),
+        (0, 0, 0),
+    ]
+
+    class Cursor:
+        def __init__(self, *, parent, color=None, tail_len=100, **kwargs):
+            self.parent = parent
+            self.data = [(0.0, 0.0)]
+            self.tail_len = tail_len
+            if not color:
+                color = ewChart.colors_series[0]
+
+            self.color = color
+
+        margin = 10
+
+        def rel_x(self, x_val):
+            return self.margin + (x_val - self.parent.data_range[0][0]) * (self.parent.width() - 2*self.margin) / self.parent.x_range_mod
+
+        def rel_y(self, y_val):
+            return self.margin + (y_val - self.parent.data_range[1][0]) * (self.parent.height() - 2*self.margin) / self.parent.y_range_mod
+
+        def update_data(self, val: tuple):
+            if isinstance(val[0], NoDataStub) or isinstance(val[1], NoDataStub):
+                return
+
+            if self.data[-1] != val:
+                self.data.append(val)
+
+            if len(self.data) > self.tail_len:
+                self.data = self.data[1:]
+
+        def redraw(self, painter):
+            b = len(self.data)
+            for i in range(0, b):
+                if i == b-1:
+                    alpha = 255
+                    thickness = 2
+                else:
+                    alpha = int(i * 100.0 / b)
+                    thickness = 1
+
+                painter.setPen(
+                    QPen(QtGui.QColor(self.color[0], self.color[1], self.color[2], alpha), thickness, Qt.SolidLine))
+
+                x = self.rel_x(self.data[i][0])
+                y = self.rel_y(self.data[i][1])
+                d = 8
+                d_2 = d/2
+                painter.drawEllipse(int(x - d_2), int(y - d_2), int(d), int(d))
+
+    def __init__(self, data_sources: List[Tuple[DataSourceBasic, DataSourceBasic]], data_range=((-1.0, 1.0), (-1.0, 1.0)), *args, **kwargs):
+        myQtWidget.__init__(self, **kwargs)
+        ewBasic.__init__(self)
+
+        data_sources_list = [ elem for t in data_sources for elem in t]
+        self.set_data_sources(data_sources_list)
+
+        self.setFixedSize(180, 180)
+        # self.setMinimumHeight(80)
+        # self.setMinimumWidth(80)
+
+        self.layout.addWidget(self, stretch=1)
+
+        self.data_range = data_range
+        self.x_range_mod = data_range[0][1] - data_range[0][0]
+        self.y_range_mod = data_range[1][1] - data_range[1][0]
+
+        self.cursors: List[ewChart.Cursor] = []
+
+        color_i = 0
+        for ds in data_sources:
+            self.cursors.append(ewCursor.Cursor(parent=self, color=self.colors_series[color_i]))
+            if color_i < len(self.colors_series):
+                color_i += 1
+
+    def paintEvent(self, QPaintEvent):
+        canvas = QPainter(self)
+
+        for c in self.cursors:
+            c.redraw(canvas)
+
+        canvas.end()
+
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+        for i in range(0, len(self.cursors)):
+            self.cursors[i].update_data((vals[i*2], vals[i*2 + 1]))
+
+        self.repaint()
 
 
 class ApplicationWindow(QtWidgets.QMainWindow):
@@ -394,9 +503,11 @@ def find_data_source(lst: List[DataSourceBasic], name: str):
     return None
 
 
-class SdtlTelemetryWidget(ewBasic):
+class SdtlTelemetryWidget(myQtWidget, ewBasic):
     def __init__(self, sdtl_ref: e.SDTLserialService):
-        super().__init__(data_sources=[], layout_vertical=False)
+        myQtWidget.__init__(self, layout_vertical=False)
+        ewBasic.__init__(self)
+
         data_service_rx_stat = [DataSourceEswbTopic(name=t.name, path=t.get_path()) for t in sdtl_ref.stat_topics_service_tree.children]
 
         bytes_receive_source = find_data_source(data_service_rx_stat, 'bytes_received')
