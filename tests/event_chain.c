@@ -311,7 +311,7 @@ int functions_init_handler(struct test_thread_param *p) {
 
 #define ITB_CONVERSIONS "itb:/" BUS_CONVERSIONS
 
-    rv = eswb_bridge_connect_vector(cs->bridge, ITB_CONVERSIONS);
+    rv = eswb_bridge_connect(cs->bridge, 0, ITB_CONVERSIONS);
 
     return rv;
 }
