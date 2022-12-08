@@ -95,12 +95,15 @@ static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, v
 
 
 static eswb_rv_t fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state) {
-    eswb_rv_t rv = eswb_e_ok;
+
+    if (t->fifo_ext == NULL) {
+        return eswb_e_not_fifo;
+    }
 
     rcvr_state->lap = t->fifo_ext->state.lap_num;
     rcvr_state->tail = t->fifo_ext->state.head;
 
-    return rv;
+    return eswb_e_ok;
 }
 
 
@@ -112,7 +115,7 @@ topic_io_fifo_pop(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int syn
     return rv;
 }
 
-eswb_rv_t topic_io_fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state) {
+eswb_rv_t topic_io_fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state, int synced) {
     if (synced) sync_take(t->sync);
     eswb_rv_t rv = fifo_flush(t, rcvr_state);
     if (synced) sync_give(t->sync);

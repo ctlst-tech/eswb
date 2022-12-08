@@ -386,7 +386,7 @@ eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
 }
 
 eswb_rv_t local_fifo_flush(topic_local_index_t *li) {
-    return topic_io_fifo_flush(li->t, &li->rcvr_state);
+    return topic_io_fifo_flush(li->t, &li->rcvr_state, bus_is_synced(li->bh));
 }
 
 eswb_rv_t local_init_fifo_receiver(eswb_topic_descr_t td) {
