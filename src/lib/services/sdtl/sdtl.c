@@ -149,12 +149,17 @@ rx_process_data(sdtl_channel_handle_t *chh, sdtl_data_header_t *dhdr, sdtl_chann
     return rv;
 }
 
-static sdtl_rv_t process_cmd(sdtl_channel_handle_t *chh, sdtl_cmd_header_t *chdr) {
+static sdtl_rv_t rx_process_cmd(sdtl_channel_handle_t *chh, sdtl_cmd_header_t *chdr) {
     uint8_t flags = 0;
     sdtl_data_header_t *dhdr = (sdtl_data_header_t *) chdr;
     sdtl_ack_header_t *ahdr = (sdtl_ack_header_t *) chdr;
 
+    //printf("%s: seq %d (last known seq code is %d)\n", __func__, chdr->cmd_seq_code, chh->rx_cmd_last_seq_code);
+
     if (chh->rx_cmd_last_seq_code != chdr->cmd_seq_code) {
+        //printf("%s: seq %d processing\n", __func__, chdr->cmd_seq_code, chh->rx_cmd_last_seq_code);
+
+        chh->rx_cmd_last_seq_code = chdr->cmd_seq_code;
         if (chdr->cmd_code == SDTL_PKT_CMD_CODE_RESET) {
             flags |= SDTL_CHANNEL_STATE_COND_FLAG_APP_RESET;
         }
@@ -171,8 +176,8 @@ static sdtl_rv_t process_cmd(sdtl_channel_handle_t *chh, sdtl_cmd_header_t *chdr
         // fake ack to unblock recipient fifo
         ahdr->sub.code = SDTL_ACK_OUT_BAND_EVENT;
         rx_process_ack(chh, &ahdr->sub);
-
-        chh->rx_cmd_last_seq_code = chdr->cmd_seq_code;
+    } else {
+        // printf("%s: filtering out repetitive cmd with seq %d\n", __func__, chdr->cmd_seq_code);
     }
 
     return send_ack(chh, chh->rx_cmd_last_seq_code, SDTL_ACK_GOT_CMD);
@@ -226,7 +231,7 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
         case SDTL_PKT_ATTR_PKT_TYPE_CMD:
             sdtl_dbg_msg("Got cmd code 0x%02X", chdr->cmd_code);
             if (rel) { ;
-                rv = process_cmd(chh, chdr);
+                rv = rx_process_cmd(chh, chdr);
             }
             break;
 

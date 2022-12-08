@@ -108,12 +108,11 @@ typedef struct sdtl_channel_handle {
     eswb_topic_descr_t rx_stat_td;
     eswb_topic_descr_t tx_stat_td;
 
-    sdtl_seq_code_t rx_cmd_last_seq_code;
-
     sdtl_channel_t *channel;
 
     void *rx_dafa_fifo_buf; // mtu size
 
+    sdtl_seq_code_t rx_cmd_last_seq_code;
 
     void *tx_frame_buf;
     size_t tx_frame_buf_size;
