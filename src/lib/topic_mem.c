@@ -161,6 +161,7 @@ eswb_rv_t topic_mem_event_queue_write(topic_t *t, const event_queue_record_t *r)
         if (ptr_crosses_record(checking_record, data_buf_topic->data,
                                data_buf_topic->data_size, buffer_tail) == YES) {
             checking_record->type = eqr_none;
+            checking_record->ch_mask = 0;
         }
     }
 
