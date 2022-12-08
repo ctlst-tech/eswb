@@ -320,6 +320,7 @@ static void *eqrb_server_thread(void *p) {
         return NULL;
     }
 
+    eqrb_dbg_msg("Resetting remote side");
     rv = dev->command(dd, eqrb_cmd_reset_remote);
     if (rv != eqrb_rv_ok) {
         eqrb_dbg_msg("device command eqrb_cmd_reset_remote error: %d", rv);
@@ -373,15 +374,16 @@ static void *eqrb_server_thread(void *p) {
             rv = dev->recv(dd, hdr, EVENT_BUF_SIZE, &br);
             switch (rv) {
                 case eqrb_rv_ok:
+                    eqrb_dbg_msg("Waiting client command: eqrb_rv_ok");
                     break;
 
                 case eqrb_media_reset_cmd:
-                    eqrb_dbg_msg("Got eqrb_media_reset_cmd");
+                    eqrb_dbg_msg("Waiting client command: eqrb_media_reset_cmd");
                     dev->command(dd, eqrb_cmd_reset_local_state);
                     continue;
 
                 default:
-                    eqrb_dbg_msg("device recv error: %d", rv);
+                    eqrb_dbg_msg("Waiting client command: device recv error: %d", rv);
                     return NULL;
             }
 
