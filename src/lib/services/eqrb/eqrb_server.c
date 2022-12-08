@@ -133,7 +133,11 @@ static void *eqrb_server_sidekick_thread(void *p) {
     do {
         while (eswb_get_update(cmd_td, &cmd) == eswb_e_ok && cmd.code == SK_PAUSE);
 
-        erv = eswb_fifo_flush(cmd_td);
+        erv = eswb_fifo_flush(eq_td);
+        if (erv != eswb_e_ok) {
+            eqrb_dbg_msg("eswb_fifo_flush error: %s", eswb_strerror(erv));
+        }
+
         while (eswb_read(cmd_td, &cmd) == eswb_e_ok && cmd.code == SK_RUN) {
             erv = eswb_event_queue_pop(eq_td, event);
             switch (erv) {
@@ -154,6 +158,7 @@ static void *eqrb_server_sidekick_thread(void *p) {
                     break;
 
                 default:
+                    eqrb_dbg_msg("eswb_event_queue_pop error: %d", eswb_strerror(erv));
                     break;
             }
         }
@@ -468,6 +473,7 @@ static void *eqrb_server_thread(void *p) {
 
                     default:
                         // TODO BREAK_LOOP_AND_RETURN(eqrb_rv_rx_eswb_fatal_err);
+                        eqrb_dbg_msg("eswb_event_queue_pop error: %s", eswb_strerror(erv));
                         break;
                 }
 
