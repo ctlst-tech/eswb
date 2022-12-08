@@ -481,7 +481,7 @@ TEST_CASE("Event queue io | local bus level", "[unit]") {
 
     eqt = (event_queue_transfer_t *) calloc(1, EVQ_DATA_BUF_SIZE + sizeof(event_queue_transfer_t));
 
-    rv = local_bus_create(EVQ_TEST_BUS_NAME, nonsynced, EVQ_TEST_BUS_MAX_TOPICS);
+    rv = local_bus_create(EVQ_TEST_BUS_NAME, local_bus_t_nonsynced, EVQ_TEST_BUS_MAX_TOPICS);
     REQUIRE(rv == eswb_e_ok);
 
     eswb_bus_handle_t *bh;

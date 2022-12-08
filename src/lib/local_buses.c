@@ -56,7 +56,7 @@ eswb_rv_t local_bus_lookup(const char *bus_name, local_bus_type_t type, eswb_bus
 
     for (int i = 0; i < LOCAL_BUSSES_MAX; i++) {
         if (local_bus_is_inited(&local_buses[i])) {
-            if (((type == synced_or_nonsynced) || (local_buses[i].local_type == type)) &&
+            if (((type == local_bus_t_synced_or_nonsynced) || (local_buses[i].local_type == type)) &&
                 (strncmp(local_buses[i].name, bus_name, ESWB_BUS_NAME_MAX_LEN) == 0)) {
                 if (b != NULL) {
                     *b = &local_buses[i];
@@ -74,19 +74,19 @@ eswb_rv_t local_bus_lookup(const char *bus_name, local_bus_type_t type, eswb_bus
 
 
 eswb_rv_t local_lookup_itb(const char *bus_name, eswb_bus_handle_t **b) {
-    return local_bus_lookup(bus_name, synced, b);
+    return local_bus_lookup(bus_name, local_bus_t_synced, b);
 }
 
 eswb_rv_t local_lookup_nsb(const char *bus_name, eswb_bus_handle_t **b) {
-    return local_bus_lookup(bus_name, nonsynced, b);
+    return local_bus_lookup(bus_name, local_bus_t_nonsynced, b);
 }
 
 eswb_rv_t local_lookup_any(const char *bus_name, eswb_bus_handle_t **b) {
-    return local_bus_lookup(bus_name, synced_or_nonsynced, b);
+    return local_bus_lookup(bus_name, local_bus_t_synced_or_nonsynced, b);
 }
 
 static int bus_is_synced(eswb_bus_handle_t *bh) {
-    return bh->local_type==synced ? -1 : 0;
+    return bh->local_type == local_bus_t_synced ? -1 : 0;
 }
 
 #define TOPIC_IS_FIFO(__t) (((__t)->type == tt_fifo) || ((__t)->type == tt_event_queue))
@@ -172,7 +172,7 @@ eswb_rv_t local_bus_create(const char *bus_name, local_bus_type_t type, eswb_siz
         }
         strncpy(new->name, bus_name, ESWB_BUS_NAME_MAX_LEN);
         new->local_type = type;
-        rv = reg_create(bus_name, &new->registry, max_topics, type == synced ? -1 : 0);
+        rv = reg_create(bus_name, &new->registry, max_topics, type == local_bus_t_synced ? -1 : 0);
     } while(0);
     pthread_mutex_unlock(&local_buses_mutex);
 
@@ -202,11 +202,11 @@ eswb_rv_t local_bus_delete(eswb_bus_handle_t *bh) {
 }
 
 eswb_rv_t local_bus_itb_create(const char *bus_name, eswb_size_t max_topics) {
-    return local_bus_create(bus_name, synced, max_topics);
+    return local_bus_create(bus_name, local_bus_t_synced, max_topics);
 }
 
 eswb_rv_t local_bus_nsb_create(const char *bus_name, eswb_size_t max_topics) {
-    return local_bus_create(bus_name, nonsynced, max_topics);
+    return local_bus_create(bus_name, local_bus_t_nonsynced, max_topics);
 }
 
 eswb_rv_t  local_bus_alloc_topic_descr(eswb_bus_handle_t *bh, topic_t *t, eswb_topic_descr_t *td) {
@@ -342,7 +342,7 @@ eswb_rv_t local_get_mounting_point(eswb_topic_descr_t td, char *mp) {
     topic_local_index_t *li = &local_td_index[td];
     // don't need to be sync proteced, data is read only for registered topics
 
-    strncpy(mp, li->bh->local_type == synced ? "itb:" : "nsb:", ESWB_TOPIC_MAX_PATH_LEN);
+    strncpy(mp, li->bh->local_type == local_bus_t_synced ? "itb:" : "nsb:", ESWB_TOPIC_MAX_PATH_LEN);
 
     int depth = 0;
     for (topic_t *n = li->t; n != NULL; n = n->parent) {

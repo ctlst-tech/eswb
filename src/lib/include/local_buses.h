@@ -8,9 +8,9 @@
 
 
 typedef enum local_bus_type_e {
-    synced,
-    nonsynced,
-    synced_or_nonsynced,
+    local_bus_t_synced,
+    local_bus_t_nonsynced,
+    local_bus_t_synced_or_nonsynced,
 } local_bus_type_t;
 
 typedef struct eswb_bus_handle {
