@@ -8,6 +8,12 @@ Works as library and standalone tool to read ESWB bus via EQRB protocol.
 
 Library for displaying ESWB parameters via PyQt5.
 
+Build and install ESWB library first:
+```
+cmake -B build
+sudo cmake --build ./build --target install -j8
+```
+
 ## Dependencies installation Ubuntu
 
 ```

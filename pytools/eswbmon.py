@@ -448,6 +448,35 @@ class ewCursor(myQtWidget, ewBasic):
         self.repaint()
 
 
+class ewPaintSample(myQtWidget, ewBasic):
+    # SAMPLE_TODO copy and paste this class , rename properly
+
+    def __init__(self, data_sources: List[DataSourceBasic], **kwargs):
+        myQtWidget.__init__(self, **kwargs)
+        ewBasic.__init__(self)
+
+        # SAMPLE_TODO pass list of data to
+        self.set_data_sources(data_sources)
+
+        # SAMPLE_TODO define widget size policy
+        self.setFixedSize(180, 180)
+        # self.setMinimumHeight(80)
+        # self.setMinimumWidth(80)
+
+        self.layout.addWidget(self)
+
+    def paintEvent(self, QPaintEvent):
+        canvas = QPainter(self)
+
+        # SAMPLE_TODO drawing code
+        canvas.end()
+
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+
+        # SAMPLE_TODO pass upcoming data to widget's state
+        self.repaint()
+
+
 class ApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self, bus: e.Bus = None):
         super().__init__()
