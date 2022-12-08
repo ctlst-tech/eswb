@@ -595,8 +595,8 @@ sdtl_seq_code_t generate_seq_code(unsigned seq_num) {
     return seq_code;
 }
 
-// TODO timeout value must be calculated based on specivied interface speed
-#define ACK_WAIT_TIMEOUT_uS_PER_BYTE(b__) ((100000) + (b__) * 8 * 1000000 / (57600 / 10))
+// TODO timeout value must be calculated based on specivied interface speed (constant delay, e.g. proparation and data size related)
+#define ACK_WAIT_TIMEOUT_uS_PER_BYTE(b__) ((80000) + (b__) * 8 * 1000000 / (57600 / 10))
 
 static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d, size_t l) {
     sdtl_pkt_payload_size_t dsize;

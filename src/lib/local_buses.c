@@ -378,7 +378,8 @@ eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
             break;
 
         default:
-            return eswb_e_not_fifo;
+            rv = eswb_e_not_fifo;
+            break;
     }
 
     li->timeout_us = 0;

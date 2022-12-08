@@ -26,6 +26,7 @@ typedef enum {
 
     eqrb_os_based_err,
     eqrb_media_err,
+    eqrb_media_timedout,
     eqrb_media_stop,
     eqrb_media_invarg,
     eqrb_media_reset_cmd,

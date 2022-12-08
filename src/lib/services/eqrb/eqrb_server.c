@@ -371,7 +371,7 @@ static void *eqrb_server_thread(void *p) {
 
         while(mode_wait_cmd) {
             eqrb_dbg_msg("Waiting client command");
-            rv = dev->recv(dd, hdr, EVENT_BUF_SIZE, &br);
+            rv = dev->recv(dd, hdr, EVENT_BUF_SIZE, &br, 0);
             switch (rv) {
                 case eqrb_rv_ok:
                     eqrb_dbg_msg("Waiting client command: eqrb_rv_ok");

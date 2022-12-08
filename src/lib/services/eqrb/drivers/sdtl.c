@@ -50,8 +50,10 @@ eqrb_rv_t eqrb_drv_sdtl_send (device_descr_t dh, void *data, size_t bts, size_t 
     }
 }
 
-eqrb_rv_t eqrb_drv_sdtl_recv (device_descr_t dh, void *data, size_t btr, size_t *br) {
+eqrb_rv_t eqrb_drv_sdtl_recv (device_descr_t dh, void *data, size_t btr, size_t *br, uint32_t timeout) {
     sdtl_channel_handle_t *chh = (sdtl_channel_handle_t *) dh;
+
+    sdtl_channel_recv_arm_timeout(chh, timeout);
 
     sdtl_rv_t rv = sdtl_channel_recv_data(chh, data, btr, br);
     switch (rv) {
@@ -61,6 +63,9 @@ eqrb_rv_t eqrb_drv_sdtl_recv (device_descr_t dh, void *data, size_t btr, size_t 
 
         case SDTL_APP_RESET:
             return eqrb_media_reset_cmd;
+
+        case SDTL_TIMEDOUT:
+            return eqrb_media_timedout;
 
         default:
             return eqrb_media_err;

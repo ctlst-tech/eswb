@@ -23,7 +23,7 @@ typedef struct eqrb_media_driver {
     char name[30];
     eqrb_rv_t (*connect)(void *param, device_descr_t *dh);
     eqrb_rv_t (*send)(device_descr_t dh, void *data, size_t bts, size_t *bs);
-    eqrb_rv_t (*recv)(device_descr_t dh, void *data, size_t btr, size_t *br);
+    eqrb_rv_t (*recv)(device_descr_t dh, void *data, size_t btr, size_t *br, uint32_t timeout);
     eqrb_rv_t (*command)(device_descr_t dh, eqrb_cmd_t cmd);
     eqrb_rv_t (*check_state)(device_descr_t dh);
     eqrb_rv_t (*disconnect)(device_descr_t dh);
