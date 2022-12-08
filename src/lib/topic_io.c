@@ -142,10 +142,11 @@ eswb_rv_t topic_io_event_queue_pop(topic_t *t, eswb_event_queue_mask_t mask, fif
         }
     }
 
-    if (synced) sync_take(t->sync);
-
     do {
+        if (synced) sync_take(t->sync);
         rv = fifo_wait_and_read(t, rcvr_state, &event, synced, 1, timeout_us);
+        if (synced) sync_give(t->sync);
+
         if ((rv == eswb_e_ok) || (rv == eswb_e_fifo_rcvr_underrun) && (event.type == eqr_none)) {
             continue;
         }
@@ -165,7 +166,6 @@ eswb_rv_t topic_io_event_queue_pop(topic_t *t, eswb_event_queue_mask_t mask, fif
         rv = topic_mem_event_queue_get_data(t, &event, EVENT_QUEUE_TRANSFER_DATA(eqt));
     }
 
-    if (synced) sync_give(t->sync);
 
     return rv;
 }
