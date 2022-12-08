@@ -608,7 +608,7 @@ TEST_CASE("Event queue io | local bus level", "[unit]") {
 #include "eswb/event_queue.h"
 #include "eswb/topic_proclaiming_tree.h"
 
-TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
+TEST_CASE("Basic event queue and replication") {
 
     // create source bus
     std::string src_bus_name("src_bus");
@@ -635,7 +635,7 @@ TEST_CASE("Basic event queue and replication", "[unit]" ) { //"[unit]"
     REQUIRE(rv == eswb_e_ok);
 
     // order topics root
-#   define TELEMETRY_CHANNEL 0
+#   define TELEMETRY_CHANNEL 1
     rv = eswb_event_queue_order_topic(src_td, src_bus_name.c_str(), TELEMETRY_CHANNEL);
     REQUIRE(rv == eswb_e_ok);
 

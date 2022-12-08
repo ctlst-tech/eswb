@@ -9,7 +9,7 @@
 #include "public/eswb/services/sdtl.h"
 
 
-TEST_CASE("Topics id map", "[unit]") {
+TEST_CASE("Topics id map") {
 
     topic_id_map_t *map;
 #define MAX_IDS (100)
@@ -568,6 +568,7 @@ void repl_factory_serial_deinit() {
 
 PseudoTopic *create_bus_and_arbitrary_hierarchy(eswb_type_t bus_type, const std::string &bus_name);
 
+/*
 TEST_CASE("EQRB bus state sync") {
 
     eswb_local_init(1);
@@ -663,7 +664,7 @@ TEST_CASE("EQRB bus state sync") {
 //    eqrb_tcp_server_stop();
 //    eqrb_tcp_client_close(client_handle);
 }
-
+*/
 
 TEST_CASE("EQBR - mem bridge with restart") {
     eswb_local_init(1);
