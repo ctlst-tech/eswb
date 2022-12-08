@@ -136,15 +136,21 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
             }
         }
 
-        while(mode_wait_events) {
-            rv = dev->recv(dd, rx_buf, RX_BUF_SIZE, &br);
+        int got_first_event = 0;
 
-            if (!stream_only) {
-                mode_wait_events = -1;
-            }
+        while(mode_wait_events) {
+            uint32_t timeout = got_first_event ? 0 : 500000;
+            rv = dev->recv(dd, rx_buf, RX_BUF_SIZE, &br, timeout);
 
             switch (rv) {
                 case eqrb_rv_ok:
+                    got_first_event = -1;
+                    break;
+
+                case eqrb_media_timedout:
+                    mode_wait_server = -1;
+                    mode_wait_events = 0;
+                    eqrb_dbg_msg("Got timeout on mode_wait_events state, return to mode_wait_server");
                     break;
 
                 case eqrb_media_reset_cmd:
@@ -165,28 +171,40 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
                     break;
             }
 
-            switch (hdr->msg_code) {
-                case EQRB_CMD_SERVER_EVENT:
-                case EQRB_CMD_SERVER_TOPIC:
-                    ; event_queue_transfer_t *event = (event_queue_transfer_t *) (rx_buf + (sizeof(*hdr)));
+            if (mode_wait_events) {
+                switch (hdr->msg_code) {
+                    case EQRB_CMD_SERVER_EVENT:
+                    case EQRB_CMD_SERVER_TOPIC:;
+                        event_queue_transfer_t *event = (event_queue_transfer_t *) (rx_buf + (sizeof(*hdr)));
 
-                    if (br != sizeof(*hdr) + sizeof(*event) + event->size) {
-                        eqrb_dbg_msg("Event size is different from accepted packet size");
+                        if (br != sizeof(*hdr) + sizeof(*event) + event->size) {
+                            eqrb_dbg_msg("Event size is different from accepted packet size");
 //                        mode_wait_events = 0;
-                        break;
-                    }
+                            break;
+                        }
 
-                    rv = client_submit_repl_event (h, event);
-                    if (rv != eqrb_rv_ok) {
-                        eqrb_dbg_msg("Uclient_submit_repl_event failure: %d", rv);
+                        if (hdr->msg_code == EQRB_CMD_SERVER_TOPIC) {
+                            eqrb_dbg_msg(
+                                    "---- got proclaim info for topic \"%s\" tid == %d parent_tid == %d topics_num == %d ----",
+                                    ((topic_proclaiming_tree_t *) EVENT_QUEUE_TRANSFER_DATA(event))->name,
+                                    ((topic_proclaiming_tree_t *) EVENT_QUEUE_TRANSFER_DATA(event))->topic_id,
+                                    event->topic_id,
+                                    event->size / sizeof(topic_proclaiming_tree_t));
+                        }
+
+
+                        rv = client_submit_repl_event(h, event);
+                        if (rv != eqrb_rv_ok) {
+                            eqrb_dbg_msg("Uclient_submit_repl_event failure: %d", rv);
 //                        mode_wait_events = 0;
 //                        mode_wait_server = 0;
-                    }
-                    break;
+                        }
+                        break;
 
-                default:
-                    eqrb_dbg_msg("Unknown command code: %d", hdr->msg_code);
-                    break;
+                    default:
+                        eqrb_dbg_msg("Unknown command code: %d", hdr->msg_code);
+                        break;
+                }
             }
         }
     } while (mode_wait_server);
