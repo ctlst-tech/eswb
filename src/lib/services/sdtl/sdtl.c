@@ -41,7 +41,7 @@ sdtl_channel_t *resolve_channel_by_id(sdtl_service_t *s, uint8_t ch_id) {
 
 sdtl_channel_handle_t *resolve_channel_handle_by_id(sdtl_service_t *s, uint8_t ch_id) {
 
-    for (int i = 0; i < s->channels_num; i++) {
+    for (size_t i = 0; i < s->channels_num; i++) {
         if (s->channel_handles[i]->channel->cfg.id == ch_id) {
             return s->channel_handles[i];
         }
@@ -149,6 +149,35 @@ rx_process_data(sdtl_channel_handle_t *chh, sdtl_data_header_t *dhdr, sdtl_chann
     return rv;
 }
 
+static sdtl_rv_t process_cmd(sdtl_channel_handle_t *chh, sdtl_cmd_header_t *chdr) {
+    uint8_t flags = 0;
+    sdtl_data_header_t *dhdr = (sdtl_data_header_t *) chdr;
+    sdtl_ack_header_t *ahdr = (sdtl_ack_header_t *) chdr;
+
+    if (chh->rx_cmd_last_seq_code != chdr->cmd_seq_code) {
+        if (chdr->cmd_code == SDTL_PKT_CMD_CODE_RESET) {
+            flags |= SDTL_CHANNEL_STATE_COND_FLAG_APP_RESET;
+        }
+        if (chdr->cmd_code == SDTL_PKT_CMD_CODE_CANCEL) {
+            flags |= SDTL_CHANNEL_STATE_COND_FLAG_APP_CANCEL;
+        }
+        ch_state_alter_cond_flags(chh, flags, 1);
+        // fake data pkt to unblock recipient fifo
+
+        memset(&dhdr->sub, 0, sizeof(dhdr->sub));
+        // convention is : dhdr->sub.payload_size == 0;
+        process_data(chh, &dhdr->sub);
+
+        // fake ack to unblock recipient fifo
+        ahdr->sub.code = SDTL_ACK_OUT_BAND_EVENT;
+        rx_process_ack(chh, &ahdr->sub);
+
+        chh->rx_cmd_last_seq_code = chdr->cmd_seq_code;
+    }
+
+    return send_ack(chh, chh->rx_cmd_last_seq_code, SDTL_ACK_GOT_CMD);
+}
+
 static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, uint8_t *data, size_t data_len) {
     sdtl_rv_t rv;
     sdtl_base_header_t *base_header = (sdtl_base_header_t *) data;
@@ -196,26 +225,8 @@ static sdtl_rv_t sdtl_got_frame_handler (sdtl_service_t *s, uint8_t cmd_code, ui
 
         case SDTL_PKT_ATTR_PKT_TYPE_CMD:
             sdtl_dbg_msg("Got cmd code 0x%02X", chdr->cmd_code);
-
             if (rel) { ;
-                uint8_t flags = 0;
-                if (chdr->cmd_code == SDTL_PKT_CMD_CODE_RESET) {
-                    flags |= SDTL_CHANNEL_STATE_COND_FLAG_APP_RESET;
-                }
-                if (chdr->cmd_code == SDTL_PKT_CMD_CODE_CANCEL) {
-                    flags |= SDTL_CHANNEL_STATE_COND_FLAG_APP_CANCEL;
-                }
-                ch_state_alter_cond_flags(chh, flags, 1);
-                // fake data pkt
-                memset(&dhdr->sub, 0, sizeof(dhdr->sub));
-                // convention is : dhdr->sub.payload_size == 0;
-                process_data(chh, &dhdr->sub);
-
-                // fake ack
-                ahdr->sub.code = SDTL_ACK_OUT_BAND_EVENT;
-                rx_process_ack(chh, &ahdr->sub);
-
-                send_ack(chh, dhdr->sub.cnt, SDTL_ACK_GOT_CMD);
+                rv = process_cmd(chh, chdr);
             }
             break;
 
@@ -413,12 +424,13 @@ send_data(sdtl_channel_handle_t *chh, uint8_t pkt_num, uint8_t flags, sdtl_seq_c
     return media_tx(chh, &hdr, sizeof(hdr), d, l);
 }
 
-static sdtl_rv_t send_cmd(sdtl_channel_handle_t *chh, uint8_t cmd_code) {
+static sdtl_rv_t send_cmd(sdtl_channel_handle_t *chh, sdtl_seq_code_t seq_code, uint8_t cmd_code) {
     sdtl_cmd_header_t hdr;
 
     hdr.base.attr = SDTL_PKT_ATTR_PKT_TYPE(SDTL_PKT_ATTR_PKT_TYPE_CMD);
     hdr.base.ch_id = chh->channel->cfg.id;
 
+    hdr.cmd_seq_code = seq_code;
     hdr.cmd_code = cmd_code;
 
     return media_tx(chh, &hdr, sizeof(hdr), NULL, 0);
@@ -564,9 +576,22 @@ wait_data(sdtl_channel_handle_t *chh, void *d, uint32_t l, sdtl_data_sub_header_
 //    return SDTL_OK;
 //}
 
+sdtl_seq_code_t generate_seq_code(unsigned seq_num) {
+    sdtl_seq_code_t seq_code;
+    struct timespec timespec;
+    clock_gettime(CLOCK_MONOTONIC, &timespec);
+
+    // pseudorandom seq num
+    seq_code = seq_num + (timespec.tv_nsec >> 10);
+    if (seq_code == 0) {
+        seq_code--;
+    }
+
+    return seq_code;
+}
 
 // TODO timeout value must be calculated based on specivied interface speed
-#define ACK_WAIT_TIMEOUT_uS_PER_BYTE (2 * 2 * 1000000 / (57600 / 10))
+#define ACK_WAIT_TIMEOUT_uS_PER_BYTE(b__) ((100000) + (b__) * 8 * 1000000 / (57600 / 10))
 
 static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d, size_t l) {
     sdtl_pkt_payload_size_t dsize;
@@ -578,15 +603,7 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
     uint8_t flags = SDTL_PKT_DATA_FLAG_FIRST_PKT |
                     (rel ? SDTL_PKT_DATA_FLAG_RELIABLE : 0);
 
-    sdtl_seq_code_t seq_code;
-    struct timespec timespec;
-    clock_gettime(CLOCK_MONOTONIC, &timespec);
-
-    // pseudorandom seq num
-    seq_code = chh->tx_seq_num + (timespec.tv_nsec >> 10);
-    if (seq_code == 0) {
-        seq_code--;
-    }
+    sdtl_seq_code_t seq_code = generate_seq_code(chh->tx_seq_num);
 
     sdtl_dbg_msg("================= call ================= (size == %d)", l);
 
@@ -617,7 +634,7 @@ static sdtl_rv_t channel_send_data(sdtl_channel_handle_t *chh, int rel, void *d,
             // TODO get timeout from somewhere
             if (rel) {
                 sdtl_ack_sub_header_t ack_sh;
-                rv = wait_ack(chh, ACK_WAIT_TIMEOUT_uS_PER_BYTE * dsize, &ack_sh);
+                rv = wait_ack(chh, ACK_WAIT_TIMEOUT_uS_PER_BYTE(dsize), &ack_sh);
 
                 switch (rv) {
                     case SDTL_OK:
@@ -682,16 +699,18 @@ static sdtl_rv_t channel_send_cmd(sdtl_channel_handle_t *chh, uint8_t cmd_code) 
         return SDTL_INVALID_CH_TYPE;
     }
 
+    sdtl_seq_code_t seq_code = generate_seq_code(chh->tx_cmd_seq_num);
+
     sdtl_dbg_msg("================= call ================= (cmd == 0x%02)", cmd_code);
 
     sdtl_ack_sub_header_t ack_sh;
     do {
-        rv = send_cmd(chh, cmd_code);
+        rv = send_cmd(chh, seq_code, cmd_code);
         if (rv != SDTL_OK) {
             return rv;
         }
 
-        rv = wait_ack(chh, ACK_WAIT_TIMEOUT_uS_PER_BYTE * 20, &ack_sh);
+        rv = wait_ack(chh, ACK_WAIT_TIMEOUT_uS_PER_BYTE(20), &ack_sh);
 
         switch (rv) {
             case SDTL_APP_RESET:
@@ -718,6 +737,8 @@ static sdtl_rv_t channel_send_cmd(sdtl_channel_handle_t *chh, uint8_t cmd_code) 
         }
 
     } while (loop);
+
+    chh->tx_cmd_seq_num++;
 
     return rv;
 }

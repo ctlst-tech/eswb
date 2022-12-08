@@ -108,9 +108,12 @@ typedef struct sdtl_channel_handle {
     eswb_topic_descr_t rx_stat_td;
     eswb_topic_descr_t tx_stat_td;
 
+    sdtl_seq_code_t rx_cmd_last_seq_code;
+
     sdtl_channel_t *channel;
 
     void *rx_dafa_fifo_buf; // mtu size
+
 
     void *tx_frame_buf;
     size_t tx_frame_buf_size;
@@ -122,8 +125,8 @@ typedef struct sdtl_channel_handle {
     sdtl_channel_rx_stat_t rx_stat;
     sdtl_channel_tx_stat_t tx_stat;
 
-    int tx_seq_num;
-
+    unsigned tx_seq_num;
+    unsigned tx_cmd_seq_num;
 } sdtl_channel_handle_t;
 
 
@@ -176,9 +179,9 @@ typedef struct __attribute__((packed)) sdtl_ack_header {
 } sdtl_ack_header_t;
 
 
-
 typedef struct __attribute__((packed)) sdtl_cmd_header {
     sdtl_base_header_t base;
+    sdtl_seq_code_t cmd_seq_code;
     uint8_t cmd_code;
 } sdtl_cmd_header_t;
 
