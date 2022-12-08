@@ -106,11 +106,13 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
             rv = dev->send(dd, hdr, sizeof(*hdr), &bs);
             switch (rv) {
                 case eqrb_rv_ok:
+                    eqrb_dbg_msg("init command to server: eqrb_rv_ok");
                     mode_wait_server = 0;
                     mode_wait_events = -1;
                     break;
 
                 case eqrb_media_remote_need_reset:
+                    eqrb_dbg_msg("init command to server: eqrb_media_remote_need_reset");
                     rv = dev->command(dd, eqrb_cmd_reset_remote);
                     if (rv != eqrb_rv_ok) {
                         eqrb_dbg_msg("device command 'eqrb_cmd_reset_remote' error: %d", rv);
@@ -123,7 +125,7 @@ void *eqrb_client_thread(eqrb_client_handle_t *p) {
                     break;
 
                 case eqrb_media_reset_cmd:
-                    eqrb_dbg_msg("Got eqrb_media_reset_cmd");
+                    eqrb_dbg_msg("init command to server: eqrb_media_reset_cmd");
                     rv = dev->command(dd, eqrb_cmd_reset_local_state);
                     if (rv != eqrb_rv_ok) {
                         eqrb_dbg_msg("device command 'eqrb_cmd_reset_local_state' error: %d", rv);
