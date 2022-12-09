@@ -20,7 +20,6 @@ eswb_rv_t topic_mem_write(topic_t *t, void *data) {
 
 eswb_rv_t topic_mem_write_fifo(topic_t *t, void *data) {
 
-    //printf ("%s: ")
     memcpy(t->data + t->fifo_ext->elem_step * t->fifo_ext->state.head, data, t->fifo_ext->elem_size);
 
     t->fifo_ext->state.head++;
@@ -28,6 +27,9 @@ eswb_rv_t topic_mem_write_fifo(topic_t *t, void *data) {
         t->fifo_ext->state.head = 0;
         t->fifo_ext->state.lap_num++;
     }
+
+    // printf("%s | fifo after update l = %d h = %d)\n", __func__,
+    //        t->fifo_ext->state.lap_num, t->fifo_ext->state.head);
 
     return eswb_e_ok;
 }

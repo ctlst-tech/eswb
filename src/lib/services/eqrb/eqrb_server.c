@@ -90,6 +90,7 @@ static eqrb_rv_t sidekick_run(eswb_topic_descr_t td) {
     return erv == eswb_e_ok ? eqrb_rv_ok : eqrb_eswb_err;
 }
 
+
 static void *eqrb_server_sidekick_thread(void *p) {
     eqrb_rv_t rv;
 
@@ -102,6 +103,8 @@ static void *eqrb_server_sidekick_thread(void *p) {
     eswb_rv_t erv;
 
     eswb_set_thread_name(__func__);
+
+    eswb_set_delta_priority(+2);
 
 #   define EVENT_BUF_SIZE_SIDEKICK 2048
     uint8_t *event_buf = eqrb_alloc(EVENT_BUF_SIZE_SIDEKICK);
@@ -137,9 +140,13 @@ static void *eqrb_server_sidekick_thread(void *p) {
         if (erv != eswb_e_ok) {
             eqrb_dbg_msg("eswb_fifo_flush error: %s", eswb_strerror(erv));
         }
+        // unsigned events_cnt = 0;
 
         while (eswb_read(cmd_td, &cmd) == eswb_e_ok && cmd.code == SK_RUN) {
             erv = eswb_event_queue_pop(eq_td, event);
+
+            // printf("%s %d %08X event tid %lu size %lu\n", __func__, eq_td, events_cnt++, event->topic_id, event->size);
+
             switch (erv) {
                 case eswb_e_ok:
                     rv = send_msg(dd, dev, EQRB_CMD_SERVER_EVENT, hdr, event);
@@ -286,6 +293,8 @@ static void *eqrb_server_thread(void *p) {
     eswb_rv_t erv;
 
     eswb_set_thread_name(__func__);
+
+    eswb_set_delta_priority(+1);
 
 #   define EVENT_BUF_SIZE 1024
     uint8_t *event_buf = eqrb_alloc(EVENT_BUF_SIZE);
@@ -459,9 +468,16 @@ static void *eqrb_server_thread(void *p) {
             if (sk_cmd_td != 0) {
                 sidekick_run(sk_cmd_td);
             }
+
+            // unsigned events_cnt = 0;
+
             do {
                 eswb_arm_timeout(h->evq_td, 500000);
                 erv = eswb_event_queue_pop(h->evq_td, event);
+                // erv = eswb_e_timedout;
+                // sleep(1);
+                // printf("%s %d %08X event tid %lu size %lu %s\n", __func__, h->evq_td, events_cnt++, event->topic_id, event->size, eswb_strerror(erv));
+
                 switch (erv) {
                     case eswb_e_timedout:
                         rv = check_state(dd, dev);
@@ -480,6 +496,8 @@ static void *eqrb_server_thread(void *p) {
                 }
 
                 rv = send_msg(dd, dev, EQRB_CMD_SERVER_EVENT, hdr, event);
+                // printf("%s send msg %s\n", __func__, eqrb_strerror(rv));
+
                 switch (rv) {
                     case eqrb_rv_ok:
                         break;
