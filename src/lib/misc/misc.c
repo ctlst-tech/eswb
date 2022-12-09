@@ -15,6 +15,13 @@ char *indent(int depth) {
     return rv;
 }
 
+void eswb_set_delta_priority(int dp) {
+    struct sched_param shp;
+    int policy;
+    pthread_getschedparam(pthread_self(), &policy, &shp);
+    shp.sched_priority += dp;
+    pthread_setschedparam(pthread_self(), policy, &shp);
+}
 
 void eswb_set_thread_name(const char *n) {
 #if __APPLE__

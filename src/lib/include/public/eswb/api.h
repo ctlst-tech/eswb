@@ -278,6 +278,12 @@ eswb_rv_t eswb_path_split(const char *full_path, char *path, char *topic_name);
  */
 void eswb_set_thread_name(const char *n);
 
+/**
+ * Change priority of the calling thread (works via pthread_getschedparam / pthread_setschedparam)
+ * @param dp delta priority
+ */
+void eswb_set_delta_priority(int dp);
+
 #ifdef __cplusplus
 }
 #endif
