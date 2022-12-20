@@ -171,6 +171,18 @@ class ewBasic:
         self.radraw_handler(vals)
 
 
+class ewGroup(myQtWidget, ewBasic):
+    def __init__(self, widgets: List[myQtWidget]):
+        myQtWidget.__init__(self, layout_vertical=False)
+        ewBasic.__init__(self)
+
+        self.group_widgets = widgets
+
+        for w in self.group_widgets:
+            self.nested_widgets.append(w)
+            self.layout.addWidget(w)
+
+
 class ewTable(myQtWidget, ewBasic):
     def __init__(self, *, caption='', data_sources: List[DataSourceBasic], **kwargs):
         myQtWidget.__init__(self, **kwargs)
@@ -419,7 +431,7 @@ class ewCursor(myQtWidget, ewBasic):
         # self.setMinimumHeight(80)
         # self.setMinimumWidth(80)
 
-        self.layout.addWidget(self, stretch=1)
+        self.layout.addWidget(self)
 
         self.data_range = data_range
         self.x_range_mod = data_range[0][1] - data_range[0][0]
