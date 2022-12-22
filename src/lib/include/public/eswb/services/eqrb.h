@@ -44,14 +44,27 @@ typedef enum {
 
 #define EQRB_ERR_MSG_MAX_LEN 128
 
+eqrb_rv_t eqrb_sdtl_server_start(const char *eqrb_service_name,
+                                 const char *sdtl_service_name,
+                                 const char *sdtl_ch1_name,
+                                 const char *sdtl_ch2_name, uint32_t ch_mask,
+                                 const char *bus2replicate,
+                                 const char **err_msg);
 
-eqrb_rv_t
-eqrb_sdtl_server_start(const char *eqrb_service_name,
-                       const char *sdtl_service_name, const char *sdtl_ch1_name, const char *sdtl_ch2_name, uint32_t ch_mask,
-                       const char *bus2replicate, const char **err_msg);
+eqrb_rv_t eqrb_sdtl_client_connect(const char *service_name,
+                                   const char *sdtl_ch1_name,
+                                   const char *sdtl_ch2_name,
+                                   const char *mount_point,
+                                   uint32_t repl_map_size);
 
-eqrb_rv_t eqrb_sdtl_client_connect(const char *service_name, const char *sdtl_ch1_name, const char *sdtl_ch2_name,
-                                   const char *mount_point, uint32_t repl_map_size);
+eqrb_rv_t eqrb_file_server_start(const char *eqrb_service_name,
+                                 const char *file_service_name,
+                                 const char *bus2replicate,
+                                 const char **err_msg);
+
+eqrb_rv_t eqrb_file_client_connect(const char *service_name,
+                                   const char *mount_point,
+                                   uint32_t repl_map_size);
 
 const char *eqrb_strerror(eqrb_rv_t ecode);
 
