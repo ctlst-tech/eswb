@@ -407,16 +407,17 @@ class ewCursor(myQtWidget, ewBasic):
                 if i == b-1:
                     alpha = 255
                     thickness = 2
+                    d = 8
                 else:
                     alpha = int(i * 100.0 / b)
                     thickness = 1
+                    d = 2
 
                 painter.setPen(
                     QPen(QtGui.QColor(self.color[0], self.color[1], self.color[2], alpha), thickness, Qt.SolidLine))
 
                 x = self.rel_x(self.data[i][0])
                 y = self.rel_y(self.data[i][1])
-                d = 8
                 d_2 = d/2
                 painter.drawEllipse(int(x - d_2), int(y - d_2), int(d), int(d))
 
