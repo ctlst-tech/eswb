@@ -633,3 +633,31 @@ class Monitor:
 
     def add_widget(self, w):
         self.app_window.add_ew(w)
+
+
+class ArgParser:
+
+    def __init__(self):
+        import argparse
+
+        self.parser = argparse.ArgumentParser('ESWB monitor tool')
+
+        self.parser.add_argument(
+            '--serdev',
+            action='store',
+            default='/dev/ttyUSB0',
+            type=str,
+            help='Serial interface device path',
+        )
+
+        self.parser.add_argument(
+            '--serbaud',
+            action='store',
+            default='115200',
+            type=int,
+            help='Serial interface baudrate',
+
+        )
+
+        self.args = self.parser.parse_args(sys.argv[1:])
+
