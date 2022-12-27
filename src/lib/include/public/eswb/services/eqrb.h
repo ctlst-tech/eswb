@@ -58,14 +58,15 @@ eqrb_rv_t eqrb_sdtl_client_connect(const char *service_name,
                                    uint32_t repl_map_size);
 
 eqrb_rv_t eqrb_file_server_start(const char *eqrb_service_name,
-                                 const char *file_service_name,
-                                 const char *dst_dir,
+                                 const char *file_prefix, const char *dst_dir,
                                  const char *bus2replicate,
                                  const char **err_msg);
 
 eqrb_rv_t eqrb_file_client_connect(const char *service_name,
+                                   const char *file_name, const char *src_dir,
                                    const char *mount_point,
-                                   uint32_t repl_map_size);
+                                   uint32_t repl_map_size,
+                                   const char **err_msg);
 
 const char *eqrb_strerror(eqrb_rv_t ecode);
 

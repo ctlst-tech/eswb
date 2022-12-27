@@ -11,7 +11,8 @@
 
 typedef struct {
     const char *file_prefix;
-    const char *dst_dir;
+    const char *file_name;
+    const char *dir;
 } eqrb_drv_file_params_t;
 
 eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh);
@@ -38,21 +39,27 @@ eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh) {
     char file_name[EQRB_FILE_MAX_NAME_LEN];
     int file_num = 0;
 
-    if (dh == NULL || p->file_prefix == NULL || p->dst_dir == NULL) {
+    if (dh == NULL || p->dir == NULL) {
         return eqrb_media_invarg;
     }
 
-    if (mkdir(p->dst_dir, 0) && errno != EEXIST) {
+    if (mkdir(p->dir, 0) && errno != EEXIST) {
         return eqrb_media_invarg;
     }
 
-    do {
-        snprintf(file_name, EQRB_FILE_MAX_NAME_LEN, "%s/%s_%d.eqrb", p->dst_dir,
-                 p->file_prefix, file_num);
-        *(int *)dh = open(file_name, O_RDWR | O_CREAT);
-        file_num++;
-    } while (*(int *)dh < 0 && errno == EEXIST &&
-             file_num < EQRB_FILE_MAX_FILES);
+    if (p->file_prefix != NULL) {
+        do {
+            snprintf(file_name, EQRB_FILE_MAX_NAME_LEN, "%s/%s_%d.eqrb", p->dir,
+                     p->file_prefix, file_num);
+            *(int *)dh = open(file_name, O_RDWR | O_CREAT | O_APPEND);
+            file_num++;
+        } while (*(int *)dh < 0 && errno == EEXIST &&
+                 file_num < EQRB_FILE_MAX_FILES);
+    } else if (p->file_name != NULL) {
+        snprintf(file_name, EQRB_FILE_MAX_NAME_LEN, "%s/%s", p->dir,
+                 p->file_name);
+        *(int *)dh = open(file_name, O_RDONLY);
+    }
 
     return *(int *)dh > 0 ? eqrb_rv_ok : eqrb_media_err;
 }
@@ -107,15 +114,26 @@ eqrb_rv_t eqrb_drv_file_disconnect(device_descr_t dh) {
 }
 
 static eqrb_rv_t init_media_params(void **media_params, const char *file_prefix,
-                                   const char *dst_dir) {
+                                   const char *file_name, const char *dir) {
     eqrb_drv_file_params_t *params = calloc(1, sizeof(*params));
 
     if (params == NULL) {
         return eqrb_rv_nomem;
     }
 
-    params->file_prefix = strdup(file_prefix);
-    params->dst_dir = strdup(dst_dir);
+    if (file_prefix != NULL) {
+        params->file_prefix = strdup(file_prefix);
+    } else {
+        params->file_prefix = NULL;
+    }
+
+    if (file_name != NULL) {
+        params->file_name = strdup(file_name);
+    } else {
+        params->file_name = NULL;
+    }
+
+    params->dir = strdup(dir);
     *media_params = params;
 
     return eqrb_rv_ok;
@@ -129,7 +147,7 @@ eqrb_rv_t eqrb_file_server_start(const char *eqrb_service_name,
     eqrb_rv_t rv;
     eqrb_server_handle_t *sh;
 
-    rv = init_media_params(&mp, file_prefix, dst_dir);
+    rv = init_media_params(&mp, file_prefix, NULL, dst_dir);
     if (rv != eqrb_rv_ok) {
         return rv;
     }
@@ -144,6 +162,7 @@ eqrb_rv_t eqrb_file_server_start(const char *eqrb_service_name,
 }
 
 static eqrb_rv_t instantiate_client(const char *service_name,
+                                    const char *file_name, const char *src_dir,
                                     const char *mount_point,
                                     uint32_t repl_map_size) {
     eqrb_client_handle_t *ch = calloc(1, sizeof(*ch));
@@ -158,22 +177,32 @@ static eqrb_rv_t instantiate_client(const char *service_name,
         return eqrb_rv_nomem;
     }
 
+    params->dir = strdup(src_dir);
+    params->file_name = strdup(file_name);
+    params->file_prefix = NULL;
+
     ch->h.driver = &eqrb_drv_file;
     ch->h.connectivity_params = params;
-
-    params->file_prefix = strdup(service_name);
 
     return eqrb_client_start(ch, mount_point, repl_map_size);
 }
 
 eqrb_rv_t eqrb_file_client_connect(const char *service_name,
+                                   const char *file_name, const char *src_dir,
                                    const char *mount_point,
-                                   uint32_t repl_map_size) {
+                                   uint32_t repl_map_size,
+                                   const char **err_msg) {
     eqrb_client_handle_t *ch;
 
-    eqrb_rv_t rv = instantiate_client(service_name, mount_point, repl_map_size);
+    eswb_rv_t erv = eswb_create(mount_point, eswb_inter_thread, 10 + 16 * 1);
+    if (erv != eswb_e_ok) {
+        return eqrb_eswb_err;
+    }
 
+    eqrb_rv_t rv = instantiate_client(service_name, file_name, src_dir,
+                                      mount_point, repl_map_size);
     if (rv != eqrb_rv_ok) {
+        *err_msg = strdup("Fatal error");
         return rv;
     }
 
