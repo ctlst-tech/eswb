@@ -14,6 +14,10 @@ ESWB adresses the following problems:
 
 ESWB is the foundation of [**c-atom**](https://github.com/ctlst-tech/c-atom) library.
 
+## Documentation
+
+[Check it here](https://docs.ctlst.app/eswb/intro.html)
+
 ## Build
 
 ESWB uses [Catch2](https://github.com/catchorg/Catch2) as a testing framework. Here is a quick tip on installing it:
