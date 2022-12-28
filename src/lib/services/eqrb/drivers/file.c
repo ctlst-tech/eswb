@@ -192,17 +192,10 @@ eqrb_rv_t eqrb_file_client_connect(const char *service_name,
                                    const char *mount_point,
                                    uint32_t repl_map_size,
                                    const char **err_msg) {
-    eqrb_client_handle_t *ch;
-
-    eswb_rv_t erv = eswb_create(mount_point, eswb_inter_thread, 10 + 16 * 1);
-    if (erv != eswb_e_ok) {
-        return eqrb_eswb_err;
-    }
-
     eqrb_rv_t rv = instantiate_client(service_name, file_name, src_dir,
                                       mount_point, repl_map_size);
     if (rv != eqrb_rv_ok) {
-        *err_msg = strdup("Fatal error");
+        *err_msg = strdup("instantiate_client failed");
         return rv;
     }
 
