@@ -7,12 +7,14 @@
 #include "../eqrb_priv.h"
 
 #define EQRB_FILE_MAX_NAME_LEN 64
-#define EQRB_FILE_MAX_FILES 100
+#define EQRB_FILE_SAME_PREFIX_MAX_FILES 100
+#define EQRB_FILE_MAX_DESC 100
 
 typedef struct {
     const char *file_prefix;
     const char *file_name;
     const char *dir;
+    struct timespec tp;
 } eqrb_drv_file_params_t;
 
 eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh);
@@ -23,6 +25,7 @@ eqrb_rv_t eqrb_drv_file_recv(device_descr_t dh, void *data, size_t bts,
 eqrb_rv_t eqrb_drv_file_command(device_descr_t dh, eqrb_cmd_t cmd);
 eqrb_rv_t eqrb_drv_file_check_state(device_descr_t dh);
 eqrb_rv_t eqrb_drv_file_disconnect(device_descr_t dh);
+eqrb_rv_t eqrb_drv_file_update_timestamp_us(device_descr_t dh, uint32_t *ts);
 
 const eqrb_media_driver_t eqrb_drv_file = {
     .name = "eqrb_file",
@@ -34,10 +37,15 @@ const eqrb_media_driver_t eqrb_drv_file = {
     .disconnect = eqrb_drv_file_disconnect,
 };
 
+static const char head[5] = "ebdf";
+static eqrb_drv_file_params_t *file_params[EQRB_FILE_MAX_DESC] = {0};
+
 eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh) {
+    eqrb_rv_t rv;
     eqrb_drv_file_params_t *p = (eqrb_drv_file_params_t *)param;
     char file_name[EQRB_FILE_MAX_NAME_LEN];
     int file_num = 0;
+    int fd;
 
     if (dh == NULL || p->dir == NULL) {
         return eqrb_media_invarg;
@@ -51,28 +59,45 @@ eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh) {
         do {
             snprintf(file_name, EQRB_FILE_MAX_NAME_LEN, "%s/%s_%d.eqrb", p->dir,
                      p->file_prefix, file_num);
-            *(int *)dh = open(file_name, O_RDWR | O_CREAT | O_APPEND);
+            fd = open(file_name, O_RDWR | O_CREAT | O_APPEND);
             file_num++;
-        } while (*(int *)dh < 0 && errno == EEXIST &&
-                 file_num < EQRB_FILE_MAX_FILES);
+        } while (fd < 0 && errno == EEXIST &&
+                 file_num < EQRB_FILE_SAME_PREFIX_MAX_FILES);
     } else if (p->file_name != NULL) {
         snprintf(file_name, EQRB_FILE_MAX_NAME_LEN, "%s/%s", p->dir,
                  p->file_name);
-        *(int *)dh = open(file_name, O_RDONLY);
+        fd = open(file_name, O_RDONLY);
     }
 
-    return *(int *)dh > 0 ? eqrb_rv_ok : eqrb_media_err;
+    if (fd > 0 && fd < EQRB_FILE_MAX_DESC) {
+        file_params[fd] = param;
+        *(int *)dh = fd;
+        rv = eqrb_rv_ok;
+    } else {
+        rv = eqrb_media_err;
+    }
+
+    return rv;
 }
 
 eqrb_rv_t eqrb_drv_file_send(device_descr_t dh, void *data, size_t bts,
                              size_t *bs) {
-    size_t bw = write((int)dh, data, bts);
+    char head_time[32];
+    int head_time_len;
+    uint32_t dt;
+
+    eqrb_drv_file_update_timestamp_us(dh, &dt);
+    head_time_len = snprintf(head_time, sizeof(head_time), "%s%u\n", head, dt);
+
+    size_t bw = write((int)dh, head_time, head_time_len);
+    sync();
+    bw += write((int)dh, data, bts);
+    sync();
 
     if (bw > 0) {
         if (bs != NULL) {
             *bs = bw;
         }
-        sync();
         return eqrb_rv_ok;
     } else if (bw == 0) {
         return eqrb_media_stop;
@@ -198,6 +223,22 @@ eqrb_rv_t eqrb_file_client_connect(const char *service_name,
         *err_msg = strdup("instantiate_client failed");
         return rv;
     }
+
+    return eqrb_rv_ok;
+}
+
+eqrb_rv_t eqrb_drv_file_update_timestamp_us(device_descr_t dh, uint32_t *ts) {
+    int fd = (int)dh;
+
+    if (ts == NULL || file_params[fd] == NULL) {
+        return eqrb_media_invarg;
+    }
+
+    struct timespec *tp = &file_params[fd]->tp;
+    uint32_t prev = tp->tv_sec * 1000000 + tp->tv_nsec / 1000; 
+    clock_gettime(CLOCK_REALTIME, &file_params[fd]->tp);
+    uint32_t current = tp->tv_sec * 1000000 + tp->tv_nsec / 1000;
+    *ts = current - prev; 
 
     return eqrb_rv_ok;
 }
