@@ -172,6 +172,71 @@ TEST_CASE("Basic Operations") {
         rv = eswb_connect(bus_path.c_str(), &td);
         REQUIRE(rv == eswb_e_bus_not_exist);
     }
+
+    SECTION("Topic try get update") {
+        TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 2);
+        std::string var_name = "var";
+        topic_proclaiming_tree_t *rt = usr_topic_set_root(cntx, var_name.c_str(), tt_double, sizeof(double));
+        REQUIRE(rt != NULL);
+
+        eswb_topic_descr_t publish_td;
+        rv = eswb_proclaim_tree_by_path(bus_path.c_str(), rt, cntx->t_num, &publish_td);
+        REQUIRE(rv == eswb_e_ok);
+
+        eswb_topic_descr_t subscr_td;
+        auto subs_path = bus_path + "/" + var_name;
+        rv = eswb_connect(subs_path.c_str(), &subscr_td);
+        REQUIRE(rv == eswb_e_ok);
+
+
+        SECTION("Non updated topic") {
+            double dummy_data;
+            rv = eswb_try_get_update(subscr_td, &dummy_data);
+            REQUIRE(rv == eswb_e_no_update);
+        }
+
+        uint32_t update_num = GENERATE(1, 2, 10, 128);
+
+        SECTION("Once try get update for " + std::to_string(update_num) + " times updated topic") {
+            double dummy_data_write = 123.456;
+            double dummy_data_read = 0.321;
+
+            for (int i = 0; i < update_num; i++) {
+                rv = eswb_update_topic(publish_td, &dummy_data_write);
+                REQUIRE(rv == eswb_e_ok);
+            }
+
+            rv = eswb_try_get_update(subscr_td, &dummy_data_read);
+            REQUIRE(rv == eswb_e_ok);
+            REQUIRE(dummy_data_write == dummy_data_read);
+
+            rv = eswb_try_get_update(subscr_td, &dummy_data_read);
+            REQUIRE(rv == eswb_e_no_update);
+            REQUIRE(dummy_data_write == dummy_data_read);
+        }
+
+        SECTION("Connect and once try get update after " + std::to_string(update_num) + " times updated topic") {
+            double dummy_data_write = 123.456;
+            double dummy_data_read = 0.321;
+
+            for (int i = 0; i < update_num; i++) {
+                rv = eswb_update_topic(publish_td, &dummy_data_write);
+                REQUIRE(rv == eswb_e_ok);
+            }
+
+            eswb_topic_descr_t subscr_td2;
+            rv = eswb_connect(subs_path.c_str(), &subscr_td2);
+            REQUIRE(rv == eswb_e_ok);
+
+            rv = eswb_try_get_update(subscr_td2, &dummy_data_read);
+            REQUIRE(rv == eswb_e_ok);
+            REQUIRE(dummy_data_write == dummy_data_read);
+
+            rv = eswb_try_get_update(subscr_td2, &dummy_data_read);
+            REQUIRE(rv == eswb_e_no_update);
+            REQUIRE(dummy_data_write == dummy_data_read);
+        }
+    }
 }
 
 
@@ -244,7 +309,7 @@ TEST_CASE("Timed out eswb_fifo_pop wait") {
 #   define FIFO_SIZE 10
     topic_proclaiming_tree_t *fifo_root = usr_topic_set_fifo(cntx, "fifo", FIFO_SIZE);
     usr_topic_add_child(cntx, fifo_root, "elem", tt_uint32,
-                        0, 4, TOPIC_FLAG_MAPPED_TO_PARENT);
+                        0, 4, TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
 
     eswb_topic_descr_t snd_td;
     rv = eswb_proclaim_tree_by_path(bus_path.c_str(), fifo_root, cntx->t_num, &snd_td);
@@ -279,7 +344,7 @@ TEST_CASE("FIFO | nsb", "[unit]") {
 #   define FIFO_SIZE 10
     topic_proclaiming_tree_t *fifo_root = usr_topic_set_fifo(cntx, "fifo", FIFO_SIZE);
     usr_topic_add_child(cntx, fifo_root, "elem", tt_uint32,
-                                                              0, 4, TOPIC_FLAG_MAPPED_TO_PARENT);
+                        0, 4, TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
 
     eswb_topic_descr_t snd_td;
     rv = eswb_proclaim_tree_by_path(bus_path.c_str(), fifo_root, cntx->t_num, &snd_td);

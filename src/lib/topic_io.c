@@ -20,6 +20,35 @@ eswb_rv_t topic_io_read(topic_t *t, void *data) {
     return rv;
 }
 
+eswb_rv_t topic_io_read_w_counter(topic_t *t, void *data, eswb_update_counter_t *update_counter) {
+    int synced = TOPIC_SYNCED(t);
+    eswb_rv_t rv;
+
+    if (synced) sync_take(t->sync);
+
+    rv = topic_mem_simply_copy(t, data);
+
+    if (!(t->flags & TOPIC_FLAGS_INITED)) {
+        // TODO this check and response supposed to be in any topic reading but we dont want to break behaviour for now
+        rv = eswb_e_no_update;
+    }
+
+    *update_counter = t->update_counter;
+    if (synced) sync_give(t->sync);
+
+    return rv;
+}
+
+eswb_rv_t topic_get_update_counter(topic_t *t, eswb_update_counter_t *update_counter) {
+    int synced = TOPIC_SYNCED(t);
+
+    if (synced) sync_take(t->sync);
+    *update_counter = t->update_counter;
+    if (synced) sync_give(t->sync);
+
+    return eswb_e_ok;
+}
+
 eswb_rv_t topic_io_get_update(topic_t *t, void *data, uint32_t timeout_us) {
     eswb_rv_t rv;
 
@@ -38,10 +67,9 @@ eswb_rv_t topic_io_get_update(topic_t *t, void *data, uint32_t timeout_us) {
             }
             rv = topic_mem_simply_copy(t, data);
         } while (0);
-
         sync_give(t->sync);
     } else {
-        return topic_io_read(t, data);
+        rv = topic_mem_simply_copy(t, data);
     };
 
     return rv;
@@ -227,6 +255,11 @@ eswb_rv_t topic_io_do_update(topic_t *t, eswb_update_t ut, void *data) {
         case upd_withdraw_topic:
             rv = eswb_e_not_supported;
             break;
+    }
+
+    if (rv == eswb_e_ok) {
+        t->flags |= TOPIC_FLAGS_INITED;
+        t->update_counter++;
     }
 
     if (synced) {

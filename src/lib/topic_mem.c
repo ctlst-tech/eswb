@@ -16,7 +16,6 @@ eswb_rv_t topic_mem_write(topic_t *t, void *data) {
     return eswb_e_ok;
 }
 
-#include <stdio.h>
 
 eswb_rv_t topic_mem_write_fifo(topic_t *t, void *data) {
 

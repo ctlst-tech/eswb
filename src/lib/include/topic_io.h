@@ -7,6 +7,9 @@
 
 
 eswb_rv_t topic_io_read(topic_t *t, void *data);
+eswb_rv_t topic_io_read_w_counter(topic_t *t, void *data, eswb_update_counter_t *update_counter);
+eswb_rv_t topic_get_update_counter(topic_t *t, eswb_update_counter_t *update_counter);
+
 eswb_rv_t topic_io_get_update(topic_t *t, void *data, uint32_t timeout_us);
 eswb_rv_t topic_io_fifo_pop(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int do_wait, uint32_t timeout_us);
 eswb_rv_t topic_io_fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state);

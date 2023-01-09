@@ -211,7 +211,6 @@ eswb_rv_t  local_bus_alloc_topic_descr(eswb_bus_handle_t *bh, topic_t *t, eswb_t
     pthread_mutex_lock(&local_topic_index_mutex); // TODO portable sync
 
     do {
-
         if (local_index_num >= ITB_TD_MAX) {
             rv = eswb_e_max_topic_desrcs;
             break;
@@ -219,9 +218,12 @@ eswb_rv_t  local_bus_alloc_topic_descr(eswb_bus_handle_t *bh, topic_t *t, eswb_t
 
         topic_local_index_t *li = &local_td_index[local_index_num];
 
+        memset(li, 0, sizeof(*li));
+
         li->t = t;
         li->bh = bh;
-
+        topic_get_update_counter(li->t, &li->update_counter);
+        li->update_counter += -1; // first read must be a read of inited topic with an update
         *td = local_index_num;
         local_index_num++;
         rv = eswb_e_ok;
@@ -313,11 +315,31 @@ eswb_rv_t local_do_read(eswb_topic_descr_t td, void *data) {
     return topic_io_read(li->t, data);
 }
 
+
 eswb_rv_t local_get_update(eswb_topic_descr_t td, void *data) {
     topic_local_index_t *li = &local_td_index[td];
 
     eswb_rv_t rv = topic_io_get_update(li->t, data, li->timeout_us);
     li->timeout_us = 0;
+
+    return rv;
+}
+
+eswb_rv_t local_try_get_update(eswb_topic_descr_t td, void *data) {
+    topic_local_index_t *li = &local_td_index[td];
+
+    eswb_update_counter_t counter;
+    eswb_rv_t rv = topic_io_read_w_counter(li->t, data, &counter);
+    if (rv == eswb_e_ok) {
+        if (li->update_counter == counter) {
+            rv = eswb_e_no_update;
+        } else {
+            li->update_counter = counter;
+        }
+    } else {
+        // topic was not inited yet, so we just initialize counter
+        li->update_counter = counter;
+    }
 
     return rv;
 }
@@ -405,8 +427,8 @@ eswb_rv_t local_bus_create_event_queue(eswb_bus_handle_t *bh, eswb_size_t events
     TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 3);
     topic_proclaiming_tree_t *r = usr_topic_set_root(cntx, BUS_EVENT_QUEUE_NAME, tt_event_queue, events_num);
     // fifo convention: it's element must be first child
-    usr_topic_add_child(cntx, r, "event", tt_struct, 0, sizeof(event_queue_record_t), TOPIC_FLAG_MAPPED_TO_PARENT);
-    usr_topic_add_child(cntx, r, "data_buf", tt_byte_buffer, 0, data_buf_size, TOPIC_FLAG_USES_PARENT_SYNC);
+    usr_topic_add_child(cntx, r, "event", tt_struct, 0, sizeof(event_queue_record_t), TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
+    usr_topic_add_child(cntx, r, "data_buf", tt_byte_buffer, 0, data_buf_size, TOPIC_PROCLAIMING_FLAG_USES_PARENT_SYNC);
 
 
     eswb_rv_t rv = topic_io_do_update(&bh->registry->topics[0], upd_proclaim_topic, r);

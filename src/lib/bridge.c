@@ -126,10 +126,10 @@ static eswb_rv_t add_nested_children_to_proclaiming_array(eswb_topic_descr_t fro
         rv = eswb_get_next_topic_info(from_td, &next2tid, &topic_info);
         if (rv == eswb_e_ok) {
             topic_proclaiming_tree_t *topic = usr_topic_add_child(to_cntx, to_root,
-                                            topic_info.info.name,
-                                            topic_info.info.type,
-                                            topic_info.info.data_offset,
-                                            topic_info.info.data_size, TOPIC_FLAG_MAPPED_TO_PARENT);
+                                                                  topic_info.info.name,
+                                                                  topic_info.info.type,
+                                                                  topic_info.info.data_offset,
+                                                                  topic_info.info.data_size, TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
             if (topic == NULL) {
                 return eswb_e_invargs;
             }
@@ -171,8 +171,8 @@ eswb_rv_t eswb_bridge_connect(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const
             topic_proclaiming_tree_t *sub_topic;
 
             sub_topic = usr_topic_add_child(cntx, root,
-                                ts->dest_name,
-                                ts->type, offset, ts->size, TOPIC_FLAG_MAPPED_TO_PARENT);
+                                            ts->dest_name,
+                                            ts->type, offset, ts->size, TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
             if (ts->type == tt_struct) {
                 rv = add_nested_children_to_proclaiming_array(ts->td, cntx, sub_topic);
                 if (rv != eswb_e_ok) {

@@ -29,16 +29,15 @@ typedef struct {
 
 typedef struct {
     topic_t *t;
-
     eswb_bus_handle_t *bh;
 
-    //eswb_index_t fifo_head;
     fifo_rcvr_state_t rcvr_state;
+
+    eswb_update_counter_t update_counter;
 
     eswb_event_queue_mask_t event_queue_mask; // this mask is used by EQ call for check desired topics
 
     uint32_t timeout_us;
-
 } topic_local_index_t;
 
 #ifdef __cplusplus
@@ -51,6 +50,7 @@ eswb_rv_t local_bus_alloc_topic_descr(eswb_bus_handle_t *bh, topic_t *t, eswb_to
 eswb_rv_t local_do_update(eswb_topic_descr_t td, eswb_update_t ut, void *data, eswb_size_t elem_num);
 eswb_rv_t local_do_read(eswb_topic_descr_t td, void *data);
 eswb_rv_t local_get_update(eswb_topic_descr_t td, void *data);
+eswb_rv_t local_try_get_update(eswb_topic_descr_t td, void *data);
 
 eswb_rv_t local_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int size);
 

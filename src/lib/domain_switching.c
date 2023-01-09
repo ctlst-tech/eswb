@@ -283,9 +283,17 @@ eswb_rv_t ds_read (eswb_topic_descr_t td, void *data) {
                           data);
 }
 
-eswb_rv_t ds_get_update (eswb_topic_descr_t td, void *data) {
+eswb_rv_t ds_get_update(eswb_topic_descr_t td, void *data) {
     SWITCH_FLOW_TO_DOMAIN(td,
                           local_get_update,
+                          not_supported_stub,
+
+                          data);
+}
+
+eswb_rv_t ds_try_get_update(eswb_topic_descr_t td, void *data) {
+    SWITCH_FLOW_TO_DOMAIN(td,
+                          local_try_get_update,
                           not_supported_stub,
 
                           data);
