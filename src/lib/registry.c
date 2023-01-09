@@ -363,6 +363,8 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
                     if (rv != eswb_e_ok) {
                         break;
                     }
+                } else {
+                    new->sync = NULL;
                 }
             }
         } while(0);
@@ -426,7 +428,8 @@ static eswb_rv_t topics_tree_register(topic_t *mount_point, topic_proclaiming_tr
     return eswb_e_ok;
 }
 
-eswb_rv_t reg_tree_register(registry_t *reg, topic_t *mounting_topic, topic_proclaiming_tree_t *new_topic_struct, int synced) {
+eswb_rv_t reg_tree_register(registry_t *reg, topic_t *mounting_topic, topic_proclaiming_tree_t *new_topic_struct) {
+    int synced = REG_SYNCED(reg);
     if (synced) sync_take(reg->sync);
     eswb_rv_t rv = topics_tree_register(mounting_topic, new_topic_struct, synced);
     if (synced) sync_give(reg->sync);
@@ -435,20 +438,20 @@ eswb_rv_t reg_tree_register(registry_t *reg, topic_t *mounting_topic, topic_proc
 }
 
 
-topic_t *reg_find_topic(registry_t *reg, const char *path, int synced) {
+topic_t *reg_find_topic(registry_t *reg, const char *path) {
 
-    if (synced) sync_take(reg->sync);
+    if (REG_SYNCED(reg)) sync_take(reg->sync);
     topic_t *rv = find_topic(&reg->topics[0], path);
-    if (synced) sync_give(reg->sync);
+    if (REG_SYNCED(reg)) sync_give(reg->sync);
 
     return rv;
 }
 
 
-eswb_rv_t reg_create(const char *root_name, registry_t **new_reg, eswb_size_t max_topics, int synced) {
-    registry_t *nr = alloc_registry(max_topics);
+eswb_rv_t reg_create(const char *root_name, registry_t **new_reg_rv, eswb_size_t max_topics, int synced) {
+    registry_t *new_reg = alloc_registry(max_topics);
 
-    if (nr == NULL) {
+    if (new_reg == NULL) {
         return eswb_e_mem_reg_na;
     }
 
@@ -459,32 +462,30 @@ eswb_rv_t reg_create(const char *root_name, registry_t **new_reg, eswb_size_t ma
     eswb_rv_t rv;
 
 
-    topic_t *root = alloc_topic(nr);
+    topic_t *root = alloc_topic(new_reg);
     if (root == NULL) {
-        // TODO dealloc nr
         return eswb_e_mem_topic_na;
-    }
-
-    rv = sync_create(&root->sync);
-    if (rv != eswb_e_ok) {
-        // TODO dealloc nr and root
-        return rv;
     }
 
     strncpy(root->name, root_name, ESWB_TOPIC_NAME_MAX_LEN);
     root->type = tt_dir;
 
     if (synced) {
-        rv = sync_create(&nr->sync);
+        rv = sync_create(&root->sync);
         if (rv != eswb_e_ok) {
-            // TODO dealloc reg
+            return rv;
+        }
+
+        rv = sync_create(&new_reg->sync);
+        if (rv != eswb_e_ok) {
             return rv;
         }
     } else {
         root->sync = NULL;
+        new_reg->sync = NULL;
     }
 
-    *new_reg = nr;
+    *new_reg_rv = new_reg;
     return eswb_e_ok;
 }
 
@@ -544,8 +545,10 @@ int parent_has_child(topic_t *parent, topic_t *child) {
 }
 
 eswb_rv_t
-reg_get_next_topic_info(registry_t *reg, topic_t *parent, eswb_topic_id_t id, topic_extract_t *extract, int synced) {
+reg_get_next_topic_info(registry_t *reg, topic_t *parent, eswb_topic_id_t id, topic_extract_t *extract) {
     eswb_rv_t rv = eswb_e_ok;
+
+    int synced = REG_SYNCED(reg);
 
     if (synced) sync_take(reg->sync);
 

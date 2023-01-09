@@ -10,7 +10,8 @@
 #include "registry.h"
 
 
-eswb_rv_t topic_io_read(topic_t *t, void *data, int synced) {
+eswb_rv_t topic_io_read(topic_t *t, void *data) {
+    int synced = TOPIC_SYNCED(t);
 
     if (synced) sync_take(t->sync);
     eswb_rv_t rv = topic_mem_simply_copy(t, data);
@@ -19,13 +20,13 @@ eswb_rv_t topic_io_read(topic_t *t, void *data, int synced) {
     return rv;
 }
 
-eswb_rv_t topic_io_get_update(topic_t *t, void *data, int synced, uint32_t timeout_us) {
+eswb_rv_t topic_io_get_update(topic_t *t, void *data, uint32_t timeout_us) {
     eswb_rv_t rv;
 
+    int synced = TOPIC_SYNCED(t);
+
     if (synced) {
-
         sync_take(t->sync);
-
         do {
             if (timeout_us) {
                 rv = sync_wait_timed(t->sync, timeout_us);
@@ -40,7 +41,7 @@ eswb_rv_t topic_io_get_update(topic_t *t, void *data, int synced, uint32_t timeo
 
         sync_give(t->sync);
     } else {
-        return topic_io_read(t, data, 0);
+        return topic_io_read(t, data);
     };
 
     return rv;
@@ -124,14 +125,17 @@ static eswb_rv_t fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state) {
 
 
 eswb_rv_t
-topic_io_fifo_pop(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int synced, int do_wait, uint32_t timeout_us) {
+topic_io_fifo_pop(topic_t *t, fifo_rcvr_state_t *rcvr_state, void *data, int do_wait, uint32_t timeout_us) {
+    int synced = TOPIC_SYNCED(t);
+
     if (synced) sync_take(t->sync);
     eswb_rv_t rv = fifo_wait_and_read(t, rcvr_state, data, synced, do_wait, timeout_us);
     if (synced) sync_give(t->sync);
     return rv;
 }
 
-eswb_rv_t topic_io_fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state, int synced) {
+eswb_rv_t topic_io_fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state) {
+    int synced = TOPIC_SYNCED(t);
     if (synced) sync_take(t->sync);
     eswb_rv_t rv = fifo_flush(t, rcvr_state);
     if (synced) sync_give(t->sync);
@@ -140,13 +144,15 @@ eswb_rv_t topic_io_fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state, int syn
 
 
 eswb_rv_t topic_io_event_queue_pop(topic_t *t, eswb_event_queue_mask_t mask, fifo_rcvr_state_t *rcvr_state,
-                                   event_queue_transfer_t *eqt, int synced, uint32_t timeout_us) {
+                                   event_queue_transfer_t *eqt, uint32_t timeout_us) {
     eswb_rv_t rv;
 
     event_queue_record_t event;
 
     struct timespec ts;
     struct timespec timeout_expiry_time;
+
+    int synced = TOPIC_SYNCED(t);
 
     if (timeout_us) {
         clock_gettime(CLOCK_MONOTONIC, &ts);
@@ -195,14 +201,14 @@ eswb_rv_t topic_io_event_queue_pop(topic_t *t, eswb_event_queue_mask_t mask, fif
     return rv;
 }
 
-eswb_rv_t topic_io_do_update(topic_t *t, eswb_update_t ut, void *data, int synced) {
-
+eswb_rv_t topic_io_do_update(topic_t *t, eswb_update_t ut, void *data) {
+    int synced = TOPIC_SYNCED(t);
     if (synced) sync_take(t->sync);
 
     eswb_rv_t  rv;
     switch (ut) {
         case upd_proclaim_topic:
-            rv = reg_tree_register(t->reg_ref, t, (topic_proclaiming_tree_t *) data, synced);
+            rv = reg_tree_register(t->reg_ref, t, (topic_proclaiming_tree_t *) data);
             break;
 
         case upd_update_topic:
@@ -237,9 +243,10 @@ eswb_rv_t topic_io_do_update(topic_t *t, eswb_update_t ut, void *data, int synce
 }
 
 
-eswb_rv_t topic_io_get_state (topic_t *t, topic_fifo_state_t *state, int synced) {
+eswb_rv_t topic_io_get_state(topic_t *t, topic_fifo_state_t *state) {
 
     eswb_rv_t rv = eswb_e_ok;
+    int synced = TOPIC_SYNCED(t);
 
     if (synced) sync_take(t->sync);
 
