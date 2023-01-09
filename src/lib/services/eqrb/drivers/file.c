@@ -25,7 +25,7 @@ eqrb_rv_t eqrb_drv_file_recv(device_descr_t dh, void *data, size_t bts,
 eqrb_rv_t eqrb_drv_file_command(device_descr_t dh, eqrb_cmd_t cmd);
 eqrb_rv_t eqrb_drv_file_check_state(device_descr_t dh);
 eqrb_rv_t eqrb_drv_file_disconnect(device_descr_t dh);
-eqrb_rv_t eqrb_drv_file_update_timestamp_us(device_descr_t dh, uint32_t *ts);
+eqrb_rv_t eqrb_drv_file_update_timestamp_us(device_descr_t dh, uint32_t *ts, uint32_t *dts);
 
 const eqrb_media_driver_t eqrb_drv_file = {
     .name = "eqrb_file",
@@ -59,7 +59,7 @@ eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh) {
         do {
             snprintf(file_name, EQRB_FILE_MAX_NAME_LEN, "%s/%s_%d.eqrb", p->dir,
                      p->file_prefix, file_num);
-            fd = open(file_name, O_RDWR | O_CREAT | O_APPEND);
+            fd = open(file_name, O_RDWR | O_CREAT);
             file_num++;
         } while (fd < 0 && errno == EEXIST &&
                  file_num < EQRB_FILE_SAME_PREFIX_MAX_FILES);
@@ -84,10 +84,10 @@ eqrb_rv_t eqrb_drv_file_send(device_descr_t dh, void *data, size_t bts,
                              size_t *bs) {
     char head_time[32];
     int head_time_len;
-    uint32_t dt;
+    uint32_t t, dt;
 
-    eqrb_drv_file_update_timestamp_us(dh, &dt);
-    head_time_len = snprintf(head_time, sizeof(head_time), "%s%u\n", head, dt);
+    eqrb_drv_file_update_timestamp_us(dh, &t, &dt);
+    head_time_len = snprintf(head_time, sizeof(head_time), "%s%f\n", head, t / 1000000.0);
 
     size_t bw = write((int)dh, head_time, head_time_len);
     sync();
@@ -227,7 +227,7 @@ eqrb_rv_t eqrb_file_client_connect(const char *service_name,
     return eqrb_rv_ok;
 }
 
-eqrb_rv_t eqrb_drv_file_update_timestamp_us(device_descr_t dh, uint32_t *ts) {
+eqrb_rv_t eqrb_drv_file_update_timestamp_us(device_descr_t dh, uint32_t *ts, uint32_t *dts) {
     int fd = (int)dh;
 
     if (ts == NULL || file_params[fd] == NULL) {
@@ -238,7 +238,8 @@ eqrb_rv_t eqrb_drv_file_update_timestamp_us(device_descr_t dh, uint32_t *ts) {
     uint32_t prev = tp->tv_sec * 1000000 + tp->tv_nsec / 1000; 
     clock_gettime(CLOCK_REALTIME, &file_params[fd]->tp);
     uint32_t current = tp->tv_sec * 1000000 + tp->tv_nsec / 1000;
-    *ts = current - prev; 
+    *ts = current;
+    *dts = current - prev; 
 
     return eqrb_rv_ok;
 }
