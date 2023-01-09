@@ -57,6 +57,8 @@ typedef struct topic {
     eswb_event_queue_mask_t evq_mask; // TODO this thing should be inherited by nested topics
 } topic_t;
 
+#define TOPIC_SYNCED(t__) (t__->sync != NULL)
+
 #ifdef __cplusplus
 extern "C" {
 #endif

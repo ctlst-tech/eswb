@@ -85,15 +85,11 @@ eswb_rv_t local_lookup_any(const char *bus_name, eswb_bus_handle_t **b) {
     return local_bus_lookup(bus_name, local_bus_t_synced_or_nonsynced, b);
 }
 
-static int bus_is_synced(eswb_bus_handle_t *bh) {
-    return bh->local_type == local_bus_t_synced ? -1 : 0;
-}
-
 #define TOPIC_IS_FIFO(__t) (((__t)->type == tt_fifo) || ((__t)->type == tt_event_queue))
 
 eswb_rv_t local_bus_connect(eswb_bus_handle_t *bh, const char *conn_pnt, eswb_topic_descr_t *td) {
     eswb_topic_descr_t new_td;
-    topic_t *t = reg_find_topic(bh->registry, conn_pnt, bus_is_synced(bh));
+    topic_t *t = reg_find_topic(bh->registry, conn_pnt);
             //bh->drv->find_topic((registry_t *)bh->registry, conn_pnt, &t);
     if (t == NULL) {
         return eswb_e_no_topic;
@@ -267,7 +263,7 @@ static event_queue_record_type_t event_type (eswb_update_t ut) {
 eswb_rv_t local_event_queue_update(eswb_bus_handle_t *bh, event_queue_record_t *record) {
     topic_local_index_t *eq_li = &local_td_index[bh->event_queue_publisher_td];
 
-    return topic_io_do_update(eq_li->t, upd_push_event_queue, record, bus_is_synced(bh));
+    return topic_io_do_update(eq_li->t, upd_push_event_queue, record);
 }
 
 static eswb_rv_t local_event_queue_pack_and_update(topic_local_index_t *li, eswb_update_t ut, void *data, eswb_size_t elem_num) {
@@ -299,7 +295,7 @@ static eswb_rv_t local_event_queue_pack_and_update(topic_local_index_t *li, eswb
 
 eswb_rv_t local_do_update(eswb_topic_descr_t td, eswb_update_t ut, void *data, eswb_size_t elem_num) {
     topic_local_index_t *li = &local_td_index[td];
-    eswb_rv_t rv = topic_io_do_update(li->t, ut, data, bus_is_synced(li->bh));
+    eswb_rv_t rv = topic_io_do_update(li->t, ut, data);
 
     if (rv == eswb_e_ok) {
         if (li->t->evq_mask) {
@@ -314,13 +310,13 @@ eswb_rv_t local_do_update(eswb_topic_descr_t td, eswb_update_t ut, void *data, e
 eswb_rv_t local_do_read(eswb_topic_descr_t td, void *data) {
     topic_local_index_t *li = &local_td_index[td];
 
-    return topic_io_read(li->t, data, bus_is_synced(li->bh));
+    return topic_io_read(li->t, data);
 }
 
 eswb_rv_t local_get_update(eswb_topic_descr_t td, void *data) {
     topic_local_index_t *li = &local_td_index[td];
 
-    eswb_rv_t rv = topic_io_get_update(li->t, data, bus_is_synced(li->bh), li->timeout_us);
+    eswb_rv_t rv = topic_io_get_update(li->t, data, li->timeout_us);
     li->timeout_us = 0;
 
     return rv;
@@ -368,13 +364,12 @@ eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
 
     switch(li->t->type) {
         case tt_event_queue:
-            rv = topic_io_event_queue_pop(li->t, li->event_queue_mask, &li->rcvr_state, data, bus_is_synced(li->bh),
-                                            li->timeout_us);
+            rv = topic_io_event_queue_pop(li->t, li->event_queue_mask, &li->rcvr_state, data,
+                                          li->timeout_us);
             break;
 
         case tt_fifo:
-            rv = topic_io_fifo_pop(li->t, &li->rcvr_state, data,
-                                             bus_is_synced(li->bh), do_wait, li->timeout_us);;
+            rv = topic_io_fifo_pop(li->t, &li->rcvr_state, data, do_wait, li->timeout_us);;
             break;
 
         default:
@@ -387,7 +382,7 @@ eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
 }
 
 eswb_rv_t local_fifo_flush(topic_local_index_t *li) {
-    return topic_io_fifo_flush(li->t, &li->rcvr_state, bus_is_synced(li->bh));
+    return topic_io_fifo_flush(li->t, &li->rcvr_state);
 }
 
 eswb_rv_t local_init_fifo_receiver(eswb_topic_descr_t td) {
@@ -395,7 +390,7 @@ eswb_rv_t local_init_fifo_receiver(eswb_topic_descr_t td) {
 
     topic_fifo_state_t s;
 
-    eswb_rv_t rv = topic_io_get_state(li->t, &s, bus_is_synced(li->bh));
+    eswb_rv_t rv = topic_io_get_state(li->t, &s);
     if (rv == eswb_e_ok) {
         li->rcvr_state.tail = s.head; // TODO maybe we need already accumulated but not overwritten data?
         li->rcvr_state.lap = s.lap_num;
@@ -414,7 +409,7 @@ eswb_rv_t local_bus_create_event_queue(eswb_bus_handle_t *bh, eswb_size_t events
     usr_topic_add_child(cntx, r, "data_buf", tt_byte_buffer, 0, data_buf_size, TOPIC_FLAG_USES_PARENT_SYNC);
 
 
-    eswb_rv_t rv = topic_io_do_update(&bh->registry->topics[0], upd_proclaim_topic, r, bus_is_synced(bh));
+    eswb_rv_t rv = topic_io_do_update(&bh->registry->topics[0], upd_proclaim_topic, r);
 
     if (rv != eswb_e_ok) {
         return rv;
@@ -470,7 +465,7 @@ eswb_rv_t local_bus_get_next_topic_info(topic_local_index_t *li, eswb_topic_id_t
     if (tid == 0) {
         tid = li->t->id;
     }
-    return reg_get_next_topic_info(li->bh->registry, li->t, tid, info, bus_is_synced(li->bh));
+    return reg_get_next_topic_info(li->bh->registry, li->t, tid, info);
 }
 
 eswb_rv_t local_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int size) {
