@@ -17,10 +17,13 @@ extern "C" {
 #endif
 
 typedef uint32_t eswb_index_t;
+typedef uint32_t eswb_update_counter_t;
 typedef uint16_t eswb_fifo_index_t;
 typedef uint32_t eswb_size_t;
 typedef uint32_t eswb_topic_id_t;
 typedef uint32_t eswb_event_queue_mask_t;
+
+#define ESWB_UPDATE_COUNTER_MAX UINT32_MAX
 
 typedef enum {
     tt_none         = 0x00,

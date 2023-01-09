@@ -184,16 +184,20 @@ eswb_rv_t eswb_mkdir_nested(eswb_topic_descr_t parent_td, const char *dir_name, 
 }
 
 
-eswb_rv_t eswb_update_topic (eswb_topic_descr_t td, void *data) {
+eswb_rv_t eswb_update_topic(eswb_topic_descr_t td, void *data) {
     return do_update(td, upd_update_topic, data, 0);
 }
 
-eswb_rv_t eswb_read (eswb_topic_descr_t td, void *data) {
+eswb_rv_t eswb_read(eswb_topic_descr_t td, void *data) {
     return ds_read(td, data);
 }
 
-eswb_rv_t eswb_get_update (eswb_topic_descr_t td, void *data) {
+eswb_rv_t eswb_get_update(eswb_topic_descr_t td, void *data) {
     return ds_get_update(td, data);
+}
+
+eswb_rv_t eswb_try_get_update(eswb_topic_descr_t td, void *data) {
+    return ds_try_get_update(td, data);
 }
 
 eswb_rv_t eswb_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int size) {

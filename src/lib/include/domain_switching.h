@@ -13,6 +13,7 @@ eswb_rv_t ds_disconnect(eswb_topic_descr_t td);
 eswb_rv_t ds_update(eswb_topic_descr_t td, eswb_update_t ut, void *data, eswb_size_t elem_num);
 eswb_rv_t ds_read (eswb_topic_descr_t td, void *data);
 eswb_rv_t ds_get_update (eswb_topic_descr_t td, void *data);
+eswb_rv_t ds_try_get_update(eswb_topic_descr_t td, void *data);
 
 eswb_rv_t ds_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int size);
 

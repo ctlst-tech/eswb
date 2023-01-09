@@ -43,14 +43,14 @@ eswb_rv_t alloc_topic_data(topic_t *t) {
 }
 
 eswb_rv_t topic_dealloc_resources(topic_t *t) {
-    if (!(t->flags & TOPIC_FLAG_MAPPED_TO_PARENT)) {
+    if (!(t->flags & TOPIC_FLAGS_MAPPED_TO_PARENT)) {
         if (t->fifo_ext != NULL) {
             free(t->fifo_ext);
         }
         if (t->data != NULL) {
             free(t->data);
         }
-        if (!(t->flags & TOPIC_FLAG_USES_PARENT_SYNC)) {
+        if (!(t->flags & TOPIC_FLAGS_USES_PARENT_SYNC)) {
             if (t->sync != NULL) {
                 sync_destroy(t->sync);
             }
@@ -298,7 +298,7 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
         return rv;
     }
 
-    if (topic_struct->flags & TOPIC_FLAG_MAPPED_TO_PARENT) {
+    if (topic_struct->flags & TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT) {
         new->sync = parent->sync;
         if ((parent->type == tt_fifo) || (parent->type == tt_event_queue)) {
             new->data = parent->data;
@@ -306,8 +306,8 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
         } else {
             new->data = parent->data + topic_struct->data_offset;
         }
-        new->fifo_ext = parent->fifo_ext; // dont care if it is null
-        new->flags |= TOPIC_FLAG_MAPPED_TO_PARENT;
+        new->fifo_ext = parent->fifo_ext; // don't care if it is null
+        new->flags |= TOPIC_FLAGS_MAPPED_TO_PARENT;
     } else {
         do {
             // topics might be added created only inside directories
@@ -354,9 +354,9 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
                 break;
             }
 
-            if (topic_struct->flags & TOPIC_FLAG_USES_PARENT_SYNC) {
+            if (topic_struct->flags & TOPIC_PROCLAIMING_FLAG_USES_PARENT_SYNC) {
                 new->sync = parent->sync;
-                new->flags |= TOPIC_FLAG_USES_PARENT_SYNC;
+                new->flags |= TOPIC_FLAGS_USES_PARENT_SYNC;
             } else {
                 if (synced) {
                     rv = sync_create(&new->sync);
@@ -569,7 +569,7 @@ reg_get_next_topic_info(registry_t *reg, topic_t *parent, eswb_topic_id_t id, to
         extract->parent_id = t->parent != NULL ? t->parent->id : 0;
         extract->info.type = t->type;
         extract->info.data_size = t->data_size;
-        extract->info.data_offset = t->flags & TOPIC_FLAG_MAPPED_TO_PARENT ? t->data - t->parent->data : 0;
+        extract->info.data_offset = t->flags & TOPIC_FLAGS_MAPPED_TO_PARENT ? t->data - t->parent->data : 0;
         extract->info.flags = t->flags;
         extract->info.topic_id = t->id;
         extract->info.abs_ind = 0;

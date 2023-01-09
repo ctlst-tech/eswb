@@ -26,13 +26,14 @@ typedef struct fifo_ext {
 
 } fifo_ext_t;
 
-#define TOPIC_FLAGS_TO_EVENT_QUEUE (1 << 0)
+#define TOPIC_FLAGS_MAPPED_TO_PARENT    (1UL << 0UL)
+#define TOPIC_FLAGS_USES_PARENT_SYNC    (1UL << 1UL)
+#define TOPIC_FLAGS_INITED              (1UL << 2UL)
 
 typedef struct topic {
     // credentials
     char name[ESWB_TOPIC_NAME_MAX_LEN + 1];
     topic_data_type_t type;
-    char* annotation;
     eswb_size_t data_size; // field size for regular topic; length of fifo for fifo; overall size for event_queue
 
     void* data;
@@ -40,9 +41,8 @@ typedef struct topic {
     // sync and stat
     struct sync_handle* sync;
 
-    //state : state
     //last_update_time : time
-    //eswb_index_t me;
+    eswb_update_counter_t update_counter;
 
     uint32_t flags;
 

@@ -133,6 +133,15 @@ eswb_rv_t eswb_read (eswb_topic_descr_t td, void *data);
 eswb_rv_t eswb_get_update (eswb_topic_descr_t td, void *data);
 
 /**
+ * Read topic's data and check either topic was published (update) from prior call of this function for
+ * desired topic descriptor.
+ * @param td topic descriptor
+ * @param data data to read; must have a size according to the topic size
+ * @return eswb_e_ok either topic was update from prior call or eswb_e_no_update if there was no update
+ */
+eswb_rv_t eswb_try_get_update(eswb_topic_descr_t td, void *data);
+
+/**
  * Get topic's information by its descriptor
  * @param td topic descriptor
  * @param params pointer to an allocated parameters strucutre to store parameters on success

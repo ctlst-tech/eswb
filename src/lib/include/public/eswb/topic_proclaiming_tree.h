@@ -15,9 +15,8 @@
 #include "eswb/types.h"
 
 
-#define TOPIC_FLAG_MAPPED_TO_PARENT (1UL << 0UL)
-#define TOPIC_FLAG_USES_PARENT_SYNC    (1UL << 1UL)
-//#define TOPIC_USER_PARENT_IS_FIFO (1UL << 0UL)
+#define TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT (1UL << 0UL)
+#define TOPIC_PROCLAIMING_FLAG_USES_PARENT_SYNC (1UL << 1UL)
 
 #define PR_TREE_NAME (ESWB_TOPIC_NAME_MAX_LEN+1)
 
@@ -97,7 +96,7 @@ topic_proclaiming_tree_t *usr_topic_add_child(topic_tree_context_t *context, top
                             __type,                                   \
                             OFFSETOF(__struct_type, __struct_var),                                    \
                             SIZEOFMEMBER(__struct_type, __struct_var),                                \
-                            TOPIC_FLAG_MAPPED_TO_PARENT)
+                            TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT)
 
 void print_topics_tree(topic_proclaiming_tree_t *current);
 
