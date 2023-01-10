@@ -191,7 +191,7 @@ TEST_CASE("Basic Operations") {
 
         SECTION("Non updated topic") {
             double dummy_data;
-            rv = eswb_try_get_update(subscr_td, &dummy_data);
+            rv = eswb_read_check_update(subscr_td, &dummy_data);
             REQUIRE(rv == eswb_e_no_update);
         }
 
@@ -206,11 +206,11 @@ TEST_CASE("Basic Operations") {
                 REQUIRE(rv == eswb_e_ok);
             }
 
-            rv = eswb_try_get_update(subscr_td, &dummy_data_read);
+            rv = eswb_read_check_update(subscr_td, &dummy_data_read);
             REQUIRE(rv == eswb_e_ok);
             REQUIRE(dummy_data_write == dummy_data_read);
 
-            rv = eswb_try_get_update(subscr_td, &dummy_data_read);
+            rv = eswb_read_check_update(subscr_td, &dummy_data_read);
             REQUIRE(rv == eswb_e_no_update);
             REQUIRE(dummy_data_write == dummy_data_read);
         }
@@ -228,11 +228,11 @@ TEST_CASE("Basic Operations") {
             rv = eswb_connect(subs_path.c_str(), &subscr_td2);
             REQUIRE(rv == eswb_e_ok);
 
-            rv = eswb_try_get_update(subscr_td2, &dummy_data_read);
+            rv = eswb_read_check_update(subscr_td2, &dummy_data_read);
             REQUIRE(rv == eswb_e_ok);
             REQUIRE(dummy_data_write == dummy_data_read);
 
-            rv = eswb_try_get_update(subscr_td2, &dummy_data_read);
+            rv = eswb_read_check_update(subscr_td2, &dummy_data_read);
             REQUIRE(rv == eswb_e_no_update);
             REQUIRE(dummy_data_write == dummy_data_read);
         }
