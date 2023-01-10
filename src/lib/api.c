@@ -196,7 +196,7 @@ eswb_rv_t eswb_get_update(eswb_topic_descr_t td, void *data) {
     return ds_get_update(td, data);
 }
 
-eswb_rv_t eswb_try_get_update(eswb_topic_descr_t td, void *data) {
+eswb_rv_t eswb_read_check_update(eswb_topic_descr_t td, void *data) {
     return ds_try_get_update(td, data);
 }
 

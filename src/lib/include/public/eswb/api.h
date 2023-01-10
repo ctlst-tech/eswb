@@ -137,9 +137,10 @@ eswb_rv_t eswb_get_update (eswb_topic_descr_t td, void *data);
  * desired topic descriptor.
  * @param td topic descriptor
  * @param data data to read; must have a size according to the topic size
- * @return eswb_e_ok either topic was update from prior call or eswb_e_no_update if there was no update
+ * @return eswb_e_ok either topic was update from prior call or eswb_e_no_update if there was no update;
+ * if topic is not inited, function returns eswb_e_no_update
  */
-eswb_rv_t eswb_try_get_update(eswb_topic_descr_t td, void *data);
+eswb_rv_t eswb_read_check_update(eswb_topic_descr_t td, void *data);
 
 /**
  * Get topic's information by its descriptor
