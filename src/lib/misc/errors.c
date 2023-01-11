@@ -27,6 +27,7 @@ const char *eswb_strerror(eswb_rv_t e) {
         case eswb_e_topic_exist:            return "Topic exists";
         case eswb_e_topic_is_not_dir:       return "Topic is not a directory";
         case eswb_e_not_fifo:               return "Topic is not a FIFO";
+        case eswb_e_not_vector:             return "Topic is not a vector";
         case eswb_e_not_evq:                return "Topic is not an event queue";
         case eswb_e_fifo_rcvr_underrun:     return "Fifo under run detected";
         case eswb_e_not_supported:          return "Call is not supported";
@@ -41,6 +42,8 @@ const char *eswb_strerror(eswb_rv_t e) {
         case eswb_e_map_key_exists:         return "Replication map key is alredy exists";
         case eswb_e_map_no_mem:             return "Replication map allocation failed";
         case eswb_e_map_no_match:           return "Replication map have no match";
+        case eswb_e_vector_inv_index:       return "Vector operation is out of bound";
+        case eswb_e_vector_len_exceeded:    return "Vector write beyond its size";
         default:                            return "Unknown!";
     }
 }

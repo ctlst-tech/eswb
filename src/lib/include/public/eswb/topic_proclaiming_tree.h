@@ -87,6 +87,10 @@ topic_proclaiming_tree_t *usr_topic_add_child(topic_tree_context_t *context, top
                             tt_fifo,                        \
                             __fifo_size)
 
+
+topic_proclaiming_tree_t *usr_topic_set_vector(topic_tree_context_t *context, const char *name, size_t vector_max_len,
+                                               topic_data_type_t elem_type, eswb_size_t elem_size);
+
 #define OFFSETOF(__type, __member) ((size_t)&(((__type *)(void*)0)->__member) )
 #define SIZEOFMEMBER(__type, __member) (sizeof(((__type *)(void*)0)->__member))
 

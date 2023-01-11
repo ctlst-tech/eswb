@@ -75,6 +75,34 @@ eswb_rv_t topic_io_get_update(topic_t *t, void *data, uint32_t timeout_us) {
     return rv;
 }
 
+eswb_rv_t
+topic_io_read_vector(topic_t *t, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv, int do_wait, uint32_t timeout_us) {
+    int synced = TOPIC_SYNCED(t);
+    eswb_rv_t rv;
+
+    do {
+        if (synced) {
+            sync_take(t->sync);
+            if (do_wait) {
+                if (timeout_us > 0) {
+                    rv = sync_wait_timed(t->sync, timeout_us);
+                } else {
+                    rv = sync_wait(t->sync);
+                }
+                if (rv != eswb_e_ok) {
+                    break;
+                }
+            }
+        }
+
+        rv = topic_mem_read_vector(t, data, pos, num, num_rv);
+
+        if (synced) sync_give(t->sync);
+    } while(0);
+
+    return rv;
+}
+
 static int32_t fifo_index_delta(eswb_fifo_index_t i1, eswb_fifo_index_t i2, eswb_fifo_index_t overflow_th) {
     int32_t rv = i1 - i2;
     if (rv < 0) {
@@ -89,18 +117,18 @@ static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, v
     eswb_rv_t rv = eswb_e_ok;
 
     do {
-        int32_t dlap = fifo_index_delta(t->fifo_ext->state.lap_num,  rcvr_state->lap, ESWB_FIFO_INDEX_OVERFLOW);
-        int32_t dind = t->fifo_ext->state.head - rcvr_state->tail;
+        int32_t dlap = fifo_index_delta(t->array_ext->state.lap_num, rcvr_state->lap, ESWB_FIFO_INDEX_OVERFLOW);
+        int32_t dind = t->array_ext->state.head - rcvr_state->tail;
 
         if ( (dlap > 1) || ((dlap == 1) && (dind >= 0)) ) {
             rv = eswb_e_fifo_rcvr_underrun;
-            rcvr_state->lap = t->fifo_ext->state.lap_num-1;
-            rcvr_state->tail = t->fifo_ext->state.head;
+            rcvr_state->lap = t->array_ext->state.lap_num - 1;
+            rcvr_state->tail = t->array_ext->state.head;
             // printf("%s | %p Underrun (rcvr l = %d t = %d) (fifo l = %d t = %d)\n", __func__, rcvr_state,
             //        rcvr_state->lap, rcvr_state->tail,
-            //        t->fifo_ext->state.lap_num, t->fifo_ext->state.head);
+            //        t->array_ext->state.lap_num, t->array_ext->state.head);
 
-        } else if (t->fifo_ext->state.head == rcvr_state->tail) {
+        } else if (t->array_ext->state.head == rcvr_state->tail) {
             if (do_wait && synced) {
                 int wait_cnt = 0;
                 do {
@@ -113,7 +141,7 @@ static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, v
                     // here we got an issue (under free rtos) when we've got a return from wait when there is no broadcast
                     // this cycle allowes fifos to be more robust
                     // printf("%s | %p %p sync_wait result = %s (cnt == %d)\n", __func__, rcvr_state, pthread_self(), eswb_strerror(rv), wait_cnt);
-                } while((t->fifo_ext->state.head == rcvr_state->tail) && (rv == eswb_e_ok));
+                } while((t->array_ext->state.head == rcvr_state->tail) && (rv == eswb_e_ok));
 
                 if (rv != eswb_e_ok) {
                     break;
@@ -127,7 +155,7 @@ static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, v
         topic_mem_read_fifo(t, rcvr_state->tail, data);
 
         rcvr_state->tail++;
-        if (rcvr_state->tail >= t->fifo_ext->fifo_size) {
+        if (rcvr_state->tail >= t->array_ext->len) {
             rcvr_state->tail = 0;
             rcvr_state->lap++;
         }
@@ -141,12 +169,12 @@ static eswb_rv_t fifo_wait_and_read(topic_t *t, fifo_rcvr_state_t *rcvr_state, v
 
 static eswb_rv_t fifo_flush(topic_t *t, fifo_rcvr_state_t *rcvr_state) {
 
-    if (t->fifo_ext == NULL) {
+    if (t->array_ext == NULL) {
         return eswb_e_not_fifo;
     }
 
-    rcvr_state->lap = t->fifo_ext->state.lap_num;
-    rcvr_state->tail = t->fifo_ext->state.head;
+    rcvr_state->lap = t->array_ext->state.lap_num;
+    rcvr_state->tail = t->array_ext->state.head;
 
     return eswb_e_ok;
 }
@@ -229,7 +257,7 @@ eswb_rv_t topic_io_event_queue_pop(topic_t *t, eswb_event_queue_mask_t mask, fif
     return rv;
 }
 
-eswb_rv_t topic_io_do_update(topic_t *t, eswb_update_t ut, void *data) {
+eswb_rv_t topic_io_do_update(topic_t *t, eswb_update_t ut, void *data, array_alter_t *params) {
     int synced = TOPIC_SYNCED(t);
     if (synced) sync_take(t->sync);
 
@@ -249,6 +277,14 @@ eswb_rv_t topic_io_do_update(topic_t *t, eswb_update_t ut, void *data) {
 
         case upd_push_event_queue:
             rv = topic_mem_event_queue_write(t, (event_queue_record_t *) data);
+            break;
+
+        case upd_write_vector:
+            if (t->type == tt_vector) {
+                rv = topic_mem_write_vector(t, data, params);
+            } else {
+                rv = eswb_e_not_vector;
+            }
             break;
 
         default:
@@ -276,17 +312,17 @@ eswb_rv_t topic_io_do_update(topic_t *t, eswb_update_t ut, void *data) {
 }
 
 
-eswb_rv_t topic_io_get_state(topic_t *t, topic_fifo_state_t *state) {
+eswb_rv_t topic_io_get_state(topic_t *t, topic_array_state_t *state) {
 
     eswb_rv_t rv = eswb_e_ok;
     int synced = TOPIC_SYNCED(t);
 
     if (synced) sync_take(t->sync);
 
-    if (t->fifo_ext == NULL) {
+    if (t->array_ext == NULL) {
         rv = eswb_e_not_fifo;
     } else {
-        memcpy(state, &t->fifo_ext->state, sizeof(topic_fifo_state_t));
+        memcpy(state, &t->array_ext->state, sizeof(topic_array_state_t));
     }
 
     if (synced) sync_give(t->sync);

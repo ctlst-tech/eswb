@@ -95,11 +95,6 @@ eswb_rv_t eswb_wait_connect_nested(eswb_topic_descr_t mp_td, const char *topic_n
     return rv;
 }
 
-
-static inline eswb_rv_t do_update(eswb_topic_descr_t td, eswb_update_t ut, void *data, eswb_size_t elem_num) {
-    return ds_update(td, ut, data, elem_num);
-}
-
 // TODO for now function dont reused in connection by path, what is sad.
 eswb_rv_t eswb_proclaim_tree(eswb_topic_descr_t parent_td, topic_proclaiming_tree_t *bp, eswb_size_t tree_size,
                                      eswb_topic_descr_t *new_td) {
@@ -109,7 +104,11 @@ eswb_rv_t eswb_proclaim_tree(eswb_topic_descr_t parent_td, topic_proclaiming_tre
         return eswb_e_invargs;
     }
 
-    rv = do_update(parent_td, upd_proclaim_topic, bp, tree_size);
+    array_alter_t array_params = {
+        .elems_num = tree_size
+    };
+
+    rv = ds_update(parent_td, upd_proclaim_topic, bp, &array_params);
     if (rv != eswb_e_ok) {
         return rv;
     }
@@ -128,7 +127,11 @@ eswb_rv_t eswb_proclaim_tree_by_path(const char *mount_point, topic_proclaiming_
         return rv;
     }
 
-    rv = do_update(parent_td, upd_proclaim_topic, bp, tree_size);
+    array_alter_t array_params = {
+        .elems_num = tree_size
+    };
+
+    rv = ds_update(parent_td, upd_proclaim_topic, bp, &array_params);
     if (rv != eswb_e_ok) {
         return rv;
     }
@@ -185,7 +188,7 @@ eswb_rv_t eswb_mkdir_nested(eswb_topic_descr_t parent_td, const char *dir_name, 
 
 
 eswb_rv_t eswb_update_topic(eswb_topic_descr_t td, void *data) {
-    return do_update(td, upd_update_topic, data, 0);
+    return ds_update(td, upd_update_topic, data, NULL);
 }
 
 eswb_rv_t eswb_read(eswb_topic_descr_t td, void *data) {
@@ -236,6 +239,21 @@ eswb_rv_t eswb_get_topic_path (eswb_topic_descr_t td, char *path) {
     return eswb_ctl(td, eswb_ctl_get_topic_path, path, 0);
 }
 
+eswb_rv_t eswb_vector_write(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, uint32_t option_flags) {
+    array_alter_t array_params = {
+        .elem_index = pos,
+        .elems_num = len,
+        .flags = option_flags
+    };
+
+    return ds_update(td, upd_write_vector, data, &array_params);
+}
+
+eswb_rv_t
+eswb_vector_read(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv) {
+    return ds_vector_read(td, data, pos, len, len_rv, 0);
+}
+
 
 eswb_rv_t eswb_fifo_subscribe(const char *path, eswb_topic_descr_t *new_td) {
     eswb_rv_t rv = eswb_connect(path, new_td);
@@ -248,7 +266,7 @@ eswb_rv_t eswb_fifo_subscribe(const char *path, eswb_topic_descr_t *new_td) {
 }
 
 eswb_rv_t eswb_fifo_push(eswb_topic_descr_t td, void *data) {
-    return do_update(td, upd_push_fifo, data, 0);
+    return ds_update(td, upd_push_fifo, data, NULL);
 }
 
 eswb_rv_t eswb_fifo_pop(eswb_topic_descr_t td, void *data) {

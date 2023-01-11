@@ -173,6 +173,32 @@ eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next
  */
 eswb_rv_t eswb_get_topic_path (eswb_topic_descr_t td, char *path);
 
+
+#define ESWB_VECTOR_WRITE_OPT_FLAG_DEFINE_END (1 << 0)
+
+/**
+ * Write *len* numberr of array elements from *data* to position *pos*
+ * @param td topic descriptor (must be tt_vector type)
+ * @param pos position in vector to write elements
+ * @param data array elements data buffer
+ * @param len number of elements to write
+ * @param option_flags flags to control array, might be:
+ *      ESWB_VECTOR_WRITE_OPT_FLAG_DEFINE_END - redefine vector size by the position of last written element (pos + len)
+ * @return eswb_e_ok on success
+ */
+eswb_rv_t eswb_vector_write(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, uint32_t option_flags);
+
+/**
+ * Read *len* vector elements from position *pos* to *data* and store read number elements in *len_rv*
+ * @param td topic descriptor (must be tt_vector type)
+ * @param data data to store read elements
+ * @param pos position in vector to read from
+ * @param len elements to read
+ * @param len_rv pointer to store actual number of read elements
+ * @return eswb_e_ok on success
+ */
+eswb_rv_t eswb_vector_read(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv);
+
 /**
  * Subscribe on fifo topic
  * @param path path to fifo

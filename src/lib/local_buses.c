@@ -265,10 +265,10 @@ static event_queue_record_type_t event_type (eswb_update_t ut) {
 eswb_rv_t local_event_queue_update(eswb_bus_handle_t *bh, event_queue_record_t *record) {
     topic_local_index_t *eq_li = &local_td_index[bh->event_queue_publisher_td];
 
-    return topic_io_do_update(eq_li->t, upd_push_event_queue, record);
+    return topic_io_do_update(eq_li->t, upd_push_event_queue, record, NULL);
 }
 
-static eswb_rv_t local_event_queue_pack_and_update(topic_local_index_t *li, eswb_update_t ut, void *data, eswb_size_t elem_num) {
+static eswb_rv_t local_event_queue_pack_and_update(topic_local_index_t *li, eswb_update_t ut, void *data, array_alter_t *array_params) {
 
     if (li->bh->event_queue_publisher_td == 0) {
         return eswb_e_no_topic;
@@ -279,8 +279,12 @@ static eswb_rv_t local_event_queue_pack_and_update(topic_local_index_t *li, eswb
         return eswb_e_ok;
     }
 
+    if ((ut == upd_proclaim_topic) && (array_params == NULL)) {
+        return eswb_e_invargs;
+    }
+
     event_queue_record_t v = {
-            .size = ut == upd_proclaim_topic ? sizeof(topic_proclaiming_tree_t) * elem_num : li->t->data_size,
+            .size = ut == upd_proclaim_topic ? sizeof(topic_proclaiming_tree_t) * array_params->elems_num : li->t->data_size,
             .topic_id = li->t->id,
             .ch_mask = li->t->evq_mask,
             .type = et,
@@ -295,13 +299,13 @@ static eswb_rv_t local_event_queue_pack_and_update(topic_local_index_t *li, eswb
     return local_event_queue_update(li->bh, &v);
 }
 
-eswb_rv_t local_do_update(eswb_topic_descr_t td, eswb_update_t ut, void *data, eswb_size_t elem_num) {
+eswb_rv_t local_do_update(eswb_topic_descr_t td, eswb_update_t ut, void *data, array_alter_t *params) {
     topic_local_index_t *li = &local_td_index[td];
-    eswb_rv_t rv = topic_io_do_update(li->t, ut, data);
+    eswb_rv_t rv = topic_io_do_update(li->t, ut, data, params);
 
-    if (rv == eswb_e_ok) {
+    if (rv == eswb_e_ok && ut != upd_write_vector) { // FIXME for now upd_write_vector is excluded
         if (li->t->evq_mask) {
-            local_event_queue_pack_and_update(li, ut, data, elem_num);
+            local_event_queue_pack_and_update(li, ut, data, params);
             // TODO handle rv
         }
     }
@@ -379,6 +383,22 @@ eswb_rv_t local_get_mounting_point(eswb_topic_descr_t td, char *mp) {
     return eswb_e_ok;
 }
 
+
+eswb_rv_t local_vector_read(eswb_topic_descr_t td, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv, int do_wait) {
+    topic_local_index_t *li = &local_td_index[td];
+
+    eswb_rv_t rv;
+
+    if (li->t->type != tt_vector) {
+        return eswb_e_not_vector;
+    }
+
+    rv = topic_io_read_vector(li->t, data, pos, num, num_rv, do_wait, li->timeout_us);
+
+    li->timeout_us = 0;
+    return rv;
+}
+
 eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
     topic_local_index_t *li = &local_td_index[td];
 
@@ -403,6 +423,7 @@ eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait) {
     return rv;
 }
 
+
 eswb_rv_t local_fifo_flush(topic_local_index_t *li) {
     return topic_io_fifo_flush(li->t, &li->rcvr_state);
 }
@@ -410,7 +431,7 @@ eswb_rv_t local_fifo_flush(topic_local_index_t *li) {
 eswb_rv_t local_init_fifo_receiver(eswb_topic_descr_t td) {
     topic_local_index_t *li = &local_td_index[td];
 
-    topic_fifo_state_t s;
+    topic_array_state_t s;
 
     eswb_rv_t rv = topic_io_get_state(li->t, &s);
     if (rv == eswb_e_ok) {
@@ -431,7 +452,7 @@ eswb_rv_t local_bus_create_event_queue(eswb_bus_handle_t *bh, eswb_size_t events
     usr_topic_add_child(cntx, r, "data_buf", tt_byte_buffer, 0, data_buf_size, TOPIC_PROCLAIMING_FLAG_USES_PARENT_SYNC);
 
 
-    eswb_rv_t rv = topic_io_do_update(&bh->registry->topics[0], upd_proclaim_topic, r);
+    eswb_rv_t rv = topic_io_do_update(&bh->registry->topics[0], upd_proclaim_topic, r, NULL);
 
     if (rv != eswb_e_ok) {
         return rv;
