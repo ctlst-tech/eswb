@@ -267,12 +267,12 @@ eswb_rv_t ds_disconnect(eswb_topic_descr_t td) {
 }
 
 
-eswb_rv_t ds_update(eswb_topic_descr_t td, eswb_update_t ut, void *data, eswb_size_t elem_num) {
+eswb_rv_t ds_update(eswb_topic_descr_t td, eswb_update_t ut, void *data, array_alter_t *array_params) {
     SWITCH_FLOW_TO_DOMAIN(td,
                           local_do_update,
                           not_supported_stub,
 
-                          ut, data, elem_num);
+                          ut, data, array_params);
 }
 
 eswb_rv_t ds_read (eswb_topic_descr_t td, void *data) {
@@ -297,6 +297,18 @@ eswb_rv_t ds_try_get_update(eswb_topic_descr_t td, void *data) {
                           not_supported_stub,
 
                           data);
+}
+
+
+eswb_rv_t ds_vector_read(eswb_topic_descr_t td, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv, int do_wait) {
+    SWITCH_FLOW_TO_DOMAIN(td,
+                          local_vector_read,
+                          not_supported_stub,
+                          data,
+                          pos,
+                          num,
+                          num_rv,
+                          do_wait);
 }
 
 

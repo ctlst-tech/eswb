@@ -239,6 +239,101 @@ TEST_CASE("Basic Operations") {
     }
 }
 
+void init_double_array(double *a, unsigned len) {
+    for (int i = 0; i < len; i++) {
+        a[i] = i * 1.1;
+    }
+}
+
+TEST_CASE("Vectors") {
+
+    eswb_local_init(1);
+
+    std::string bus_name("bus");
+    std::string bus_path = "itb:/" + bus_name;
+
+    eswb_rv_t rv = eswb_create(bus_name.c_str(), eswb_inter_thread, 20);
+    REQUIRE(rv == eswb_e_ok);
+
+    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 2);
+
+    std::string vector_name = "vector";
+
+    #define VECTOR_SIZE 256
+    topic_proclaiming_tree_t *rt = usr_topic_set_vector(cntx, vector_name.c_str(), VECTOR_SIZE, tt_double, 8);
+    REQUIRE(rt != NULL);
+
+    eswb_topic_descr_t publish_td;
+    eswb_topic_descr_t read_td;
+
+    rv = eswb_proclaim_tree_by_path(bus_path.c_str(), rt, cntx->t_num, &publish_td);
+    REQUIRE(rv == eswb_e_ok);
+
+    double test_array_write[VECTOR_SIZE];
+    init_double_array(test_array_write, VECTOR_SIZE);
+
+    rv = eswb_connect((bus_path+'/'+vector_name).c_str(), &read_td);
+    REQUIRE(rv == eswb_e_ok);
+
+    uint32_t elem2read = GENERATE(1, 2, 3, 10, 13, 128, 127, VECTOR_SIZE - 2, VECTOR_SIZE - 1, VECTOR_SIZE);
+
+    SECTION("Write whole array (" + std::to_string(VECTOR_SIZE) + "), read by "
+                                + std::to_string(elem2read) + " elements read") {
+        rv = eswb_vector_write(publish_td, 0, test_array_write,
+                               VECTOR_SIZE, ESWB_VECTOR_WRITE_OPT_FLAG_DEFINE_END);
+        REQUIRE(rv == eswb_e_ok);
+
+        for (unsigned i = 0; i < VECTOR_SIZE; i += elem2read) {
+            double v[elem2read];
+            eswb_index_t len_rv;
+            rv = eswb_vector_read(read_td, i, &v, elem2read, &len_rv);
+            REQUIRE(rv == eswb_e_ok);
+            unsigned expected_len_rv = std::min<unsigned>(elem2read, VECTOR_SIZE-i);
+            REQUIRE(len_rv == expected_len_rv);
+            REQUIRE(memcmp(v, &test_array_write[i], expected_len_rv * sizeof(double)) == 0);
+        }
+    }
+
+    SECTION("Write bigger than allocated") {
+        unsigned oversized_array_size = VECTOR_SIZE * 2;
+        double test_array_oversized[oversized_array_size];
+        init_double_array(test_array_oversized, oversized_array_size);
+
+
+        rv = eswb_vector_write(publish_td, 0, test_array_oversized,
+                               oversized_array_size, ESWB_VECTOR_WRITE_OPT_FLAG_DEFINE_END);
+        REQUIRE(rv == eswb_e_vector_len_exceeded);
+    }
+
+    uint32_t index2write = GENERATE(0, 1, 10, 20, 128, VECTOR_SIZE - 1, VECTOR_SIZE, VECTOR_SIZE + 1);
+
+    SECTION("Write wrong index " + std::to_string(index2write)) {
+        unsigned array_size = VECTOR_SIZE / 2;
+        double test_array[array_size];
+        init_double_array(test_array, array_size);
+
+        rv = eswb_vector_write(publish_td, index2write, test_array,
+                               array_size, ESWB_VECTOR_WRITE_OPT_FLAG_DEFINE_END);
+        if (index2write + array_size > VECTOR_SIZE) {
+            if (index2write < VECTOR_SIZE) {
+                REQUIRE(rv == eswb_e_vector_len_exceeded);
+            } else {
+                REQUIRE(rv == eswb_e_vector_inv_index);
+            }
+        } else {
+            REQUIRE(rv == eswb_e_ok);
+            double test_array_read_back[array_size];
+            eswb_index_t len_rv;
+            rv = eswb_vector_read(read_td, index2write, test_array_read_back, array_size, &len_rv);
+            REQUIRE(rv == eswb_e_ok);
+            REQUIRE(len_rv == array_size);
+            REQUIRE(memcmp(test_array_read_back, test_array, len_rv) == 0);
+        }
+    }
+
+    // TODO write array in random positions
+}
+
 
 TEST_CASE("Timed out eswb_get_update wait") {
 

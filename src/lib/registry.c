@@ -44,8 +44,8 @@ eswb_rv_t alloc_topic_data(topic_t *t) {
 
 eswb_rv_t topic_dealloc_resources(topic_t *t) {
     if (!(t->flags & TOPIC_FLAGS_MAPPED_TO_PARENT)) {
-        if (t->fifo_ext != NULL) {
-            free(t->fifo_ext);
+        if (t->array_ext != NULL) {
+            free(t->array_ext);
         }
         if (t->data != NULL) {
             free(t->data);
@@ -68,29 +68,29 @@ eswb_rv_t reg_destroy(registry_t *reg) {
     return eswb_e_ok;
 }
 
-static eswb_rv_t alloc_fifo_topic_data_generalized(topic_t *t, eswb_size_t fifo_elem_data_size, int do_align) {
+static eswb_rv_t alloc_array_topic_data_generalized(topic_t *t, eswb_size_t elem_size, int do_align) {
 
-    t->fifo_ext = calloc(1, sizeof(*t->fifo_ext));
-    if (t->fifo_ext == NULL) {
+    t->array_ext = calloc(1, sizeof(*t->array_ext));
+    if (t->array_ext == NULL) {
         return eswb_e_mem_data_na;
     }
 
     if (do_align) {
-        eswb_size_t dword_size = (fifo_elem_data_size >> 2) + ((fifo_elem_data_size & 0x03) ? 1 : 0);
-        t->fifo_ext->elem_step = dword_size << 2; // align to dword;
+        eswb_size_t dword_size = (elem_size >> 2) + ((elem_size & 0x03) ? 1 : 0);
+        t->array_ext->elem_step = dword_size << 2; // align to dword;
     } else {
-        t->fifo_ext->elem_step = fifo_elem_data_size;
+        t->array_ext->elem_step = elem_size;
     }
 
-    t->fifo_ext->elem_size = fifo_elem_data_size;
-    t->fifo_ext->fifo_size = t->data_size;
+    t->array_ext->elem_size = elem_size;
+    t->array_ext->len = t->data_size;
 
-    t->fifo_ext->state.head = 0;
-    t->fifo_ext->state.lap_num = 0;
+    t->array_ext->state.head = 0;
+    t->array_ext->state.lap_num = 0;
 
-    t->data = calloc(t->fifo_ext->fifo_size, t->fifo_ext->elem_step);
-    if (t->data == NULL ) {
-        free(t->fifo_ext);
+    t->data = calloc(t->array_ext->len, t->array_ext->elem_step);
+    if (t->data == NULL) {
+        free(t->array_ext);
         return eswb_e_mem_data_na;
     }
 
@@ -98,11 +98,20 @@ static eswb_rv_t alloc_fifo_topic_data_generalized(topic_t *t, eswb_size_t fifo_
 }
 
 eswb_rv_t alloc_fifo_topic_data(topic_t *t, eswb_size_t fifo_elem_data_size) {
-    return alloc_fifo_topic_data_generalized(t, fifo_elem_data_size, -1);
+    return alloc_array_topic_data_generalized(t, fifo_elem_data_size, -1);
 }
 
 eswb_rv_t alloc_buffer_data(topic_t *t) {
-    return alloc_fifo_topic_data_generalized(t, 1, 0);
+    return alloc_array_topic_data_generalized(t, 1, 0);
+}
+
+eswb_rv_t alloc_vector_data(topic_t *t, eswb_size_t elem_size) {
+    eswb_rv_t rv = alloc_array_topic_data_generalized(t, elem_size, 0);
+    if (rv == eswb_e_ok) {
+        t->array_ext->curr_len = 0;
+    }
+
+    return rv;
 }
 
 void dealloc_topic(topic_t *t) {
@@ -302,11 +311,10 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
         new->sync = parent->sync;
         if ((parent->type == tt_fifo) || (parent->type == tt_event_queue)) {
             new->data = parent->data;
-            new->fifo_ext = parent->fifo_ext;
         } else {
             new->data = parent->data + topic_struct->data_offset;
         }
-        new->fifo_ext = parent->fifo_ext; // don't care if it is null
+        new->array_ext = parent->array_ext; // don't care if it is null
         new->flags |= TOPIC_FLAGS_MAPPED_TO_PARENT;
     } else {
         do {
@@ -344,9 +352,12 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
                     rv = alloc_fifo_topic_data(new, topic_struct[topic_struct->first_child_ind].data_size);
                     break;
 
-
                 case tt_byte_buffer:
                     rv = alloc_buffer_data(new);
+                    break;
+
+                case tt_vector:
+                    rv = alloc_vector_data(new, topic_struct[topic_struct->first_child_ind].data_size);
                     break;
             }
 
