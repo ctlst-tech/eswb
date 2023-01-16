@@ -1,6 +1,7 @@
 #ifndef ESWB_TOPIC_MEM_H
 #define ESWB_TOPIC_MEM_H
 
+#include <sys/types.h>
 #include "eswb/types.h"
 #include "eswb/errors.h"
 #include "eswb/event_queue.h"
