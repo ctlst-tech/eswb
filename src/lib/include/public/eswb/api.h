@@ -200,6 +200,17 @@ eswb_rv_t eswb_vector_write(eswb_topic_descr_t td, eswb_index_t pos, void *data,
 eswb_rv_t eswb_vector_read(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv);
 
 /**
+ * Waits update and read *len* vector elements from position *pos* to *data* and store read number elements in *len_rv*
+ * @param td topic descriptor (must be tt_vector type)
+ * @param data data to store read elements
+ * @param pos position in vector to read from
+ * @param len elements to read
+ * @param len_rv pointer to store actual number of read elements
+ * @return eswb_e_ok on success
+ */
+eswb_rv_t eswb_vector_get_update(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv);
+
+/**
  * Subscribe on fifo topic
  * @param path path to fifo
  * @param new_td pointer to save new topic descriptor value in case of success
