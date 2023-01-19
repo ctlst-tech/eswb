@@ -64,8 +64,16 @@ target_link_libraries(eswb_test_dummy PUBLIC eswb)
 add_library(eswb-if INTERFACE)
 target_link_libraries(eswb-if INTERFACE eswb-static eswb-sync-static eswb-eqrb-static eswb-sdtl-static )
 
-add_library(eswb-cpp STATIC cpp/eswb.hpp cpp/eswb.cpp)
+add_library(eswb-cpp STATIC 
+    cpp/eswb.hpp 
+    cpp/eswb.cpp 
+    cpp/conv/conv.cpp
+    cpp/conv/conv.hpp
+    cpp/sdtl/sdtl.cpp
+    cpp/sdtl/sdtl.hpp)
+
 target_link_libraries(eswb-cpp PUBLIC eswb-static eswb-sync-static eswb-eqrb-static eswb-sdtl-static)
+target_include_directories(eswb-cpp PUBLIC cpp cpp/conv cpp/sdtl)
 
 add_executable(eswbutil cpp/eswbutil.cpp)
 target_link_libraries(eswbutil eswb-cpp)

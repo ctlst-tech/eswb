@@ -7,7 +7,9 @@
 #include <thread>
 #include <vector>
 
+#include "conv.hpp"
 #include "eswb.hpp"
+#include "sdtl.hpp"
 
 class option;
 
@@ -89,36 +91,9 @@ std::list<option *> parse_options(int argc, char *argv[]) {
     return rv;
 }
 
-void clrsrc() {
-    std::cout << char(27) << "[2J" << std::endl;
-}
-
-void read_sdtl_bridge_serial(const std::string &path, unsigned baudrate) {
-    std::string monitor = "monitor";
-    eswb::Bus monitor_bus(monitor, eswb::inter_thread, 2048);
-    std::string bus2request = "sens";
-
-    monitor_bus.mkdir(bus2request);
-
-    auto sdtl_bridge =
-        eswb::BridgeSDTL(path, baudrate, monitor + "/" + bus2request);
-    auto rv = sdtl_bridge.start();
-    if (rv != eqrb_rv_ok) {
-        std::cerr << "sdtl_bridge start error: " << eqrb_strerror(rv)
-                  << std::endl;
-        return;
-    }
-
-    while (1) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(20));
-        monitor_bus.update_tree();
-        clrsrc();
-        monitor_bus.print_tree();
-    }
-}
-
 void init_options() {
     new option("read_serial", 1, 2);
+    new option("convert_raw", 2, 2);
 };
 
 int main(int argc, char *argv[]) {
@@ -128,8 +103,11 @@ int main(int argc, char *argv[]) {
 
         for (auto o : opts) {
             if (o->is("read_serial")) {
-                read_sdtl_bridge_serial(o->arg_as_string(0),
-                                        o->arg_as_int(1, 115200));
+                eswb::read_sdtl_bridge_serial(o->arg_as_string(0),
+                                              o->arg_as_int(1, 115200));
+            }
+            if (o->is("convert_raw")) {
+                std::cout << "convert_raw" << std::endl;
             }
         }
     } catch (const std::string &s) {
