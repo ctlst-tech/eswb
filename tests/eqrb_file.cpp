@@ -138,9 +138,9 @@ public:
 int main(int argc, char **argv) {
     EqrbFileTest eqrb_test;
     BasePublisher *sin1 = new SinGenerator(std::string("sin1"),
-                                           std::string("generators"), 1.0, 1.0);
+                                           std::string("generators"), 1.0, 0.001);
     BasePublisher *sin2 = new SinGenerator(std::string("sin2"),
-                                           std::string("generators"), 2.0, 2.0);
+                                           std::string("generators"), 2.0, 0.002);
 
     eqrb_test.createBus(std::string("generators"));
     eqrb_test.startPublisherService(sin1);

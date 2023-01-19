@@ -1,7 +1,9 @@
 
-#include <iostream>
-#include <iomanip>
 #include "eswb.hpp"
+
+#include <iomanip>
+#include <iostream>
+
 #include "../src/lib/include/registry.h"
 
 extern "C" const topic_t *local_bus_topics_list(eswb_topic_descr_t td);
@@ -9,7 +11,7 @@ extern "C" const topic_t *local_bus_topics_list(eswb_topic_descr_t td);
 namespace eswb {
 
 Topic *new_Topic(const topic_t *t) {
-    return  new Topic(std::string(t->name),t->type,t->data);
+    return new Topic(std::string(t->name), t->type, t->data);
 }
 
 static void process_children(Topic *rt, const topic_t *t) {
@@ -23,7 +25,8 @@ static void process_children(Topic *rt, const topic_t *t) {
 }
 
 void Bus::update_tree() {
-    const topic_t *lrt = local_bus_topics_list(abs(root_td)); // FIXME dont read registry memory directly
+    const topic_t *lrt = local_bus_topics_list(
+        abs(root_td));  // FIXME dont read registry memory directly
     Topic *root = new_Topic(lrt);
     process_children(root, lrt);
 
@@ -47,7 +50,6 @@ void Bus::update_tree() {
 }
 
 int pc(int w) {
-
     return w < 1 ? 1 : w;
 }
 
@@ -62,7 +64,7 @@ void Topic::print_node(int nesting_level) {
     std::cout << out << std::endl;
 
     if (first_child != nullptr) {
-        first_child->print_node(nesting_level+1);
+        first_child->print_node(nesting_level + 1);
     }
     if (next_sibling != nullptr) {
         next_sibling->print_node(nesting_level);
@@ -75,20 +77,44 @@ void Topic::print() {
 
 std::string Topic::value_str() {
     std::string rv;
-#   define CAST_DREF2VAL(__t) (*((__t*)data_ref))
-    switch(type) {
-        default: rv = ""; break;
-        case tt_float:  rv = std::to_string(CAST_DREF2VAL(float)); break;
-        case tt_double: rv = std::to_string(CAST_DREF2VAL(double)); break;
-        case tt_uint8:  rv = std::to_string(CAST_DREF2VAL(uint8_t)); break;
-        case tt_int8:   rv = std::to_string(CAST_DREF2VAL(int8_t)); break;
-        case tt_uint16: rv = std::to_string(CAST_DREF2VAL(uint16_t)); break;
-        case tt_int16:  rv = std::to_string(CAST_DREF2VAL(int16_t)); break;
-        case tt_uint32: rv = std::to_string(CAST_DREF2VAL(uint32_t)); break;
-        case tt_int32:  rv = std::to_string(CAST_DREF2VAL(int32_t)); break;
-        case tt_uint64: rv = std::to_string(CAST_DREF2VAL(uint64_t)); break;
-        case tt_int64:  rv = std::to_string(CAST_DREF2VAL(int64_t)); break;
-        case tt_string: rv = "\"" + std::string((const char *)data_ref) + "\""; break;
+#define CAST_DREF2VAL(__t) (*((__t *)data_ref))
+    switch (type) {
+        default:
+            rv = "";
+            break;
+        case tt_float:
+            rv = std::to_string(CAST_DREF2VAL(float));
+            break;
+        case tt_double:
+            rv = std::to_string(CAST_DREF2VAL(double));
+            break;
+        case tt_uint8:
+            rv = std::to_string(CAST_DREF2VAL(uint8_t));
+            break;
+        case tt_int8:
+            rv = std::to_string(CAST_DREF2VAL(int8_t));
+            break;
+        case tt_uint16:
+            rv = std::to_string(CAST_DREF2VAL(uint16_t));
+            break;
+        case tt_int16:
+            rv = std::to_string(CAST_DREF2VAL(int16_t));
+            break;
+        case tt_uint32:
+            rv = std::to_string(CAST_DREF2VAL(uint32_t));
+            break;
+        case tt_int32:
+            rv = std::to_string(CAST_DREF2VAL(int32_t));
+            break;
+        case tt_uint64:
+            rv = std::to_string(CAST_DREF2VAL(uint64_t));
+            break;
+        case tt_int64:
+            rv = std::to_string(CAST_DREF2VAL(int64_t));
+            break;
+        case tt_string:
+            rv = "\"" + std::string((const char *)data_ref) + "\"";
+            break;
     }
 
     if (rv[0] != '-') {
@@ -98,4 +124,4 @@ std::string Topic::value_str() {
     return rv;
 }
 
-}
+}  // namespace eswb
