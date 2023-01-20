@@ -52,6 +52,7 @@ typedef enum {
     eswb_e_map_key_exists,
     eswb_e_map_no_mem,
     eswb_e_map_no_match,
+    eswb_e_bridge_vector,
 } eswb_rv_t;
 
 const char *eswb_strerror(eswb_rv_t e);
