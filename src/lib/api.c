@@ -1,4 +1,5 @@
 #include <string.h>
+#include <ctype.h>
 
 #include "eswb/api.h"
 #include "eswb_ctl.h"
@@ -370,6 +371,131 @@ eswb_rv_t eswb_path_trailing_topic(const char *path, char **result) {
 
     return eswb_e_ok;
 }
+
+
+#define BUS_TYPE_MAX_LEN 10
+
+static eswb_type_t bus_type(const char *bus_acr) {
+    if (strcmp(bus_acr, "nsb") == 0) return eswb_non_synced;
+    else if (strcmp(bus_acr, "itb") == 0) return eswb_inter_thread;
+    else if (strcmp(bus_acr, "ipb") == 0) return eswb_inter_process;
+    else return eswb_not_defined;
+}
+
+static eswb_rv_t normalize_path(const char *p, char *n) {
+    int got_slash = 0;
+    int cnt = ESWB_TOPIC_MAX_PATH_LEN;
+
+    while ((*p != 0) && (cnt > 0)) {
+        if (*p == '/') {
+            if (!got_slash) {
+                got_slash = -1;
+            } else {
+                p++;
+                continue;
+            }
+        } else {
+            got_slash = 0;
+        }
+
+        *n++ = *p++;
+        cnt--;
+    }
+
+    *n = 0;
+
+    if (cnt <= 0) {
+        return eswb_e_path_too_long;
+    }
+
+    return eswb_e_ok;
+}
+
+static int check_path (const char *p) {
+    int has_colon = 0;
+    int got_first_slash = 0;
+
+    if (!isalnum(p[0]) && (p[0] != '/')) {
+        return 1;
+    }
+
+    do {
+        switch (*p) {
+            case '.':
+            case '_':
+                break;
+
+            case '/':
+                got_first_slash = -1;
+                break;
+
+            case ':':
+                if (got_first_slash) {
+                    return 1;
+                }
+                if (has_colon) {
+                    return 1;
+                } else {
+                    has_colon = 1;
+                }
+                break;
+
+            default:
+                if (!isalnum(*p)) {
+                    return 1;
+                }
+        }
+        p++;
+    } while (*p != 0);
+
+    return 0;
+}
+
+eswb_rv_t eswb_parse_path(const char *connection_point, eswb_type_t *t, char *bus_name, char *local_path) {
+    eswb_type_t bt;
+    char norm_cp[ESWB_TOPIC_MAX_PATH_LEN + 1];
+
+    eswb_rv_t rv = normalize_path(connection_point, norm_cp);
+    if (rv != eswb_e_ok) {
+        return rv;
+    }
+
+    if (check_path(norm_cp)) {
+        return eswb_e_inv_naming;
+    }
+
+    char *c = strstr(norm_cp, ":/");
+    char *bus_name_p;
+    if (c != NULL) {
+        *c = 0;
+        bt = bus_type(norm_cp);
+        if (bt == eswb_not_defined) {
+            return eswb_e_inv_bus_spec;
+        }
+        bus_name_p = &c[2];
+    } else {
+        bt = eswb_not_defined;
+        bus_name_p = norm_cp;
+    }
+
+    if (local_path != NULL) {
+        strcpy(local_path, bus_name_p);
+    }
+
+    if (bus_name != NULL) {
+        c = strchr(bus_name_p, '/');
+        size_t l = c != NULL ? c - bus_name_p : strlen(bus_name_p);
+        strncpy(bus_name, bus_name_p, l);
+        bus_name[l] = 0;
+    }
+
+    if (t != NULL) {
+        *t = bt;
+    }
+
+    return eswb_e_ok;
+}
+
 
 eswb_rv_t eswb_path_compose(eswb_type_t type, const char *bus_name, const char *topic_subpath, char *result) {
     size_t l = 0;
