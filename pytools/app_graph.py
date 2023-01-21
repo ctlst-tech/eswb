@@ -1,30 +1,23 @@
-import pyqtgraph as pg
-import pyqtgraph.opengl as gl
+import sys
+from controls import *
+from controls.relative_position import *
+from controls.datasources import *
+from controls.graph3d import EwGraph3D
+from monitor import Monitor
+from controls.ewvista import EwPyVista
 
-pg.mkQApp()
+mon_bus_name = 'monitor'
+telemetry_dir_name = 'telemetry'
 
-view = gl.GLViewWidget()
-view.show()
+mon = Monitor(monitor_bus_name=mon_bus_name, argv=sys.argv)
 
-view.setWindowTitle('pyqtgraph')
-view.setCameraPosition(distance=200)
+# manc_xy = ewCursor([(DataSourceSinus('s1', iphase=0.0), DataSourceSinus('s2', iphase=1.0))])
+# mon.add_widget(ewGroup([manc_xy]))
+hi = EwHeadingIndicator([DataSourceSinus('s1', iphase=0.0, mult=360)])
 
-xgrid = gl.GLGridItem()
-# ygrid = gl.GLGridItem()
-# zgrid = gl.GLGridItem()
+g3d = EwGraph3D([])
+v = EwPyVista([])
 
+mon.add_widget(EwGroup([hi, g3d, v]))
 
-# view.addItem(ygrid)
-# view.addItem(zgrid)
-
-# xgrid.rotate(90, 0, 1, 0)
-# ygrid.rotate(90, 1, 0, 0)
-xgrid.scale(10, 10, 1)
-# xgrid.scale(0.2, 0.1, 0.1)
-# ygrid.scale(0.2, 0.1, 0.1)
-# zgrid.scale(0.1, 0.2, 0.1)
-
-view.addItem(xgrid)
-
-if __name__ == '__main__':
-    pg.exec()
+mon.run()
