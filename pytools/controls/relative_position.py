@@ -3,8 +3,8 @@ from typing import List, Union
 from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QPainter, QPalette, QPainterPath, QPen
 
-from pytools.controls import MyQtWidget, EwBasic
-from pytools.datasources import DataSourceBasic, NoDataStub
+from controls import MyQtWidget, EwBasic
+from controls.datasources import DataSourceBasic, NoDataStub
 import math
 
 class EwRelativePosition(MyQtWidget, EwBasic):

@@ -3,7 +3,7 @@ from typing import List, Union
 from PyQt5.QtGui import QPainter
 
 from pytools.controls import MyQtWidget, EwBasic
-from pytools.datasources import DataSourceBasic, NoDataStub
+from pytools.controls.datasources import DataSourceBasic, NoDataStub
 
 
 class EwLocationMap(MyQtWidget, EwBasic):

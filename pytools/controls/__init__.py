@@ -8,8 +8,8 @@ from PyQt5.QtCore import QRectF, Qt, QPointF
 from PyQt5.QtGui import QPen, QPainter
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 
-from pytools.common import ColorInterp
-from pytools.datasources import DataSourceBasic, NoDataStub
+from controls.common import ColorInterp
+from controls.datasources import DataSourceBasic, NoDataStub
 
 
 class MyQtWidget(QtWidgets.QWidget):

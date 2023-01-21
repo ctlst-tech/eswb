@@ -7,7 +7,7 @@ from PyQt5 import QtCore
 
 import eswb as e
 from controls import MyQtWidget, EwBasic, EwTable, EwChart
-from datasources import *
+from pytools.controls.datasources import *
 from monitor import Monitor, ApplicationWindow
 
 
