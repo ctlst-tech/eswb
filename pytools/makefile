@@ -28,4 +28,3 @@ update_wrappers: clean $(TARGET)
 demo:
 	python3 app_demo.py
 
-

@@ -2,8 +2,8 @@ from typing import List, Union
 
 from PyQt5.QtGui import QPainter
 
-from pytools.controls import MyQtWidget, EwBasic
-from pytools.controls.datasources import DataSourceBasic, NoDataStub
+from controls import MyQtWidget, EwBasic
+from controls.datasources import DataSourceBasic, NoDataStub
 
 
 class EwPaintSample(MyQtWidget, EwBasic):

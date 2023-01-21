@@ -7,6 +7,7 @@ from controls import MyQtWidget, EwBasic
 from controls.datasources import DataSourceBasic, NoDataStub
 import math
 
+
 class EwRelativePosition(MyQtWidget, EwBasic):
     # SAMPLE_TODO copy and paste this class , rename properly
 
