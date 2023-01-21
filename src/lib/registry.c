@@ -235,7 +235,7 @@ static int walk_through_tree(topic_t *t, char *dir_ptrs[], crawling_lambda_t lam
 
     for (topic_t *n = t; n != NULL; n = n->next_sibling) {
         if (match_str(n->name, dir_ptrs[0])) {
-            int wt_rv = walk_through_tree(t->first_child, &dir_ptrs[1], lambda, usr_l_data);
+            int wt_rv = walk_through_tree(n->first_child, &dir_ptrs[1], lambda, usr_l_data);
             switch (wt_rv) {
                 case WALK_RV_NO_NESTED_TOPIC:
                 case WALK_RV_TERMINAL:
@@ -258,8 +258,15 @@ eswb_rv_t topic_mem_walk_through (topic_t *root, const char *find_path, crawling
 
     memset(dir_ptrs, 0, sizeof(dir_ptrs));
 
+    const char *find_path_start = strstr(find_path, ":/");
+    if (find_path_start == NULL) {
+        find_path_start = find_path;
+    } else {
+        find_path_start += 2;
+    }
+
     char path[ESWB_TOPIC_MAX_PATH_LEN+1];
-    strncpy(path, find_path, ESWB_TOPIC_MAX_PATH_LEN);
+    strncpy(path, find_path_start, ESWB_TOPIC_MAX_PATH_LEN);
 
     eswb_rv_t rv = parse_path(path, MAX_LEVELS, dir_ptrs);
     if (rv != eswb_e_ok) {
