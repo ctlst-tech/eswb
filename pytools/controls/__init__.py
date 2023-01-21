@@ -1,15 +1,15 @@
+import math
 from abc import abstractmethod
 from typing import List, Union, Tuple
-from datasources import *
 
-from PyQt5 import QtWidgets, QtSvg
-from PyQt5.QtCore import Qt, QRectF
-from PyQt5.QtGui import QPainter, QPen
+import pyqtgraph as pg
+from PyQt5 import QtWidgets, QtSvg, Qt
+from PyQt5.QtCore import QRectF, Qt, QPointF
+from PyQt5.QtGui import QPen, QPainter
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 
-from pyqtgraph.Qt import QtGui
-import pyqtgraph as pg
-from common import ColorInterp
+from pytools.common import ColorInterp
+from pytools.datasources import DataSourceBasic, NoDataStub
 
 
 class MyQtWidget(QtWidgets.QWidget):
@@ -26,21 +26,36 @@ class MyQtWidget(QtWidgets.QWidget):
         return item
 
     @staticmethod
-    def draw_item(canvas, item):
+    def translate_point(canvas, pt: QPointF, zero_offset_x=0, zero_offset_y=0):
+        cwidth = canvas.device().width()
+        cheight = canvas.device().height()
+        dx, dy = cwidth / 2 + zero_offset_x, cheight / 2 + zero_offset_y
+        return QPointF(pt.x() + dx, pt.y() + dy)
+
+    @staticmethod
+    def draw_item(canvas, item, width=0, height=0, zero_offset_x=0, zero_offset_y=0):
         canvas.save()
 
-        width, height = canvas.device().width(), canvas.device().height()
-        canvas.translate(width / 2+item.x(), height / 2+item.y())
+        cwidth = canvas.device().width()
+        cheight = canvas.device().height()
+
+        width = cwidth if width == 0 else width
+        height = cheight if height == 0 else height
+
+        dx, dy = cwidth / 2 + zero_offset_x + item.x(), cheight / 2 + zero_offset_y + item.y()
+
+        canvas.translate(dx, dy)
         canvas.rotate(item.rotation())
 
         # item.x()
-        item.renderer().render(canvas, QRectF(-width / 2-item.x(), -height / 2-item.y(), 180, 180))
+        item.renderer().render(canvas, QRectF(-width / 2, -height / 2, width, height))
         canvas.restore()
 
-class ewBasic:
+
+class EwBasic:
     def __init__(self):
         self.data_sources: List[DataSourceBasic] = []
-        self.nested_widgets: List[ewBasic] = []
+        self.nested_widgets: List[EwBasic] = []
 
     def set_data_sources(self, data_sources: List[DataSourceBasic]):
         self.data_sources = data_sources
@@ -63,10 +78,13 @@ class ewBasic:
         self.radraw_handler(vals)
 
 
-class ewGroup(MyQtWidget, ewBasic):
+class EwGroup(MyQtWidget, EwBasic):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+        pass
+
     def __init__(self, widgets: List[MyQtWidget]):
         MyQtWidget.__init__(self, layout_vertical=False)
-        ewBasic.__init__(self)
+        EwBasic.__init__(self)
 
         self.group_widgets = widgets
 
@@ -75,10 +93,10 @@ class ewGroup(MyQtWidget, ewBasic):
             self.layout.addWidget(w)
 
 
-class ewTable(MyQtWidget, ewBasic):
+class EwTable(MyQtWidget, EwBasic):
     def __init__(self, *, caption='', data_sources: List[DataSourceBasic], **kwargs):
         MyQtWidget.__init__(self, **kwargs)
-        ewBasic.__init__(self)
+        EwBasic.__init__(self)
 
         self.set_data_sources(data_sources)
 
@@ -89,7 +107,7 @@ class ewTable(MyQtWidget, ewBasic):
         # self.table.setColumnCount(3)
 
         active_color = [0, 100, 0, 255]
-        idle_color = self.table.palette().color(QtGui.QPalette.Base).getRgb()
+        idle_color = self.table.palette().color(Qt.QPalette.Base).getRgb()
 
         self.color_blenders: List[ColorInterp] = []
         for i in range(0, len(self.data_sources)):
@@ -130,7 +148,7 @@ class ewTable(MyQtWidget, ewBasic):
             value_item.setText(new_val)
 
 
-class ewChart(MyQtWidget, ewBasic):
+class EwChart(MyQtWidget, EwBasic):
     colors_series = [
         (255, 0, 0),
         (0, 200, 0),
@@ -147,7 +165,7 @@ class ewChart(MyQtWidget, ewBasic):
             self.parent_graph = graph
 
             if not color:
-                color = ewChart.colors_series[0]
+                color = EwChart.colors_series[0]
 
             pen = pg.mkPen(color=color, width=4)
             self.data_line = graph.plot(self.x, self.y, pen=pen)
@@ -156,7 +174,7 @@ class ewChart(MyQtWidget, ewBasic):
             self.no_data_message = pg.TextItem('', anchor=(0.5, 0.5), color=color)
             self.no_data_message.setPos(100, 100)
             # self.no_data_message.setZValue(50)
-            self.no_data_message.setFont(QtGui.QFont("Arial", 14))
+            self.no_data_message.setFont(Qt.QFont("Arial", 14))
 
         def update(self, val):
             if isinstance(val, NoDataStub):
@@ -180,7 +198,7 @@ class ewChart(MyQtWidget, ewBasic):
 
     def __init__(self, data_sources: List[DataSourceBasic], data_range=None, **kwargs):
         MyQtWidget.__init__(self, **kwargs)
-        ewBasic.__init__(self)
+        EwBasic.__init__(self)
 
         self.set_data_sources(data_sources)
 
@@ -194,11 +212,11 @@ class ewChart(MyQtWidget, ewBasic):
         # window = 600
         # self.graph.setBackground(QtGui.QColor('white'))
 
-        self.plots: List[ewChart.Plot] = []
+        self.plots: List[EwChart.Plot] = []
 
         color_i = 0
         for ds in data_sources:
-            self.plots.append(ewChart.Plot(label=ds.name, graph=self.graph, color=self.colors_series[color_i]))
+            self.plots.append(EwChart.Plot(label=ds.name, graph=self.graph, color=self.colors_series[color_i]))
             if color_i < len(self.colors_series):
                 color_i += 1
 
@@ -207,8 +225,8 @@ class ewChart(MyQtWidget, ewBasic):
             self.plots[i].update(vals[i])
 
 
-class ewCursor(MyQtWidget, ewBasic):
-    colors_series=[
+class EwCursor(MyQtWidget, EwBasic):
+    colors_series = [
         (255, 0, 0),
         (0, 200, 0),
         (0, 0, 255),
@@ -221,17 +239,19 @@ class ewCursor(MyQtWidget, ewBasic):
             self.data = [(0.0, 0.0)]
             self.tail_len = tail_len
             if not color:
-                color = ewChart.colors_series[0]
+                color = EwChart.colors_series[0]
 
             self.color = color
 
         margin = 10
 
         def rel_x(self, x_val):
-            return self.margin + (x_val - self.parent.data_range[0][0]) * (self.parent.width() - 2*self.margin) / self.parent.x_range_mod
+            return self.margin + (x_val - self.parent.data_range[0][0]) * (
+                        self.parent.width() - 2 * self.margin) / self.parent.x_range_mod
 
         def rel_y(self, y_val):
-            return self.margin + (y_val - self.parent.data_range[1][0]) * (self.parent.height() - 2*self.margin) / self.parent.y_range_mod
+            return self.margin + (y_val - self.parent.data_range[1][0]) * (
+                        self.parent.height() - 2 * self.margin) / self.parent.y_range_mod
 
         def update_data(self, val: tuple):
             if isinstance(val[0], NoDataStub) or isinstance(val[1], NoDataStub):
@@ -246,7 +266,7 @@ class ewCursor(MyQtWidget, ewBasic):
         def redraw(self, painter):
             b = len(self.data)
             for i in range(0, b):
-                if i == b-1:
+                if i == b - 1:
                     alpha = 255
                     thickness = 2
                     d = 8
@@ -256,18 +276,19 @@ class ewCursor(MyQtWidget, ewBasic):
                     d = 2
 
                 painter.setPen(
-                    QPen(QtGui.QColor(self.color[0], self.color[1], self.color[2], alpha), thickness, Qt.SolidLine))
+                    QPen(Qt.QColor(self.color[0], self.color[1], self.color[2], alpha), thickness, Qt.SolidLine))
 
                 x = self.rel_x(self.data[i][0])
                 y = self.rel_y(self.data[i][1])
-                d_2 = d/2
+                d_2 = d / 2
                 painter.drawEllipse(int(x - d_2), int(y - d_2), int(d), int(d))
 
-    def __init__(self, data_sources: List[Tuple[DataSourceBasic, DataSourceBasic]], data_range=((-1.0, 1.0), (-1.0, 1.0)), *args, **kwargs):
+    def __init__(self, data_sources: List[Tuple[DataSourceBasic, DataSourceBasic]],
+                 data_range=((-1.0, 1.0), (-1.0, 1.0)), *args, **kwargs):
         MyQtWidget.__init__(self, **kwargs)
-        ewBasic.__init__(self)
+        EwBasic.__init__(self)
 
-        data_sources_list = [ elem for t in data_sources for elem in t]
+        data_sources_list = [elem for t in data_sources for elem in t]
         self.set_data_sources(data_sources_list)
 
         self.setFixedSize(180, 180)
@@ -280,15 +301,15 @@ class ewCursor(MyQtWidget, ewBasic):
         self.x_range_mod = data_range[0][1] - data_range[0][0]
         self.y_range_mod = data_range[1][1] - data_range[1][0]
 
-        self.cursors: List[ewChart.Cursor] = []
+        self.cursors: List[EwCursor.Cursor] = []
 
         color_i = 0
         for ds in data_sources:
-            self.cursors.append(ewCursor.Cursor(parent=self, color=self.colors_series[color_i]))
+            self.cursors.append(EwCursor.Cursor(parent=self, color=self.colors_series[color_i]))
             if color_i < len(self.colors_series):
                 color_i += 1
 
-    def paintEvent(self, QPaintEvent):
+    def paintEvent(self, event):
         canvas = QPainter(self)
 
         for c in self.cursors:
@@ -298,46 +319,17 @@ class ewCursor(MyQtWidget, ewBasic):
 
     def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
         for i in range(0, len(self.cursors)):
-            self.cursors[i].update_data((vals[i*2], vals[i*2 + 1]))
+            self.cursors[i].update_data((vals[i * 2], vals[i * 2 + 1]))
 
         self.repaint()
 
 
-class ewPaintSample(MyQtWidget, ewBasic):
+class EwHeadingIndicator(MyQtWidget, EwBasic):
     # SAMPLE_TODO copy and paste this class , rename properly
 
     def __init__(self, data_sources: List[DataSourceBasic], **kwargs):
         MyQtWidget.__init__(self, **kwargs)
-        ewBasic.__init__(self)
-
-        # SAMPLE_TODO pass list of data to
-        self.set_data_sources(data_sources)
-
-        # SAMPLE_TODO define widget size policy
-        self.setFixedSize(180, 180)
-        # self.setMinimumHeight(80)
-        # self.setMinimumWidth(80)
-
-        self.layout.addWidget(self)
-
-    def paintEvent(self, QPaintEvent):
-        canvas = QPainter(self)
-
-        # SAMPLE_TODO drawing code
-        canvas.end()
-
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
-
-        # SAMPLE_TODO pass upcoming data to widget's state
-        self.repaint()
-
-
-class ewHeadingIndicator(MyQtWidget, ewBasic):
-    # SAMPLE_TODO copy and paste this class , rename properly
-
-    def __init__(self, data_sources: List[DataSourceBasic], **kwargs):
-        MyQtWidget.__init__(self, **kwargs)
-        ewBasic.__init__(self)
+        EwBasic.__init__(self)
 
         # SAMPLE_TODO pass list of data to
         self.set_data_sources(data_sources)
@@ -367,18 +359,13 @@ class ewHeadingIndicator(MyQtWidget, ewBasic):
         self.repaint()
 
 
-class ewAttitudeIndicator(MyQtWidget, ewBasic):
+class EwAttitudeIndicator(MyQtWidget, EwBasic):
     def __init__(self, data_sources: List[DataSourceBasic], **kwargs):
         MyQtWidget.__init__(self, **kwargs)
-        ewBasic.__init__(self)
+        EwBasic.__init__(self)
 
-        # SAMPLE_TODO pass list of data to
         self.set_data_sources(data_sources)
-
-        # SAMPLE_TODO define widget size policy
         self.setFixedSize(180, 180)
-        # self.setMinimumHeight(80)
-        # self.setMinimumWidth(80)
 
         self.svgBack = self.mk_svg("images/ai/ai_back.svg", -30)
         self.svgFace = self.mk_svg("images/ai/ai_face.svg")
@@ -459,4 +446,3 @@ class ewAttitudeIndicator(MyQtWidget, ewBasic):
         self.set_roll(vals[0])
         self.set_pitch(vals[1])
         self.repaint()
-

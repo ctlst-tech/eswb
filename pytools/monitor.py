@@ -1,6 +1,7 @@
 import sys
 from PyQt5 import QtWidgets, QtCore
 
+
 class ApplicationWindow(QtWidgets.QMainWindow):
     def __init__(self, title="ESWB display"):
         super().__init__()
@@ -36,6 +37,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         for w in self.widgets:
             w.redraw()
 
+
 class Monitor:
     def __init__(self, *, monitor_bus_name='monitor', argv=None):
         super().__init__()
@@ -55,11 +57,9 @@ class Monitor:
         self.show()
         sys.exit(self.app.exec_())
 
-    def mkdir(self, dirname):
-        self.bus.mkdir(dirname)
-
     def add_widget(self, w):
         self.app_window.add_ew(w)
+
 
 class ArgParser:
     def __init__(self):

@@ -1,4 +1,4 @@
-from pyqtgraph.Qt import QtGui
+from PyQt5 import Qt
 
 
 class ColorInterp:
@@ -10,14 +10,14 @@ class ColorInterp:
         self.step = step
 
         self.color_delta = [c1[0] - c0[0],
-                          c1[1] - c0[1],
-                          c1[2] - c0[2],
-                          c1[3] - c0[3]
+                            c1[1] - c0[1],
+                            c1[2] - c0[2],
+                            c1[3] - c0[3]
                             ]
 
     @staticmethod
     def qcolor(clr):
-        return QtGui.QColor(QtGui.qRgba(
+        return Qt.QColor(Qt.qRgba(
             int(clr[0]),
             int(clr[1]),
             int(clr[2]),

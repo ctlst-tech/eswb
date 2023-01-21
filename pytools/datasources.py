@@ -3,15 +3,16 @@ from typing import List, Union, Tuple
 import time
 import math
 
+
 class NoDataStub:
     def __init__(self, err_msg):
         self.err_msg = err_msg
 
 
 class DataSourceBasic:
-    def __init__(self, name, *, mult=1.0, range=None, demo_mode=False):
+    def __init__(self, name, *, mult=1.0, rng=None, demo_mode=False):
         self.name = name
-        self.range = range
+        self.range = rng
         self.mult = mult
         self.demo_mode = demo_mode
 
@@ -76,6 +77,18 @@ class DataSourceCalcFilteredRate(DataSourceBasic):
         self.previous_time = curr_time
 
         return self.filtered_value
+
+
+class DataSourceConst(DataSourceBasic):
+    def __init__(self, name, *, value=0.0, **kwargs):
+        super().__init__(name, **kwargs)
+        self._value = value
+
+    def connect(self):
+        pass
+
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        return self._value
 
 
 class DataSourceSinus(DataSourceBasic):
