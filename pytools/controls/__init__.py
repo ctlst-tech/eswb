@@ -15,7 +15,8 @@ from controls.datasources import DataSourceBasic, NoDataStub
 class MyQtWidget(QtWidgets.QWidget):
     def __init__(self, layout_vertical=True, **kwargs):
         super().__init__(**kwargs)
-        self.layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.TopToBottom if layout_vertical else QtWidgets.QBoxLayout.LeftToRight)
+        self.layout = QtWidgets.QBoxLayout(
+            QtWidgets.QBoxLayout.TopToBottom if layout_vertical else QtWidgets.QBoxLayout.LeftToRight)
         self.setLayout(self.layout)
 
     @staticmethod
@@ -82,7 +83,7 @@ class EwGroup(MyQtWidget, EwBasic):
     def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
         pass
 
-    def __init__(self, widgets: List[MyQtWidget]):
+    def __init__(self, widgets: List[EwBasic | MyQtWidget]):
         MyQtWidget.__init__(self, layout_vertical=False)
         EwBasic.__init__(self)
 
@@ -247,11 +248,11 @@ class EwCursor(MyQtWidget, EwBasic):
 
         def rel_x(self, x_val):
             return self.margin + (x_val - self.parent.data_range[0][0]) * (
-                        self.parent.width() - 2 * self.margin) / self.parent.x_range_mod
+                    self.parent.width() - 2 * self.margin) / self.parent.x_range_mod
 
         def rel_y(self, y_val):
             return self.margin + (y_val - self.parent.data_range[1][0]) * (
-                        self.parent.height() - 2 * self.margin) / self.parent.y_range_mod
+                    self.parent.height() - 2 * self.margin) / self.parent.y_range_mod
 
         def update_data(self, val: tuple):
             if isinstance(val[0], NoDataStub) or isinstance(val[1], NoDataStub):

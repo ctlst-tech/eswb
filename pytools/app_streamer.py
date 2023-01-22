@@ -1,5 +1,4 @@
 from sanic import Sanic
-from sanic import Request, Websocket
 
 from controls.datasources import DataSourceSinus, DataSourceConst
 from ws_channel import WsStreamChannel, WsMonitor

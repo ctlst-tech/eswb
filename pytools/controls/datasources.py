@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Union, Tuple
+from typing import List, Union
 import time
 import math
 

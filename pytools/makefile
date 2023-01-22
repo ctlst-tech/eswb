@@ -31,3 +31,5 @@ streamer:
 demo:
 	python3 app_demo.py
 
+graph:
+	python3 app_graph.py

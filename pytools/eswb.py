@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 from ctypes import *
-import platform
-import os
 from typing import List, Union
 
 import c_eswb_wrappers as ce
