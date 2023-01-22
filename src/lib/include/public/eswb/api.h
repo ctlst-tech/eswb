@@ -320,16 +320,6 @@ eswb_rv_t eswb_path_compose(eswb_type_t type, const char *bus_name, const char *
 eswb_rv_t eswb_path_split(const char *full_path, char *path, char *topic_name);
 
 /**
- * Parse path and get its elements
- * @param connection_point
- * @param t
- * @param bus_name
- * @param local_path
- * @return
- */
-eswb_rv_t eswb_parse_path(const char *connection_point, eswb_type_t *t, char *bus_name, char *local_path);
-
-/**
  * Wrapper for a system's specific calls to name calling a thread
  * @param n name to set for calling thread
  */
