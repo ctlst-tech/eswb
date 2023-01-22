@@ -2,14 +2,21 @@ import math
 from abc import abstractmethod
 from typing import List, Union, Tuple
 
+import os.path
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, QtSvg, Qt
 from PyQt5.QtCore import QRectF, Qt, QPointF
-from PyQt5.QtGui import QPen, QPainter
+from PyQt5.QtGui import QPen, QPainter, QFont, QPalette, QColor
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 
 from controls.common import ColorInterp
 from controls.datasources import DataSourceBasic, NoDataStub
+
+
+def rel_path(path, base_path=None):
+    if not base_path:
+        base_path = os.path.dirname(__file__)
+    return f'{base_path}/../{path}'
 
 
 class MyQtWidget(QtWidgets.QWidget):
@@ -107,7 +114,7 @@ class EwTable(MyQtWidget, EwBasic):
         # self.table.setColumnCount(3)
 
         active_color = [0, 100, 0, 255]
-        idle_color = self.table.palette().color(Qt.QPalette.Base).getRgb()
+        idle_color = self.table.palette().color(QPalette.Base).getRgb()
 
         self.color_blenders: List[ColorInterp] = []
         for i in range(0, len(self.data_sources)):
@@ -174,7 +181,7 @@ class EwChart(MyQtWidget, EwBasic):
             self.no_data_message = pg.TextItem('', anchor=(0.5, 0.5), color=color)
             self.no_data_message.setPos(100, 100)
             # self.no_data_message.setZValue(50)
-            self.no_data_message.setFont(Qt.QFont("Arial", 14))
+            self.no_data_message.setFont(QFont("Arial", 14))
 
         def update(self, val):
             if isinstance(val, NoDataStub):
@@ -276,7 +283,7 @@ class EwCursor(MyQtWidget, EwBasic):
                     d = 2
 
                 painter.setPen(
-                    QPen(Qt.QColor(self.color[0], self.color[1], self.color[2], alpha), thickness, Qt.SolidLine))
+                    QPen(QColor(self.color[0], self.color[1], self.color[2], alpha), thickness, Qt.SolidLine))
 
                 x = self.rel_x(self.data[i][0])
                 y = self.rel_y(self.data[i][1])
@@ -339,19 +346,23 @@ class EwHeadingIndicator(MyQtWidget, EwBasic):
         # self.setMinimumHeight(80)
         # self.setMinimumWidth(80)
 
-        self.svgBack = self.mk_svg("images/hi/hi_face.svg")
-        self.svgFace = self.mk_svg("images/hi/hi_case.svg")
+        self.svgBack = self.mk_svg(rel_path("images/hi/hi_face.svg"))
+        self.svgFace = self.mk_svg(rel_path("images/hi/hi_case.svg"))
         self._heading = 0.0
         self.layout.addWidget(self)
 
     def paintEvent(self, event):
         canvas = QPainter(self)
-        self.svgFace.setRotation(-self._heading)
+        self.svgFace.setRotation(self._heading)
         self.draw_item(canvas, self.svgBack)
         self.draw_item(canvas, self.svgFace)
         canvas.end()
 
     def set_heading(self, h):
+        if isinstance(h, NoDataStub):
+            self._heading = 0
+            return
+
         self._heading = h
 
     def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
@@ -367,10 +378,10 @@ class EwAttitudeIndicator(MyQtWidget, EwBasic):
         self.set_data_sources(data_sources)
         self.setFixedSize(180, 180)
 
-        self.svgBack = self.mk_svg("images/ai/ai_back.svg", -30)
-        self.svgFace = self.mk_svg("images/ai/ai_face.svg")
-        self.svgRing = self.mk_svg("images/ai/ai_ring.svg")
-        self.svgCase = self.mk_svg("images/ai/ai_case.svg")
+        self.svgBack = self.mk_svg(rel_path("images/ai/ai_back.svg"), -30)
+        self.svgFace = self.mk_svg(rel_path("images/ai/ai_face.svg"))
+        self.svgRing = self.mk_svg(rel_path("images/ai/ai_ring.svg"))
+        self.svgCase = self.mk_svg(rel_path("images/ai/ai_case.svg"))
 
         self._roll = 0.0
         self._pitch = 0.0
@@ -382,6 +393,10 @@ class EwAttitudeIndicator(MyQtWidget, EwBasic):
         self.layout.addWidget(self)
 
     def set_roll(self, roll):
+        if isinstance(roll, NoDataStub):
+            self._roll = 0
+            return
+
         self._roll = roll
 
         if self._roll < -180.0:
@@ -391,6 +406,10 @@ class EwAttitudeIndicator(MyQtWidget, EwBasic):
             self._roll = 180.0
 
     def set_pitch(self, pitch):
+        if isinstance(pitch, NoDataStub):
+            self._pitch = 90
+            return
+
         self._pitch = pitch
 
         if self._pitch < -25.0:
