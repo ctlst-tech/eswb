@@ -1,7 +1,6 @@
 from typing import List, Union
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPainter
 from pyvistaqt import QtInteractor
 from PyQt5.QtGui import QPalette
 

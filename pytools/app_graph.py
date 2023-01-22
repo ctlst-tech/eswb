@@ -16,8 +16,8 @@ mon = Monitor(monitor_bus_name=mon_bus_name, argv=sys.argv)
 hi = EwHeadingIndicator([DataSourceSinus('s1', iphase=0.0, mult=360)])
 
 g3d = EwGraph3D([])
-v = EwPyVista([])
+# v = EwPyVista([])
 
-mon.add_widget(EwGroup([hi, g3d, v]))
+mon.add_widget(EwGroup([hi, g3d]))
 
 mon.run()
