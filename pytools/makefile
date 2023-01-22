@@ -24,3 +24,7 @@ clean:
 
 update_wrappers: clean $(TARGET)
 	@echo Done!
+
+demo:
+	python3 app_demo.py
+
