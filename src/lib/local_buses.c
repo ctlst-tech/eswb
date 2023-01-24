@@ -384,7 +384,8 @@ eswb_rv_t local_get_mounting_point(eswb_topic_descr_t td, char *mp) {
 }
 
 
-eswb_rv_t local_vector_read(eswb_topic_descr_t td, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv, int do_wait) {
+eswb_rv_t local_vector_read(eswb_topic_descr_t td, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv,
+                            int do_wait, int check_update) {
     topic_local_index_t *li = &local_td_index[td];
 
     eswb_rv_t rv;
@@ -393,7 +394,25 @@ eswb_rv_t local_vector_read(eswb_topic_descr_t td, void *data, eswb_index_t pos,
         return eswb_e_not_vector;
     }
 
-    rv = topic_io_read_vector(li->t, data, pos, num, num_rv, do_wait, li->timeout_us);
+    eswb_update_counter_t counter;
+
+    rv = topic_io_read_vector(li->t, data, pos, num, num_rv, do_wait,
+                              check_update ? &counter: NULL,
+                              li->timeout_us);
+
+    if (check_update) {
+        // FIXME this must be universalized through all topics read
+        if (rv == eswb_e_ok) {
+            if (li->update_counter == counter) {
+                rv = eswb_e_no_update;
+            } else {
+                li->update_counter = counter;
+            }
+        } else {
+            // topic was not inited yet, so we just initialize counter
+            li->update_counter = counter;
+        }
+    }
 
     li->timeout_us = 0;
     return rv;

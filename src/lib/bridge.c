@@ -255,7 +255,11 @@ eswb_rv_t eswb_bridge_update(eswb_bridge_t *b) {
             //  b->buffer2post_size is in bytes for a len arg, while vector may have other type,
             //  but this humber must be larger than array size
             ;eswb_index_t vs = 0;
-            eswb_vector_read(b->topics[0].td, 0, b->buffer2post, b->buffer2post_size, &vs);
-            return eswb_vector_write(b->dest_td, 0, b->buffer2post, vs, ESWB_VECTOR_WRITE_OPT_FLAG_DEFINE_END);
+            rv = eswb_vector_read_check_update(b->topics[0].td, 0, b->buffer2post, b->buffer2post_size, &vs);
+            if (rv == eswb_e_ok) {
+                return eswb_vector_write(b->dest_td, 0, b->buffer2post, vs, ESWB_VECTOR_WRITE_OPT_FLAG_DEFINE_END);
+            } else {
+                return eswb_e_ok;
+            }
     }
 }
