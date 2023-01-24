@@ -311,6 +311,16 @@ const char *eswb_get_bus_prefix(eswb_type_t type);
 eswb_rv_t eswb_path_compose(eswb_type_t type, const char *bus_name, const char *topic_subpath, char *result);
 
 /**
+ * Decompose ESWB path by its components
+ * @param connection_point
+ * @param t
+ * @param bus_name
+ * @param local_path
+ * @return
+ */
+eswb_rv_t eswb_parse_path(const char *connection_point, eswb_type_t *t, char *bus_name, char *local_path);
+
+/**
  * Split a full path to the specific topic
  * @param full_path pointer to the full path to the topic
  * @param path pointer to the basepath of the topic (string of size ESWB_TOPIC_MAX_PATH_LEN)
