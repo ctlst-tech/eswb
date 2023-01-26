@@ -1,4 +1,5 @@
 #include <string.h>
+#include <pthread.h>
 
 #include "eswb/errors.h"
 #include "registry.h"
@@ -8,14 +9,12 @@
 
 #include "topic_io.h"
 
-#define ITB_TD_MAX 512
-
+#define ITB_TD_MAX 1024
 #define LOCAL_INDEX_INIT 1
 
 static topic_local_index_t local_td_index[ITB_TD_MAX];
 static int local_index_num = LOCAL_INDEX_INIT; // omit first for having no zero td-s
 
-#include <pthread.h>
 static pthread_mutex_t local_topic_index_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t local_buses_mutex = PTHREAD_MUTEX_INITIALIZER;
 
