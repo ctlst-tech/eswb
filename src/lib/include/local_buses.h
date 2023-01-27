@@ -55,7 +55,8 @@ eswb_rv_t local_try_get_update(eswb_topic_descr_t td, void *data);
 
 eswb_rv_t local_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int size);
 
-eswb_rv_t local_vector_read(eswb_topic_descr_t td, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv, int do_wait);
+eswb_rv_t local_vector_read(eswb_topic_descr_t td, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv,
+                            int do_wait, int check_update);
 
 eswb_rv_t local_init_fifo_receiver(eswb_topic_descr_t td);
 eswb_rv_t local_fifo_pop(eswb_topic_descr_t td, void *data, int do_wait);

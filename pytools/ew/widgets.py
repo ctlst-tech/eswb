@@ -2,14 +2,22 @@ import math
 from abc import abstractmethod
 from typing import List, Union, Dict, Tuple
 
+import os.path
 import pyqtgraph as pg
-from PyQt5 import Qt, QtCore
-from PyQt5.QtGui import QPen, QPainter
+from PyQt5 import QtWidgets, QtSvg, Qt
+from PyQt5.QtCore import QRectF, Qt, QPointF
+from PyQt5.QtGui import QPen, QPainter, QFont, QPalette, QColor, QBrush
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 
 from common import MyQtWidget, ColorInterp
 from ds import DataSourceBasic, NoDataStub
+from controls.common import ColorInterp
+from controls.datasources import DataSourceBasic, NoDataStub
 
+def rel_path(path, base_path=None):
+    if not base_path:
+        base_path = os.path.dirname(__file__)
+    return f'{base_path}/../{path}'
 
 class EwBasic:
     def __init__(self):
@@ -70,7 +78,7 @@ class EwTable(MyQtWidget, EwBasic):
         # self.table.setColumnCount(3)
 
         active_color = [0, 100, 0, 255]
-        idle_color = self.table.palette().color(Qt.QPalette.Base).getRgb()
+        idle_color = self.table.palette().color(QPalette.Base).getRgb()
 
         self.color_blenders: List[ColorInterp] = []
         for i in range(0, len(self.data_sources)):
@@ -101,7 +109,7 @@ class EwTable(MyQtWidget, EwBasic):
             value_item = self.table.item(i, 1)
             color_item = self.table.item(i, 1)
             prev_val = value_item.text()
-            new_val = str(vals[i])
+            new_val = str(vals[i]) if not isinstance(vals[i], NoDataStub) else 'NO DATA'
             if prev_val == new_val:
                 self.color_blenders[i].shift_to_left()
                 color_item.setBackground(self.color_blenders[i].color_get())
@@ -111,12 +119,72 @@ class EwTable(MyQtWidget, EwBasic):
             value_item.setText(new_val)
 
 
+class EwLamp(MyQtWidget, EwBasic):
+
+    def __init__(self, *, data_source: DataSourceBasic, max, min = 0, color, **kwargs):
+        MyQtWidget.__init__(self, **kwargs)
+        EwBasic.__init__(self)
+
+        self.set_data_sources([data_source])
+
+        self.setFixedSize(50, 50)
+        # self.setMinimumHeight(80)
+        # self.setMinimumWidth(80)
+
+
+        self.max = max
+        self.min = min
+
+        self.k = 1 / (max - min)
+        self.b = min
+
+        max_color = [*list(color), 255]
+        min_color = self.palette().color(QPalette.Base).getRgb()
+
+        self.color_blender = ColorInterp(min_color, max_color, 0.01)
+
+        self.value = 0.0
+        self.not_valid = False
+
+        self.layout.addWidget(self)
+
+    def paintEvent(self, event):
+        canvas = QPainter(self)
+
+
+
+
+        if self.not_valid:
+            pass
+        else:
+            v = self.k * self.value + self.b
+            self.color_blender.set_lever(v)
+            color = self.color_blender.color_get()
+            # canvas.setBackground(QBrush(color))
+            canvas.fillRect(event.rect(), color)
+
+        canvas.end()
+
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+        v = vals[0]
+
+        if isinstance(v, NoDataStub):
+            self.not_valid = True
+        else:
+            self.not_valid = False
+            self.value = vals[0]
+
+        self.repaint()
+
+
 class EwChart(MyQtWidget, EwBasic):
     colors_series = [
         (255, 0, 0),
         (0, 200, 0),
         (0, 0, 255),
-        (0, 0, 0),
+        (0, 200, 200),
+        (200, 200, 0),
+        (200, 0, 200),
     ]
 
     class Plot:
@@ -137,7 +205,7 @@ class EwChart(MyQtWidget, EwBasic):
             self.no_data_message = pg.TextItem('', anchor=(0.5, 0.5), color=color)
             self.no_data_message.setPos(100, 100)
             # self.no_data_message.setZValue(50)
-            self.no_data_message.setFont(Qt.QFont("Arial", 14))
+            self.no_data_message.setFont(QFont("Arial", 14))
 
         def update(self, val):
             if isinstance(val, NoDataStub):
@@ -239,7 +307,7 @@ class EwCursor(MyQtWidget, EwBasic):
                     d = 2
 
                 painter.setPen(
-                    QPen(Qt.QColor(self.color[0], self.color[1], self.color[2], alpha), thickness, QtCore.Qt.SolidLine))
+                    QPen(QColor(self.color[0], self.color[1], self.color[2], alpha), thickness, Qt.SolidLine))
 
                 x = self.rel_x(self.data[i][0])
                 y = self.rel_y(self.data[i][1])
@@ -302,19 +370,23 @@ class EwHeadingIndicator(MyQtWidget, EwBasic):
         # self.setMinimumHeight(80)
         # self.setMinimumWidth(80)
 
-        self.svgBack = self.mk_svg("images/hi/hi_face.svg")
-        self.svgFace = self.mk_svg("images/hi/hi_case.svg")
+        self.svgBack = self.mk_svg(rel_path("images/hi/hi_face.svg"))
+        self.svgFace = self.mk_svg(rel_path("images/hi/hi_case.svg"))
         self._heading = 0.0
         self.layout.addWidget(self)
 
     def paintEvent(self, event):
         canvas = QPainter(self)
-        self.svgFace.setRotation(-self._heading)
+        self.svgFace.setRotation(self._heading)
         self.draw_item(canvas, self.svgBack)
         self.draw_item(canvas, self.svgFace)
         canvas.end()
 
     def set_heading(self, h):
+        if isinstance(h, NoDataStub):
+            self._heading = 0
+            return
+
         self._heading = h
 
     def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
@@ -330,10 +402,10 @@ class EwAttitudeIndicator(MyQtWidget, EwBasic):
         self.set_data_sources(data_sources)
         self.setFixedSize(180, 180)
 
-        self.svgBack = self.mk_svg("images/ai/ai_back.svg", -30)
-        self.svgFace = self.mk_svg("images/ai/ai_face.svg")
-        self.svgRing = self.mk_svg("images/ai/ai_ring.svg")
-        self.svgCase = self.mk_svg("images/ai/ai_case.svg")
+        self.svgBack = self.mk_svg(rel_path("images/ai/ai_back.svg"), -30)
+        self.svgFace = self.mk_svg(rel_path("images/ai/ai_face.svg"))
+        self.svgRing = self.mk_svg(rel_path("images/ai/ai_ring.svg"))
+        self.svgCase = self.mk_svg(rel_path("images/ai/ai_case.svg"))
 
         self._roll = 0.0
         self._pitch = 0.0
@@ -345,6 +417,10 @@ class EwAttitudeIndicator(MyQtWidget, EwBasic):
         self.layout.addWidget(self)
 
     def set_roll(self, roll):
+        if isinstance(roll, NoDataStub):
+            self._roll = 0
+            return
+
         self._roll = roll
 
         if self._roll < -180.0:
@@ -354,6 +430,10 @@ class EwAttitudeIndicator(MyQtWidget, EwBasic):
             self._roll = 180.0
 
     def set_pitch(self, pitch):
+        if isinstance(pitch, NoDataStub):
+            self._pitch = 90
+            return
+
         self._pitch = pitch
 
         if self._pitch < -25.0:

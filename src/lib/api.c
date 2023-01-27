@@ -252,12 +252,17 @@ eswb_rv_t eswb_vector_write(eswb_topic_descr_t td, eswb_index_t pos, void *data,
 
 eswb_rv_t
 eswb_vector_read(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv) {
-    return ds_vector_read(td, data, pos, len, len_rv, 0);
+    return ds_vector_read(td, data, pos, len, len_rv, 0, 0);
+}
+
+eswb_rv_t
+eswb_vector_read_check_update(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv) {
+    return ds_vector_read(td, data, pos, len, len_rv, 0, -1);
 }
 
 eswb_rv_t
 eswb_vector_get_update(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv) {
-    return ds_vector_read(td, data, pos, len, len_rv, 1);
+    return ds_vector_read(td, data, pos, len, len_rv, 1, 0);
 }
 
 

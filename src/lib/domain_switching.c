@@ -178,7 +178,8 @@ eswb_rv_t ds_try_get_update(eswb_topic_descr_t td, void *data) {
 }
 
 
-eswb_rv_t ds_vector_read(eswb_topic_descr_t td, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv, int do_wait) {
+eswb_rv_t ds_vector_read(eswb_topic_descr_t td, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv, int do_wait,
+               int check_update) {
     SWITCH_FLOW_TO_DOMAIN(td,
                           local_vector_read,
                           not_supported_stub,
@@ -186,7 +187,8 @@ eswb_rv_t ds_vector_read(eswb_topic_descr_t td, void *data, eswb_index_t pos, es
                           pos,
                           num,
                           num_rv,
-                          do_wait);
+                          do_wait,
+                          check_update);
 }
 
 

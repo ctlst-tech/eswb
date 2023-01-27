@@ -75,8 +75,8 @@ eswb_rv_t topic_io_get_update(topic_t *t, void *data, uint32_t timeout_us) {
     return rv;
 }
 
-eswb_rv_t
-topic_io_read_vector(topic_t *t, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv, int do_wait, uint32_t timeout_us) {
+eswb_rv_t topic_io_read_vector(topic_t *t, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv, int do_wait,
+                     eswb_update_counter_t *update_counter, uint32_t timeout_us) {
     int synced = TOPIC_SYNCED(t);
     eswb_rv_t rv;
 
@@ -96,6 +96,14 @@ topic_io_read_vector(topic_t *t, void *data, eswb_index_t pos, eswb_index_t num,
         }
 
         rv = topic_mem_read_vector(t, data, pos, num, num_rv);
+
+        if (update_counter != NULL) {
+            if (!(t->flags & TOPIC_FLAGS_INITED)) {
+                rv = eswb_e_no_update;
+            }
+
+            *update_counter = t->update_counter;
+        }
 
         if (synced) sync_give(t->sync);
     } while(0);

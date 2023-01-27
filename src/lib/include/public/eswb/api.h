@@ -200,6 +200,20 @@ eswb_rv_t eswb_vector_write(eswb_topic_descr_t td, eswb_index_t pos, void *data,
 eswb_rv_t eswb_vector_read(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv);
 
 /**
+ * Read *len* vector elements from position *pos* to *data* and store read number elements in *len_rv*
+ * Difference from eswb_vector_read is that function checks either vector was update between reads
+ * @param td topic descriptor (must be tt_vector type)
+ * @param data data to store read elements
+ * @param pos position in vector to read from
+ * @param len elements to read
+ * @param len_rv pointer to store actual number of read elements
+ * @return eswb_e_ok either topic was update from prior call or eswb_e_no_update if there was no update;
+ * if topic is not inited, function returns eswb_e_no_update
+ */
+eswb_rv_t
+eswb_vector_read_check_update(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv);
+
+/**
  * Waits update and read *len* vector elements from position *pos* to *data* and store read number elements in *len_rv*
  * @param td topic descriptor (must be tt_vector type)
  * @param data data to store read elements
@@ -309,6 +323,16 @@ const char *eswb_get_bus_prefix(eswb_type_t type);
  * @return eswb_e_ok on success
  */
 eswb_rv_t eswb_path_compose(eswb_type_t type, const char *bus_name, const char *topic_subpath, char *result);
+
+/**
+ * Decompose ESWB path by its components
+ * @param connection_point
+ * @param t
+ * @param bus_name
+ * @param local_path
+ * @return
+ */
+eswb_rv_t eswb_parse_path(const char *connection_point, eswb_type_t *t, char *bus_name, char *local_path);
 
 /**
  * Split a full path to the specific topic
