@@ -2,6 +2,7 @@
 # TODO https://github.com/pyqt/examples
 
 import sys
+from typing import Dict
 
 from PyQt5 import QtCore
 
@@ -50,7 +51,7 @@ class EswbApplicationWindow(ApplicationWindow):
 
 
 class SdtlTelemetryWidget(MyQtWidget, EwBasic):
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         pass
 
     def __init__(self, sdtl_ref: e.SDTLserialService):

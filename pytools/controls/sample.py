@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Dict
 
 from PyQt5.QtGui import QPainter
 
@@ -29,6 +29,6 @@ class EwPaintSample(MyQtWidget, EwBasic):
         # SAMPLE_TODO drawing code
         canvas.end()
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         # SAMPLE_TODO pass upcoming data to widget's state
         self.repaint()

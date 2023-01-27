@@ -1,6 +1,6 @@
 import math
 from abc import abstractmethod
-from typing import List, Union, Tuple
+from typing import List, Union, Tuple, Dict
 
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, QtSvg, Qt
@@ -65,7 +65,7 @@ class EwBasic:
         self.nested_widgets.append(w)
 
     @abstractmethod
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         pass
 
     def redraw(self):
@@ -73,14 +73,18 @@ class EwBasic:
             w.redraw()
 
         vals = []
-        for ds in self.data_sources:
-            vals.append(ds.read())
+        vals_map = dict()
 
-        self.radraw_handler(vals)
+        for ds in self.data_sources:
+            v = ds.read()
+            vals.append(v)
+            vals_map[ds.name] = v
+
+        self.radraw_handler(vals, vals_map)
 
 
 class EwGroup(MyQtWidget, EwBasic):
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         pass
 
     def __init__(self, widgets: List[EwBasic | MyQtWidget]):
@@ -134,7 +138,7 @@ class EwTable(MyQtWidget, EwBasic):
 
         self.layout.addWidget(self.table)
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         for i in range(0, len(self.data_sources)):
             value_item = self.table.item(i, 1)
             color_item = self.table.item(i, 1)
@@ -221,7 +225,7 @@ class EwChart(MyQtWidget, EwBasic):
             if color_i < len(self.colors_series):
                 color_i += 1
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         for i in range(0, len(self.plots)):
             self.plots[i].update(vals[i])
 
@@ -318,7 +322,7 @@ class EwCursor(MyQtWidget, EwBasic):
 
         canvas.end()
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         for i in range(0, len(self.cursors)):
             self.cursors[i].update_data((vals[i * 2], vals[i * 2 + 1]))
 
@@ -355,7 +359,7 @@ class EwHeadingIndicator(MyQtWidget, EwBasic):
     def set_heading(self, h):
         self._heading = h
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         self.set_heading(vals[0])
         self.repaint()
 
@@ -443,7 +447,7 @@ class EwAttitudeIndicator(MyQtWidget, EwBasic):
 
         canvas.end()
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         self.set_roll(vals[0])
         self.set_pitch(vals[1])
         self.repaint()

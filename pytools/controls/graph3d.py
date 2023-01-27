@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Dict
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette
@@ -75,7 +75,7 @@ class EwGraph3D(gl.GLViewWidget, EwBasic):
         if self.cur_pt_idx == self.max_len:
             self.cur_pt_idx = 0
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         self.add_point(pos=(vals[0], vals[1], vals[2]),
                        size=(0.5),
                        color=(1.0, 0.0, 0.0, 0.5))

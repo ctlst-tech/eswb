@@ -1,4 +1,4 @@
-from typing import List, Union
+from typing import List, Union, Dict
 
 from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QPainter, QPalette, QPainterPath, QPen
@@ -96,7 +96,7 @@ class EwRelativePosition(MyQtWidget, EwBasic):
     def set_base_r(self, r):
         self._base_r = r
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         self.set_plane_phi(vals[0])
         self.set_plane_r(vals[1])
         self.set_plane_course(vals[2])
