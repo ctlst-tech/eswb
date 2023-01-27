@@ -18,7 +18,7 @@ static int local_index_num = LOCAL_INDEX_INIT; // omit first for having no zero 
 static pthread_mutex_t local_topic_index_mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_mutex_t local_buses_mutex = PTHREAD_MUTEX_INITIALIZER;
 
-#define LOCAL_BUSSES_MAX 16
+#define LOCAL_BUSSES_MAX 24
 static eswb_bus_handle_t local_buses[LOCAL_BUSSES_MAX];
 
 int local_bus_is_inited(const eswb_bus_handle_t *b){
