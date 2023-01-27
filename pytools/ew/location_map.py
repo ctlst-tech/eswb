@@ -2,15 +2,15 @@ from pathlib import Path
 from typing import List, Union, Dict
 import io
 
-from branca.element import JavascriptLink, Element
+from branca.element import Element
 from jinja2 import Template
 from PyQt5 import QtCore
-from PyQt5.QtGui import QPainter
 from PyQt5.QtWebEngineWidgets import QWebEngineView
 import folium
 
-from pytools.controls import MyQtWidget, EwBasic
-from pytools.controls.datasources import DataSourceBasic, NoDataStub
+from ew import EwBasic
+from common import MyQtWidget
+from ds import DataSourceBasic, NoDataStub
 
 
 class EwLocationMap(MyQtWidget, EwBasic):

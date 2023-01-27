@@ -1,6 +1,6 @@
 from sanic import Sanic
 
-from controls.datasources import DataSourceSinus, DataSourceConst
+from ds import DataSourceSinus, DataSourceConst
 from ws_channel import WsStreamChannel, WsMonitor
 
 app = Sanic("streamer")

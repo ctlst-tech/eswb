@@ -3,8 +3,8 @@ from typing import List, Union, Dict
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette
 
-from controls import EwBasic
-from controls.datasources import DataSourceBasic, NoDataStub
+from ew import EwBasic
+from ds import DataSourceBasic, NoDataStub
 
 import pyqtgraph.opengl as gl
 import numpy as np

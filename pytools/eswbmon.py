@@ -2,13 +2,14 @@
 # TODO https://github.com/pyqt/examples
 
 import sys
-from typing import Dict
+from typing import Dict, List, Union
 
 from PyQt5 import QtCore
 
 import eswb as e
-from controls import MyQtWidget, EwBasic, EwTable, EwChart
-from pytools.controls.datasources import *
+from ds.datasources import find_data_source
+from ew import *
+from ds import *
 from monitor import Monitor, ApplicationWindow
 
 

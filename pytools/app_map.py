@@ -1,9 +1,7 @@
 import sys
-from controls import *
-from controls.datasources import *
-from location_map import EwLocationMap
+from ds import *
+from ew import *
 from monitor import Monitor
-from relative_position import EwRelativePosition
 
 # DEBUG_PORT = '5588'
 # DEBUG_URL = 'http://127.0.0.1:%s' % DEBUG_PORT

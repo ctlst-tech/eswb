@@ -1,9 +1,8 @@
 import sys
-from controls import *
-from controls.datasources import *
-from controls.graph3d import EwGraph3D
+from ds import *
+from ew import *
 from monitor import Monitor
-from relative_position import EwRelativePosition
+
 
 mon_bus_name = 'monitor'
 telemetry_dir_name = 'telemetry'

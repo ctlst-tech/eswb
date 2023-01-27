@@ -3,8 +3,9 @@ from typing import List, Union, Dict
 from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QPainter, QPalette, QPainterPath, QPen
 
-from controls import MyQtWidget, EwBasic
-from controls.datasources import DataSourceBasic, NoDataStub
+from common import MyQtWidget
+from ew import EwBasic
+from ds import DataSourceBasic, NoDataStub
 import math
 
 

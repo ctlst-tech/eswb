@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 from eswbmon import *
+from ew import EwChart
 
 mon = EswbMonitor(argv=sys.argv)
 
