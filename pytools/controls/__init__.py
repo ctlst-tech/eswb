@@ -6,7 +6,7 @@ import os.path
 import pyqtgraph as pg
 from PyQt5 import QtWidgets, QtSvg, Qt
 from PyQt5.QtCore import QRectF, Qt, QPointF
-from PyQt5.QtGui import QPen, QPainter, QFont, QPalette, QColor
+from PyQt5.QtGui import QPen, QPainter, QFont, QPalette, QColor, QBrush
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 
 from controls.common import ColorInterp
@@ -145,7 +145,7 @@ class EwTable(MyQtWidget, EwBasic):
             value_item = self.table.item(i, 1)
             color_item = self.table.item(i, 1)
             prev_val = value_item.text()
-            new_val = str(vals[i])
+            new_val = str(vals[i]) if not isinstance(vals[i], NoDataStub) else 'NO DATA'
             if prev_val == new_val:
                 self.color_blenders[i].shift_to_left()
                 color_item.setBackground(self.color_blenders[i].color_get())
@@ -153,6 +153,64 @@ class EwTable(MyQtWidget, EwBasic):
                 color_item.setBackground(self.color_blenders[i].set_right())
 
             value_item.setText(new_val)
+
+
+class EwLamp(MyQtWidget, EwBasic):
+
+    def __init__(self, *, data_source: DataSourceBasic, max, min = 0, color, **kwargs):
+        MyQtWidget.__init__(self, **kwargs)
+        EwBasic.__init__(self)
+
+        self.set_data_sources([data_source])
+
+        self.setFixedSize(50, 50)
+        # self.setMinimumHeight(80)
+        # self.setMinimumWidth(80)
+
+
+        self.max = max
+        self.min = min
+
+        self.k = 1 / (max - min)
+        self.b = min
+
+        max_color = [*list(color), 255]
+        min_color = self.palette().color(QPalette.Base).getRgb()
+
+        self.color_blender = ColorInterp(min_color, max_color, 0.01)
+
+        self.value = 0.0
+        self.not_valid = False
+
+        self.layout.addWidget(self)
+
+    def paintEvent(self, event):
+        canvas = QPainter(self)
+
+
+
+
+        if self.not_valid:
+            pass
+        else:
+            v = self.k * self.value + self.b
+            self.color_blender.set_lever(v)
+            color = self.color_blender.color_get()
+            # canvas.setBackground(QBrush(color))
+            canvas.fillRect(event.rect(), color)
+
+        canvas.end()
+
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+        v = vals[0]
+
+        if isinstance(v, NoDataStub):
+            self.not_valid = True
+        else:
+            self.not_valid = False
+            self.value = vals[0]
+
+        self.repaint()
 
 
 class EwChart(MyQtWidget, EwBasic):

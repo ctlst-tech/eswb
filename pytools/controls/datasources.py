@@ -46,13 +46,14 @@ class DataSourceSum(DataSourceBasic):
 
 
 class DataSourceCalcFilteredRate(DataSourceBasic):
-    def __init__(self, name, data_source: DataSourceBasic, **kwargs):
+    def __init__(self, name, data_source: DataSourceBasic, factor=0.01, **kwargs):
         super().__init__(name, **kwargs)
         self.data_source = data_source
         self.initial = False
         self.filtered_value = 0
         self.previous_value = 0
         self.previous_time = 0
+        self.factor = factor
 
     def connect(self):
         self.data_source.connect()
@@ -71,7 +72,7 @@ class DataSourceCalcFilteredRate(DataSourceBasic):
         else:
             delta_time = curr_time - self.previous_time
             deriative = (current_value - self.previous_value) / delta_time
-            self.filtered_value = self.filtered_value - 0.01 * (self.filtered_value - deriative)
+            self.filtered_value = self.filtered_value - self.factor * (self.filtered_value - deriative)
 
         self.previous_value = current_value
         self.previous_time = curr_time

@@ -3,7 +3,7 @@ from PyQt5 import QtWidgets, QtCore
 
 
 class ApplicationWindow(QtWidgets.QMainWindow):
-    def __init__(self, title="ESWB display"):
+    def __init__(self, *, title="ESWB display", tabs=False):
         super().__init__()
 
         self.widgets = []
@@ -11,7 +11,7 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         # self.setAttribute(QtCore.Qt.WA_DeleteOnClose)
         self.setWindowTitle(title)
 
-        self.main_widget = QtWidgets.QWidget(self)
+        self.main_widget = QtWidgets.QWidget(self) if not tabs else QtWidgets.QTabWidget()
         self.main_widget.setFocus()
         self.setCentralWidget(self.main_widget)
 
@@ -24,6 +24,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
 
     def add_ew(self, widget):
         self.main_layout.addWidget(widget)
+
+    def reg_widget(self, widget):
         self.widgets.append(widget)
 
     def connect(self):
@@ -38,12 +40,24 @@ class ApplicationWindow(QtWidgets.QMainWindow):
             w.redraw()
 
 
+class Tab(QtWidgets.QWidget):
+    def __init__(self, *, parent):
+        super().__init__()
+        self.parent = parent
+        self.main_layout = QtWidgets.QVBoxLayout(self)
+
+    def add_widget(self, w):
+        self.main_layout.addWidget(w)
+        self.parent.app_window.reg_widget(w)
+
+
 class Monitor:
-    def __init__(self, *, monitor_bus_name='monitor', argv=None):
+    def __init__(self, *, monitor_bus_name='monitor', argv=None, tabs=False):
         super().__init__()
         self.app = QtWidgets.QApplication(argv)
-        self.app_window = ApplicationWindow()
+        self.app_window = ApplicationWindow(tabs=tabs)
         self.service_bus_name = monitor_bus_name
+        self.tab_widget = None
         pass
 
     def connect(self):
@@ -59,6 +73,12 @@ class Monitor:
 
     def add_widget(self, w):
         self.app_window.add_ew(w)
+        self.app_window.reg_widget(w)
+
+    def add_tab(self, name):
+        tab = Tab(parent=self)
+        self.app_window.main_widget.addTab(tab, name)
+        return tab
 
 
 class ArgParser:
