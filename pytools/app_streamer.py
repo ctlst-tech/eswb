@@ -1,7 +1,7 @@
 from sanic import Sanic
 
 from ds import DataSourceSinus, DataSourceConst
-from ws_channel import WsStreamChannel, WsMonitor
+from ws import WsStreamChannel, WsMonitor
 
 app = Sanic("streamer")
 app.config.WEBSOCKET_MAX_SIZE = 2 ** 20
