@@ -2,9 +2,10 @@ from typing import List, Union, Dict
 
 from PyQt5.QtGui import QPainter
 
-from common import MyQtWidget
-from ew import EwBasic
 from ds import DataSourceBasic, NoDataStub
+
+from .common import MyQtWidget
+from .widgets import EwBasic
 
 
 class EwPaintSample(MyQtWidget, EwBasic):

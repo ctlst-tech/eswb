@@ -1,12 +1,13 @@
+import math
 from typing import List, Union, Dict
 
 from PyQt5.QtCore import Qt, QPointF
 from PyQt5.QtGui import QPainter, QPalette, QPainterPath, QPen
 
-from common import MyQtWidget
-from ew import EwBasic
 from ds import DataSourceBasic, NoDataStub
-import math
+
+from .common import MyQtWidget
+from .widgets import EwBasic
 
 
 class EwRelativePosition(MyQtWidget, EwBasic):

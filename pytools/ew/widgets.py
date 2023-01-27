@@ -1,23 +1,23 @@
 import math
+import os.path
 from abc import abstractmethod
 from typing import List, Union, Dict, Tuple
 
-import os.path
 import pyqtgraph as pg
-from PyQt5 import QtWidgets, QtSvg, Qt
-from PyQt5.QtCore import QRectF, Qt, QPointF
-from PyQt5.QtGui import QPen, QPainter, QFont, QPalette, QColor, QBrush
+from PyQt5 import Qt
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPen, QPainter, QFont, QPalette, QColor
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 
-from common import MyQtWidget, ColorInterp
 from ds import DataSourceBasic, NoDataStub
-from controls.common import ColorInterp
-from controls.datasources import DataSourceBasic, NoDataStub
+from .common import MyQtWidget, ColorInterp
+
 
 def rel_path(path, base_path=None):
     if not base_path:
         base_path = os.path.dirname(__file__)
     return f'{base_path}/../{path}'
+
 
 class EwBasic:
     def __init__(self):
@@ -120,17 +120,12 @@ class EwTable(MyQtWidget, EwBasic):
 
 
 class EwLamp(MyQtWidget, EwBasic):
-
-    def __init__(self, *, data_source: DataSourceBasic, max, min = 0, color, **kwargs):
+    def __init__(self, *, data_source: DataSourceBasic, max, min=0, color, **kwargs):
         MyQtWidget.__init__(self, **kwargs)
         EwBasic.__init__(self)
 
         self.set_data_sources([data_source])
-
         self.setFixedSize(50, 50)
-        # self.setMinimumHeight(80)
-        # self.setMinimumWidth(80)
-
 
         self.max = max
         self.min = min
@@ -151,9 +146,6 @@ class EwLamp(MyQtWidget, EwBasic):
     def paintEvent(self, event):
         canvas = QPainter(self)
 
-
-
-
         if self.not_valid:
             pass
         else:
@@ -165,7 +157,7 @@ class EwLamp(MyQtWidget, EwBasic):
 
         canvas.end()
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         v = vals[0]
 
         if isinstance(v, NoDataStub):

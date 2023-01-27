@@ -89,7 +89,7 @@ class SdtlTelemetryData(EwBasic):
 
 
 class SdtlTelemetryWidget(MyQtWidget, SdtlTelemetryData):
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         pass
 
     def __init__(self, *, sdtl_ref: e.SDTLserialService, **kwargs):
