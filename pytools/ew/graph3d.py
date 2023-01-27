@@ -3,8 +3,9 @@ from typing import List, Union, Dict
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPalette
 
-from ew import EwBasic
 from ds import DataSourceBasic, NoDataStub
+
+from .widgets import EwBasic
 
 import pyqtgraph.opengl as gl
 import numpy as np

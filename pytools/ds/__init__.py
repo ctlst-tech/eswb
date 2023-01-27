@@ -1,5 +1,12 @@
-from datasources import (DataSourceBasic, DataSourceConst, DataSourceSinus, DataSourceTimeline, DataSourceSum,
-                         NoDataStub, DataSourceCalcFilteredRate)
+from .datasources import (
+    DataSourceBasic,
+    DataSourceConst,
+    DataSourceSinus,
+    DataSourceTimeline,
+    DataSourceSum,
+    NoDataStub,
+    DataSourceCalcFilteredRate
+)
 
 __all__ = [
     "DataSourceBasic",

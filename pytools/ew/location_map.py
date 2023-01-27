@@ -1,3 +1,5 @@
+import folium
+
 from pathlib import Path
 from typing import List, Union, Dict
 import io
@@ -6,11 +8,11 @@ from branca.element import Element
 from jinja2 import Template
 from PyQt5 import QtCore
 from PyQt5.QtWebEngineWidgets import QWebEngineView
-import folium
 
-from ew import EwBasic
-from common import MyQtWidget
 from ds import DataSourceBasic, NoDataStub
+
+from .widgets import EwBasic
+from .common import MyQtWidget
 
 
 class EwLocationMap(MyQtWidget, EwBasic):

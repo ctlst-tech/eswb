@@ -9,15 +9,15 @@ from PyQt5.QtCore import QRectF, Qt, QPointF
 from PyQt5.QtGui import QPen, QPainter, QFont, QPalette, QColor, QBrush
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 
-from common import MyQtWidget, ColorInterp
+from .common import MyQtWidget, ColorInterp
 from ds import DataSourceBasic, NoDataStub
-from controls.common import ColorInterp
-from controls.datasources import DataSourceBasic, NoDataStub
+
 
 def rel_path(path, base_path=None):
     if not base_path:
         base_path = os.path.dirname(__file__)
     return f'{base_path}/../{path}'
+
 
 class EwBasic:
     def __init__(self):

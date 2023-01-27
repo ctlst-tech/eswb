@@ -39,6 +39,11 @@ class ColorInterp:
         self.mixture_lever -= self.step
         self.mixture_lever = 0.0 if self.mixture_lever < 0.0 else self.mixture_lever
 
+    def set_lever(self, lv):
+        self.mixture_lever = lv
+        self.mixture_lever = 1.0 if self.mixture_lever > 1.0 else self.mixture_lever
+        self.mixture_lever = 0.0 if self.mixture_lever < 0.0 else self.mixture_lever
+
     def set_left(self):
         self.mixture_lever = 0.0
         return self.color_get()
