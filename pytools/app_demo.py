@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 
 import sys
-from controls import *
-from controls.relative_position import *
-from controls.datasources import *
+from ds import *
+from ew import *
 from monitor import Monitor
 
 mon_bus_name = 'monitor'

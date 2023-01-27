@@ -1,12 +1,14 @@
-from typing import List, Union
+from typing import List, Union, Dict
 
 from PyQt5.QtGui import QPainter
 
-from pytools.controls import MyQtWidget, EwBasic
-from pytools.controls.datasources import DataSourceBasic, NoDataStub
+from ds import DataSourceBasic, NoDataStub
+
+from .common import MyQtWidget
+from .widgets import EwBasic
 
 
-class EwLocationMap(MyQtWidget, EwBasic):
+class EwPaintSample(MyQtWidget, EwBasic):
     # SAMPLE_TODO copy and paste this class , rename properly
 
     def __init__(self, data_sources: List[DataSourceBasic], **kwargs):
@@ -29,6 +31,6 @@ class EwLocationMap(MyQtWidget, EwBasic):
         # SAMPLE_TODO drawing code
         canvas.end()
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         # SAMPLE_TODO pass upcoming data to widget's state
         self.repaint()

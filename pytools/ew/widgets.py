@@ -1,62 +1,22 @@
 import math
-from abc import abstractmethod
-from typing import List, Union, Tuple
-
 import os.path
+from abc import abstractmethod
+from typing import List, Union, Dict, Tuple
+
 import pyqtgraph as pg
-from PyQt5 import QtWidgets, QtSvg, Qt
-from PyQt5.QtCore import QRectF, Qt, QPointF
-from PyQt5.QtGui import QPen, QPainter, QFont, QPalette, QColor, QBrush
+from PyQt5 import Qt
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPen, QPainter, QFont, QPalette, QColor
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 
-from controls.common import ColorInterp
-from controls.datasources import DataSourceBasic, NoDataStub
+from ds import DataSourceBasic, NoDataStub
+from .common import MyQtWidget, ColorInterp
 
 
 def rel_path(path, base_path=None):
     if not base_path:
         base_path = os.path.dirname(__file__)
     return f'{base_path}/../{path}'
-
-
-class MyQtWidget(QtWidgets.QWidget):
-    def __init__(self, layout_vertical=True, **kwargs):
-        super().__init__(**kwargs)
-        self.layout = QtWidgets.QBoxLayout(QtWidgets.QBoxLayout.TopToBottom if layout_vertical else QtWidgets.QBoxLayout.LeftToRight)
-        self.setLayout(self.layout)
-
-    @staticmethod
-    def mk_svg(file, z_val=0):
-        item = QtSvg.QGraphicsSvgItem(file)
-        item.setCacheMode(QtWidgets.QGraphicsItem.CacheMode.NoCache)
-        item.setZValue(z_val)
-        return item
-
-    @staticmethod
-    def translate_point(canvas, pt: QPointF, zero_offset_x=0, zero_offset_y=0):
-        cwidth = canvas.device().width()
-        cheight = canvas.device().height()
-        dx, dy = cwidth / 2 + zero_offset_x, cheight / 2 + zero_offset_y
-        return QPointF(pt.x() + dx, pt.y() + dy)
-
-    @staticmethod
-    def draw_item(canvas, item, width=0, height=0, zero_offset_x=0, zero_offset_y=0):
-        canvas.save()
-
-        cwidth = canvas.device().width()
-        cheight = canvas.device().height()
-
-        width = cwidth if width == 0 else width
-        height = cheight if height == 0 else height
-
-        dx, dy = cwidth / 2 + zero_offset_x + item.x(), cheight / 2 + zero_offset_y + item.y()
-
-        canvas.translate(dx, dy)
-        canvas.rotate(item.rotation())
-
-        # item.x()
-        item.renderer().render(canvas, QRectF(-width / 2, -height / 2, width, height))
-        canvas.restore()
 
 
 class EwBasic:
@@ -71,7 +31,7 @@ class EwBasic:
         self.nested_widgets.append(w)
 
     @abstractmethod
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         pass
 
     def redraw(self):
@@ -79,17 +39,21 @@ class EwBasic:
             w.redraw()
 
         vals = []
-        for ds in self.data_sources:
-            vals.append(ds.read())
+        vals_map = dict()
 
-        self.radraw_handler(vals)
+        for ds in self.data_sources:
+            v = ds.read()
+            vals.append(v)
+            vals_map[ds.name] = v
+
+        self.radraw_handler(vals, vals_map)
 
 
 class EwGroup(MyQtWidget, EwBasic):
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         pass
 
-    def __init__(self, widgets: List[MyQtWidget]):
+    def __init__(self, widgets: List[EwBasic | MyQtWidget]):
         MyQtWidget.__init__(self, layout_vertical=False)
         EwBasic.__init__(self)
 
@@ -140,7 +104,7 @@ class EwTable(MyQtWidget, EwBasic):
 
         self.layout.addWidget(self.table)
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         for i in range(0, len(self.data_sources)):
             value_item = self.table.item(i, 1)
             color_item = self.table.item(i, 1)
@@ -156,17 +120,12 @@ class EwTable(MyQtWidget, EwBasic):
 
 
 class EwLamp(MyQtWidget, EwBasic):
-
-    def __init__(self, *, data_source: DataSourceBasic, max, min = 0, color, **kwargs):
+    def __init__(self, *, data_source: DataSourceBasic, max, min=0, color, **kwargs):
         MyQtWidget.__init__(self, **kwargs)
         EwBasic.__init__(self)
 
         self.set_data_sources([data_source])
-
         self.setFixedSize(50, 50)
-        # self.setMinimumHeight(80)
-        # self.setMinimumWidth(80)
-
 
         self.max = max
         self.min = min
@@ -187,9 +146,6 @@ class EwLamp(MyQtWidget, EwBasic):
     def paintEvent(self, event):
         canvas = QPainter(self)
 
-
-
-
         if self.not_valid:
             pass
         else:
@@ -201,7 +157,7 @@ class EwLamp(MyQtWidget, EwBasic):
 
         canvas.end()
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         v = vals[0]
 
         if isinstance(v, NoDataStub):
@@ -287,7 +243,7 @@ class EwChart(MyQtWidget, EwBasic):
             if color_i < len(self.colors_series):
                 color_i += 1
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         for i in range(0, len(self.plots)):
             self.plots[i].update(vals[i])
 
@@ -314,11 +270,11 @@ class EwCursor(MyQtWidget, EwBasic):
 
         def rel_x(self, x_val):
             return self.margin + (x_val - self.parent.data_range[0][0]) * (
-                        self.parent.width() - 2 * self.margin) / self.parent.x_range_mod
+                    self.parent.width() - 2 * self.margin) / self.parent.x_range_mod
 
         def rel_y(self, y_val):
             return self.margin + (y_val - self.parent.data_range[1][0]) * (
-                        self.parent.height() - 2 * self.margin) / self.parent.y_range_mod
+                    self.parent.height() - 2 * self.margin) / self.parent.y_range_mod
 
         def update_data(self, val: tuple):
             if isinstance(val[0], NoDataStub) or isinstance(val[1], NoDataStub):
@@ -384,7 +340,7 @@ class EwCursor(MyQtWidget, EwBasic):
 
         canvas.end()
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         for i in range(0, len(self.cursors)):
             self.cursors[i].update_data((vals[i * 2], vals[i * 2 + 1]))
 
@@ -425,7 +381,7 @@ class EwHeadingIndicator(MyQtWidget, EwBasic):
 
         self._heading = h
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         self.set_heading(vals[0])
         self.repaint()
 
@@ -521,7 +477,7 @@ class EwAttitudeIndicator(MyQtWidget, EwBasic):
 
         canvas.end()
 
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         self.set_roll(vals[0])
         self.set_pitch(vals[1])
         self.repaint()

@@ -1,0 +1,17 @@
+function jumpTo(v, z=14, d=0.8) {
+    const map = {{ id }}
+    const marker = {{ marker_id }}
+
+    if(d < 0.1) {
+    	map.panTo(v, z);
+    } else {
+		map.flyTo(v, z, {
+			animate: true,
+			duration: d
+		});
+	}
+
+    marker.setLatLng(v).update();
+    console.log("[{{ id }}] locate: " + v)
+}
+

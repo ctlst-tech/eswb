@@ -1,4 +1,5 @@
-from PyQt5 import Qt
+from PyQt5 import Qt, QtWidgets, QtSvg
+from PyQt5.QtCore import QPointF, QRectF
 
 
 class ColorInterp:
@@ -50,3 +51,44 @@ class ColorInterp:
     def set_right(self):
         self.mixture_lever = 1.0
         return self.color_get()
+
+
+class MyQtWidget(QtWidgets.QWidget):
+    def __init__(self, layout_vertical=True, **kwargs):
+        super().__init__(**kwargs)
+        self.layout = QtWidgets.QBoxLayout(
+            QtWidgets.QBoxLayout.TopToBottom if layout_vertical else QtWidgets.QBoxLayout.LeftToRight)
+        self.setLayout(self.layout)
+
+    @staticmethod
+    def mk_svg(file, z_val=0):
+        item = QtSvg.QGraphicsSvgItem(file)
+        item.setCacheMode(QtWidgets.QGraphicsItem.CacheMode.NoCache)
+        item.setZValue(z_val)
+        return item
+
+    @staticmethod
+    def translate_point(canvas, pt: QPointF, zero_offset_x=0, zero_offset_y=0):
+        cwidth = canvas.device().width()
+        cheight = canvas.device().height()
+        dx, dy = cwidth / 2 + zero_offset_x, cheight / 2 + zero_offset_y
+        return QPointF(pt.x() + dx, pt.y() + dy)
+
+    @staticmethod
+    def draw_item(canvas, item, width=0, height=0, zero_offset_x=0, zero_offset_y=0):
+        canvas.save()
+
+        cwidth = canvas.device().width()
+        cheight = canvas.device().height()
+
+        width = cwidth if width == 0 else width
+        height = cheight if height == 0 else height
+
+        dx, dy = cwidth / 2 + zero_offset_x + item.x(), cheight / 2 + zero_offset_y + item.y()
+
+        canvas.translate(dx, dy)
+        canvas.rotate(item.rotation())
+
+        # item.x()
+        item.renderer().render(canvas, QRectF(-width / 2, -height / 2, width, height))
+        canvas.restore()

@@ -2,12 +2,14 @@
 # TODO https://github.com/pyqt/examples
 
 import sys
+from typing import Dict, List, Union
 
 from PyQt5 import QtCore
 
 import eswb as e
-from controls import MyQtWidget, EwBasic, EwTable, EwChart, EwLamp
-from controls.datasources import *
+from ds.datasources import find_data_source
+from ew import *
+from ds import *
 from monitor import Monitor, ApplicationWindow
 
 
@@ -50,6 +52,9 @@ class EswbApplicationWindow(ApplicationWindow):
 
 
 class SdtlTelemetryData(EwBasic):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
+        pass
+
     def __init__(self, sdtl_ref: e.SDTLserialService):
         EwBasic.__init__(self)
 
@@ -84,7 +89,7 @@ class SdtlTelemetryData(EwBasic):
 
 
 class SdtlTelemetryWidget(MyQtWidget, SdtlTelemetryData):
-    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]]):
+    def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         pass
 
     def __init__(self, *, sdtl_ref: e.SDTLserialService, **kwargs):
@@ -178,4 +183,3 @@ class EswbMonitor(Monitor):
 
     def add_widget(self, w):
         self.app_window.add_ew(w)
-

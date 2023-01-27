@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Union, Tuple
+from typing import List, Union
 import time
 import math
 
@@ -90,6 +90,20 @@ class DataSourceConst(DataSourceBasic):
 
     def read(self) -> Union[float, int, str, NoDataStub]:
         return self._value
+
+
+class DataSourceTimeline(DataSourceBasic):
+    def __init__(self, name, **kwargs):
+        super().__init__(name, **kwargs)
+        self.time = 0
+        self.delta_time = 1
+
+    def connect(self):
+        pass
+
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        self.time += self.delta_time
+        return self.time
 
 
 class DataSourceSinus(DataSourceBasic):
