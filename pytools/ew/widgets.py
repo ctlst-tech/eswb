@@ -109,7 +109,12 @@ class EwTable(MyQtWidget, EwBasic):
             value_item = self.table.item(i, 1)
             color_item = self.table.item(i, 1)
             prev_val = value_item.text()
-            new_val = str(vals[i]) if not isinstance(vals[i], NoDataStub) else 'NO DATA'
+            val = vals[i]
+
+            if isinstance(val, float):
+                val = '{:10.6f}'.format(val)
+
+            new_val = str(val) if not isinstance(val, NoDataStub) else 'NO DATA'
             if prev_val == new_val:
                 self.color_blenders[i].shift_to_left()
                 color_item.setBackground(self.color_blenders[i].color_get())
