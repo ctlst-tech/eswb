@@ -6,14 +6,14 @@ from PyQt5.QtGui import QPainter, QPalette, QPainterPath, QPen
 
 from ds import DataSourceBasic, NoDataStub
 
-from .common import MyQtWidget
+from .common import MyQtWidget, rel_path
 from .widgets import EwBasic
 
 
 class EwRelativePosition(MyQtWidget, EwBasic):
     # SAMPLE_TODO copy and paste this class , rename properly
 
-    def __init__(self, data_sources: List[DataSourceBasic], **kwargs):
+    def __init__(self, data_sources: List[DataSourceBasic], fixed_size=None, **kwargs):
         MyQtWidget.__init__(self, **kwargs)
         EwBasic.__init__(self)
 
@@ -21,14 +21,15 @@ class EwRelativePosition(MyQtWidget, EwBasic):
         self.set_data_sources(data_sources)
 
         # SAMPLE_TODO define widget size policy
-        self.setFixedSize(380, 380)
+        if fixed_size:
+            self.setFixedSize(fixed_size[0], fixed_size[1])
         # self.setMinimumHeight(80)
         # self.setMinimumWidth(80)
 
-        self.svgAirplaneWhite = self.mk_svg("images/vehicle/airplane-white.svg")
-        self.svgAim = self.mk_svg("images/vehicle/aim.svg")
-        self.svgCircle = self.mk_svg("images/ehsi/ehsi_back.svg")
-        self.svgCross = self.mk_svg("images/eadi/eadi_adi_fpmx.svg")
+        self.svgAirplaneWhite = self.mk_svg(rel_path("images/vehicle/airplane-white.svg"))
+        self.svgAim = self.mk_svg(rel_path("images/vehicle/aim.svg"))
+        self.svgCircle = self.mk_svg(rel_path("images/ehsi/ehsi_back.svg"))
+        self.svgCross = self.mk_svg(rel_path("images/eadi/eadi_adi_fpmx.svg"))
 
         self.path = QPainterPath()
 

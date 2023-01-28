@@ -1,5 +1,4 @@
 import math
-import os.path
 from abc import abstractmethod
 from typing import List, Union, Dict, Tuple
 
@@ -10,13 +9,7 @@ from PyQt5.QtGui import QPen, QPainter, QFont, QPalette, QColor
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 
 from ds import DataSourceBasic, NoDataStub
-from .common import MyQtWidget, ColorInterp
-
-
-def rel_path(path, base_path=None):
-    if not base_path:
-        base_path = os.path.dirname(__file__)
-    return f'{base_path}/../{path}'
+from .common import MyQtWidget, ColorInterp, rel_path
 
 
 class EwBasic:
@@ -73,6 +66,8 @@ class EwTable(MyQtWidget, EwBasic):
 
         self.table = QTableWidget()
 
+        self.caption = caption
+
         self.table.setRowCount(len(data_sources))
         self.table.setColumnCount(2)
         # self.table.setColumnCount(3)
@@ -99,8 +94,8 @@ class EwTable(MyQtWidget, EwBasic):
 
         self.table.setMinimumHeight(height)
 
-        if caption:
-            self.layout.addWidget(QLabel(caption))
+        if self.caption:
+            self.layout.addWidget(QLabel(self.caption))
 
         self.layout.addWidget(self.table)
 
@@ -109,7 +104,12 @@ class EwTable(MyQtWidget, EwBasic):
             value_item = self.table.item(i, 1)
             color_item = self.table.item(i, 1)
             prev_val = value_item.text()
-            new_val = str(vals[i]) if not isinstance(vals[i], NoDataStub) else 'NO DATA'
+            val = vals[i]
+
+            if isinstance(val, float):
+                val = '{:10.6f}'.format(val)
+
+            new_val = str(val) if not isinstance(val, NoDataStub) else 'NO DATA'
             if prev_val == new_val:
                 self.color_blenders[i].shift_to_left()
                 color_item.setBackground(self.color_blenders[i].color_get())

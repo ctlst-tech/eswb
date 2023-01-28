@@ -1,5 +1,6 @@
 from PyQt5 import Qt, QtWidgets, QtSvg
 from PyQt5.QtCore import QPointF, QRectF
+import os.path
 
 
 class ColorInterp:
@@ -92,3 +93,9 @@ class MyQtWidget(QtWidgets.QWidget):
         # item.x()
         item.renderer().render(canvas, QRectF(-width / 2, -height / 2, width, height))
         canvas.restore()
+
+
+def rel_path(path, base_path=None):
+    if not base_path:
+        base_path = os.path.dirname(__file__)
+    return f'{base_path}/../{path}'

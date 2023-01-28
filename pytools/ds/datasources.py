@@ -10,7 +10,7 @@ class NoDataStub:
 
 
 class DataSourceBasic:
-    def __init__(self, name, *, mult=1.0, rng=None, demo_mode=False):
+    def __init__(self, name, *, mult=1, rng=None, demo_mode=False):
         self.name = name
         self.range = rng
         self.mult = mult
