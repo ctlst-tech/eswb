@@ -1,5 +1,6 @@
 import sys
 from PyQt5 import QtWidgets, QtCore
+from PyQt5.QtWidgets import QPushButton
 
 
 class ApplicationWindow(QtWidgets.QMainWindow):
@@ -74,6 +75,9 @@ class Monitor:
     def add_widget(self, w):
         self.app_window.add_ew(w)
         self.app_window.reg_widget(w)
+
+    def add_button(self, btn: QPushButton):
+        btn.setParent(self.app_window.main_widget)
 
     def add_tab(self, name):
         tab = Tab(parent=self)
