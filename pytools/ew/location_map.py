@@ -18,9 +18,9 @@ from .common import MyQtWidget
 class EwLocationMap(MyQtWidget, EwBasic):
     # SAMPLE_TODO copy and paste this class , rename properly
 
-    def __init__(self, data_sources: List[DataSourceBasic],
+    def __init__(self, data_sources: List[DataSourceBasic], *,
                  start_loc=(57.0764, 24.3308),
-                 window_size=(360, 380),
+                 window_size=None,
                  **kwargs):
         MyQtWidget.__init__(self, **kwargs)
         EwBasic.__init__(self)
@@ -30,7 +30,9 @@ class EwLocationMap(MyQtWidget, EwBasic):
         self.map_zoom = 13
 
         self.set_data_sources(data_sources)
-        self.setFixedSize(window_size[0], window_size[1])
+
+        if window_size:
+            self.setFixedSize(window_size[0], window_size[1])
 
         self.map = folium.Map(location=self.location,
                               zoom_start=self.map_zoom, control_scale=True,
@@ -65,7 +67,7 @@ class EwLocationMap(MyQtWidget, EwBasic):
 
     def update_web_view(self):
         script = f"jumpTo({list(self.location)}, {self.map_zoom}, {self.animation_duration})"
-        print(f"run: {script}")
+        # print(f"run: {script}")
         self.webView.page().runJavaScript(script)
 
     def set_location(self, loc=(0.0, 0.0)):
@@ -87,20 +89,11 @@ class EwLocationMap(MyQtWidget, EwBasic):
             self.location_counter = 0
 
     def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
-        def get_location(num):
-            if num == 0:
-                return 'riga'
-            elif num == 1:
-                return 'berlin'
-            else:
-                return 'paris'
 
-        t = vals_map['time']
+        lat = vals[0]
+        lon = vals[1]
+        alt = vals[2]
 
-        if t % 300 == 0:
-            self.increment_counter()
-
-        loc_name = get_location(self.location_counter)
-        self.set_location(loc=vals_map[loc_name])
+        self.set_location(loc=(lat, lon))
 
         self.repaint()

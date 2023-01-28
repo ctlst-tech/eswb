@@ -73,6 +73,8 @@ class EwTable(MyQtWidget, EwBasic):
 
         self.table = QTableWidget()
 
+        self.caption = caption
+
         self.table.setRowCount(len(data_sources))
         self.table.setColumnCount(2)
         # self.table.setColumnCount(3)
@@ -99,8 +101,8 @@ class EwTable(MyQtWidget, EwBasic):
 
         self.table.setMinimumHeight(height)
 
-        if caption:
-            self.layout.addWidget(QLabel(caption))
+        if self.caption:
+            self.layout.addWidget(QLabel(self.caption))
 
         self.layout.addWidget(self.table)
 
