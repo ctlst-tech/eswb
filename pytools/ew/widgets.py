@@ -1,5 +1,4 @@
 import math
-import os.path
 from abc import abstractmethod
 from typing import List, Union, Dict, Tuple
 
@@ -10,13 +9,7 @@ from PyQt5.QtGui import QPen, QPainter, QFont, QPalette, QColor
 from PyQt5.QtWidgets import QTableWidget, QTableWidgetItem, QHeaderView, QLabel
 
 from ds import DataSourceBasic, NoDataStub
-from .common import MyQtWidget, ColorInterp
-
-
-def rel_path(path, base_path=None):
-    if not base_path:
-        base_path = os.path.dirname(__file__)
-    return f'{base_path}/../{path}'
+from .common import MyQtWidget, ColorInterp, rel_path
 
 
 class EwBasic:
