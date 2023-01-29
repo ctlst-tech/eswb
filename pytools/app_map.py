@@ -31,11 +31,11 @@ def center_map():
 
 # -------- Vector (aka airplane)
 
-def add_vector(_id):
-    return lambda: m.add_marker(_id, [52.52472910525925, 13.375974062388432])
+def add_marker(_id):
+    return lambda: m.add_marker(_id, [52.52472910525925, 13.375974062388432], 24, 24)
 
 
-def rotate_vector(_id):
+def rotate_marker(_id):
     return lambda: m.rotate_marker(_id, m.get_marker_rotation(_id) + 15)
 
 
@@ -50,7 +50,7 @@ offs = {
 }
 
 
-def move_vector(_id):
+def move_marker(_id):
     def _move():
         dlon[_id] = dlon[_id] + offs[_id]
         m.move_marker(_id, [dlon[_id], 13.375974062388432])
@@ -58,36 +58,37 @@ def move_vector(_id):
     return _move
 
 
-#
-# def remove_vector(v):
-#     m.rm_vector(v)
+def rm_marker(_id):
+    return lambda: m.remove_marker(_id)
 
 
-# --------- Marker (aka aim)
-
-def add_marker(_id):
-    mr = m.add_marker(_id, [52.52472910525925, 13.375974062388432])
-    return mr
-
-
-# def update_marker(mr):
-#     m.update_marker(mr, [52.52472910525925, 13.375974062388432])
-#
-#
-# def remove_marker(mr):
-#     m.rm_marker(mr)
+demo_poly = [
+    [45.51, -122.68],
+    [37.77, -122.43],
+    [34.04, -118.2]
+]
 
 
 # --------- Path
-def add_path():
-    m.set_path([[52.52472910525925, 13.375974062388432],
-                [52.52472910525925, 13.375974062388432],
-                [52.52472910525925, 13.375974062388432],
-                [52.52472910525925, 13.375974062388432]])
+def add_poly(_id):
+    def _add():
+        m.add_poly(_id, demo_poly, color='#0000ff')
+
+    return _add
 
 
-def rm_path(p):
-    m.clear_path()
+def fit_poly(_id):
+    def _fit():
+        m.fit_poly(_id)
+
+    return _fit
+
+
+def rm_poly(_id):
+    def _rm():
+        m.remove_poly(_id)
+
+    return _rm
 
 
 button1 = QPushButton()
@@ -100,37 +101,61 @@ button2 = QPushButton()
 button2.setText("Add airplane")
 button2.move(160, 0)
 button2.resize(150, 40)
-button2.clicked.connect(add_vector("1"))
+button2.clicked.connect(add_marker("1"))
 
 button3 = QPushButton()
 button3.setText("Rotate airplane")
 button3.move(320, 0)
 button3.resize(150, 40)
-button3.clicked.connect(rotate_vector("1"))
+button3.clicked.connect(rotate_marker("1"))
 
 button4 = QPushButton()
 button4.setText("Move airplane")
 button4.move(470, 0)
 button4.resize(150, 40)
-button4.clicked.connect(move_vector("1"))
+button4.clicked.connect(move_marker("1"))
 
 button12 = QPushButton()
 button12.setText("Add airplane #2")
 button12.move(160, 50)
 button12.resize(150, 40)
-button12.clicked.connect(add_vector("2"))
+button12.clicked.connect(add_marker("2"))
 
 button13 = QPushButton()
 button13.setText("Rotate airplane #2")
 button13.move(320, 50)
 button13.resize(150, 40)
-button13.clicked.connect(rotate_vector("2"))
+button13.clicked.connect(rotate_marker("2"))
 
 button14 = QPushButton()
 button14.setText("Move airplane #2")
 button14.move(470, 50)
 button14.resize(150, 40)
-button14.clicked.connect(move_vector("2"))
+button14.clicked.connect(move_marker("2"))
+
+button15 = QPushButton()
+button15.setText("Remove airplane #2")
+button15.move(470, 50)
+button15.resize(150, 40)
+button15.clicked.connect(rm_marker("2"))
+
+button22 = QPushButton()
+button22.setText("Add poly")
+button22.move(160, 100)
+button22.resize(150, 40)
+button22.clicked.connect(add_poly("1"))
+
+button23 = QPushButton()
+button23.setText("Fit poly")
+button23.move(320, 100)
+button23.resize(150, 40)
+button23.clicked.connect(fit_poly("1"))
+
+button24 = QPushButton()
+button24.setText("Remove poly")
+button24.move(470, 100)
+button24.resize(150, 40)
+button24.clicked.connect(rm_poly("1"))
 
 mon.add_widget(EwGroup([m]))
 mon.add_button(button1)
@@ -141,4 +166,8 @@ mon.add_button(button4)
 mon.add_button(button12)
 mon.add_button(button13)
 mon.add_button(button14)
+
+mon.add_button(button22)
+mon.add_button(button23)
+mon.add_button(button24)
 mon.run()

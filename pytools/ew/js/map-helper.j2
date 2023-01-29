@@ -47,25 +47,45 @@ function _map() {
 	return map;
 }
 
-const _icons = {}
 const _markers = {}
+const _polys = {}
 
-function _addIcon(id, url, loc) {
-	if(_icons[id]) return false;
+function _addPolyline(id, latlngs, color='red') {
+	if(_polys[id]) return false;
+
+	var polyline = L.polyline(latlngs, {color: color}).addTo(_map());
+
+	_polys[id] = polyline;
+}
+
+function _removePolyline(id) {
+	if(!_polys[id]) return false;
+	var polyline = _polys[id];
+	polyline.remove();
+	delete _polys[id];
+}
+
+function _fitPolyline(id) {
+	if(!_polys[id]) return false;
+	var polyline = _polys[id];
+	_map().fitBounds(polyline.getBounds());
+}
+
+function _addMarker(id, url, loc, wsize=40, hsize=40) {
+	if(_markers[id]) return false;
 
 	const myIcon = L.icon({
 		iconUrl: url,
-		iconSize: [40, 40]
+		iconSize: [wsize, hsize]
 	});
 
 	const marker = L.marker(loc, {icon: myIcon});
 	marker.addTo(_map());
-
-	_icons[id] = myIcon;
+	marker._icon.style['filter'] = 'drop-shadow(2px 2px 1px rgba(0,0,0,0.2))'
 	_markers[id] = marker;
 }
 
-function _rotateIcon(id, angle) {
+function _rotateMarker(id, angle) {
 	if(!_markers[id]) return false;
 	marker = _markers[id];
 	console.log(marker);
@@ -75,10 +95,17 @@ function _rotateIcon(id, angle) {
 	marker._icon.style['transform'] = "translate3d(" + x + "px, " + y + "px, " + z + "px) rotate(" + angle + "deg)";
 }
 
-function _moveIcon(id, loc) {
+function _moveMarker(id, loc) {
 	if(!_markers[id]) return false;
 	marker = _markers[id];
 	marker.setLatLng(loc).update();
+}
+
+function _removeMarker(id) {
+	if(!_markers[id]) return false;
+	marker = _markers[id];
+	_map().removeLayer(marker);
+	delete _markers[id];
 }
 
 function _zoomTo(z=14) {

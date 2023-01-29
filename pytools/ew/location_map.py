@@ -23,20 +23,32 @@ class JsWrapperProxy:
     def _call_js(self, script: str):
         self.web_view.page().runJavaScript(script)
 
-    def add_icon(self, _id, url, loc):
-        self._call_js(f"_addIcon({_id}, '{url}', {loc})")
-
-    def move_icon(self, _id, loc):
-        self._call_js(f"_moveIcon({_id}, {loc})")
-
-    def rotate_icon(self, _id, angle):
-        self._call_js(f"_rotateIcon({_id}, {angle})")
-
     def zoom_to(self, zoom=14):
         self._call_js(f"_zoomTo({zoom})")
 
     def jump_to(self, loc, zoom=14, anim_duration=0):
         self._call_js(f"_jumpTo({loc}, {zoom}, {anim_duration})")
+
+    def add_marker(self, _id, url, loc, width=40, height=40):
+        self._call_js(f"_addMarker({_id}, '{url}', {loc}, {width}, {height})")
+
+    def move_marker(self, _id, loc):
+        self._call_js(f"_moveMarker({_id}, {loc})")
+
+    def rotate_marker(self, _id, angle):
+        self._call_js(f"_rotateMarker({_id}, {angle})")
+
+    def remove_marker(self, _id):
+        self._call_js(f"_removeMarker({_id})")
+
+    def add_poly(self, _id, latlngs, color='#ff0000'):
+        self._call_js(f"_addPolyline({_id}, {latlngs}, '{color}')")
+
+    def remove_poly(self, _id):
+        self._call_js(f"_removePolyline({_id})")
+
+    def fit_poly(self, _id):
+        self._call_js(f"_fitPolyline({_id})")
 
 
 class EwLocationMap(MyQtWidget, EwBasic):
@@ -53,10 +65,6 @@ class EwLocationMap(MyQtWidget, EwBasic):
         self.location = [57.0764, 24.3308]
         self.zoom_level = 13
         self.rotations = {}
-
-        self.markers = []
-        self.vectors = []
-        self.path = []
         self.vector_path = f"https://ctlst.ams3.cdn.digitaloceanspaces.com/airplane.svg"
 
         self.set_data_sources(data_sources)
@@ -98,8 +106,8 @@ class EwLocationMap(MyQtWidget, EwBasic):
         self.zoom_level = z
         self.js.zoom_to(self.zoom_level)
 
-    def add_marker(self, _id, loc):
-        self.js.add_icon(_id, self.vector_path, loc)
+    def add_marker(self, _id, loc, width=40, height=40):
+        self.js.add_marker(_id, self.vector_path, loc, width, height)
         self.rotations[_id] = 0
 
     def get_marker_rotation(self, _id):
@@ -107,17 +115,24 @@ class EwLocationMap(MyQtWidget, EwBasic):
 
     def rotate_marker(self, _id, angle):
         self.rotations[_id] = angle
-        self.js.rotate_icon(_id, self.rotations[_id])
+        self.js.rotate_marker(_id, self.rotations[_id])
+
+    def remove_marker(self, _id):
+        self.rotations[_id] = 0
+        self.js.remove_marker(_id)
 
     def move_marker(self, _id, loc):
-        self.js.move_icon(_id, loc)
-        self.js.rotate_icon(_id, self.rotations[_id])
+        self.js.move_marker(_id, loc)
+        self.js.rotate_marker(_id, self.rotations[_id])
 
-    def set_path(self, path):
-        self.path = path
+    def add_poly(self, _id, latlngs, color='#ff0000'):
+        self.js.add_poly(_id, latlngs, color)
 
-    def clear_path(self):
-        self.path = []
+    def fit_poly(self, _id):
+        self.js.fit_poly(_id)
+
+    def remove_poly(self, _id):
+        self.js.remove_poly(_id)
 
     def set_animation_duration(self, d):
         self.animation_duration = d
