@@ -5,6 +5,7 @@ const char *eswb_strerror(eswb_rv_t e) {
 
     switch (e) {
         case eswb_e_ok:                     return "OK";
+        case eswb_e_name_too_long:          return "Name is too long";
         case eswb_e_invargs:                return "Invalid arguments";
         case eswb_e_notdir:                 return "Mount point is not a directory";
         case eswb_e_path_too_long:          return "Path is too long";
