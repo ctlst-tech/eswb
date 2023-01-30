@@ -304,6 +304,12 @@ static eswb_rv_t fill_in_topic(topic_t *t, topic_proclaiming_tree_t *tsrc) {
 static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topic_struct, topic_t **rv_tpc,
                           int synced) {
 
+    topic_t *t = reg_find_topic_among_siblings(parent->first_child, topic_struct->name);
+
+    if (t != NULL) {
+        return eswb_e_topic_exist;
+    }
+
     topic_t *new = alloc_topic(parent->reg_ref);
 
     if (new == NULL) {

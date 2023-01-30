@@ -150,6 +150,14 @@ eswb_rv_t eswb_read_check_update(eswb_topic_descr_t td, void *data);
  */
 eswb_rv_t eswb_get_topic_params (eswb_topic_descr_t td, topic_params_t *params);
 
+/**
+ * Convenience function for checking topic expected type, e.g. when subscribing
+ * @param td topic descriptor
+ * @param expected_type expected topic type
+ * @param expected_size expected topic size
+ * @return eswb_e_ok on match, eswb_e_type_missmatch on mismatch
+ */
+eswb_rv_t eswb_check_topic_type(eswb_topic_descr_t td, topic_data_type_t expected_type, eswb_size_t expected_size);
 
 /**
  * Retrieve topics

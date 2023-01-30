@@ -216,6 +216,16 @@ eswb_rv_t eswb_get_topic_params (eswb_topic_descr_t td, topic_params_t *params) 
     return eswb_ctl(td, eswb_ctl_evq_get_params, params, sizeof(*params));
 }
 
+eswb_rv_t eswb_check_topic_type(eswb_topic_descr_t td, topic_data_type_t expected_type, eswb_size_t expected_size) {
+    topic_params_t tp;
+    eswb_rv_t rv = eswb_get_topic_params(td, &tp);
+    if (rv != eswb_e_ok) {
+        return rv;
+    }
+
+    return tp.type == expected_type && tp.size == expected_size ? eswb_e_ok : eswb_e_type_missmatch;
+}
+
 eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next2tid, struct topic_extract *info) {
     union {
         eswb_topic_id_t             tid;
@@ -333,6 +343,7 @@ const char *eswb_get_bus_prefix(eswb_type_t type) {
         case eswb_inter_thread:     return "itb:/";
         case eswb_inter_process:    return "ipb:/";
         case eswb_non_synced: return "nsb:/";
+        case eswb_not_defined: return "";
         default:
             return NULL;
     }
