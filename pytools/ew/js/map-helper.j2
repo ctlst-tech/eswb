@@ -53,9 +53,15 @@ const _polys = {}
 function _addPolyline(id, latlngs, color='red') {
 	if(_polys[id]) return false;
 
-	var polyline = L.polyline(latlngs, {color: color}).addTo(_map());
+    var polyline = L.polyline(latlngs, {color: color, smoothFactor: 0.0, weight: 1}).addTo(_map());
 
 	_polys[id] = polyline;
+}
+
+function _updatePolyline(id, latlngs) {
+ if(!_polys[id]) return false;
+ var polyline = _polys[id];
+ polyline.setLatLngs(latlngs);
 }
 
 function _removePolyline(id) {
@@ -79,7 +85,7 @@ function _addMarker(id, url, loc, wsize=40, hsize=40) {
 		iconSize: [wsize, hsize]
 	});
 
-	const marker = L.marker(loc, {icon: myIcon});
+    const marker = L.marker(loc, {icon: myIcon, title: id});
 	marker.addTo(_map());
 	marker._icon.style['filter'] = 'drop-shadow(2px 2px 1px rgba(0,0,0,0.2))'
 	_markers[id] = marker;
