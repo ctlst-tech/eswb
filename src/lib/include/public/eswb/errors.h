@@ -13,7 +13,9 @@ extern "C" {
 
 typedef enum {
     eswb_e_ok = 0,
+    eswb_e_name_too_long,
     eswb_e_invargs,
+    eswb_e_type_missmatch,
     eswb_e_notdir,
     eswb_e_path_too_long,
     eswb_e_timedout,

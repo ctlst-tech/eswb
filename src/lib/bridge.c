@@ -172,7 +172,9 @@ eswb_rv_t eswb_bridge_connect(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const
 
     TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, topics_num + 1);
 
-    if (b->tds_num > 1) {
+    int as_structure = b->tds_num > 1;
+
+    if (as_structure) {
         // several topics in bridge will deliver structure
         root = usr_topic_set_root(cntx, b->name, tt_struct, b->buffer2post_size);
 
@@ -208,7 +210,7 @@ eswb_rv_t eswb_bridge_connect(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const
         }
 
         root = usr_topic_set_root(cntx, mtd_td == 0 ? topic_name : b->topics[0].dest_name,
-                                                          b->topics[0].type, b->topics[0].size);
+                                  b->topics[0].type, b->topics[0].size);
         if (b->topics[0].type == tt_struct || b->topics[0].type == tt_vector) {
             rv = add_nested_children_to_proclaiming_array(b->topics[0].td, cntx, root);
             if (rv != eswb_e_ok) {
@@ -222,6 +224,27 @@ eswb_rv_t eswb_bridge_connect(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const
     } else {
         rv = eswb_proclaim_tree(mtd_td, root, cntx->t_num, &b->dest_td);
     }
+
+    if (rv == eswb_e_topic_exist) {
+        if (!as_structure) {
+            if (mtd_td != 0) {
+                rv = eswb_connect_nested(mtd_td, root->name, &b->dest_td);
+            } else {
+                strcpy(topic_path, dest_mnt);
+                strcat(topic_path, "/");
+                strcat(topic_path, root->name);
+                rv = eswb_connect(dest_mnt, &b->dest_td);
+            }
+            if (rv != eswb_e_ok) {
+                return rv;
+            }
+            rv = eswb_check_topic_type(b->dest_td, b->topics[0].type, b->topics[0].size);
+            if (rv != eswb_e_ok) {
+                return rv;
+            }
+        }
+    }
+
 
     return rv;
 }

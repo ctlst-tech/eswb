@@ -144,7 +144,7 @@ eswb_rv_t local_bus_create(const char *bus_name, local_bus_type_t type, eswb_siz
     eswb_rv_t rv;
 
     if (strlen(bus_name) >= ESWB_BUS_NAME_MAX_LEN) {
-        return eswb_e_invargs;
+        return eswb_e_name_too_long;
     }
     if (local_bus_lookup(bus_name, type, NULL) == eswb_e_ok) {
         return eswb_e_bus_exists;

@@ -284,8 +284,13 @@ eswb_rv_t topic_mem_walk_through (topic_t *root, const char *find_path, crawling
 }
 
 static eswb_rv_t fill_in_topic(topic_t *t, topic_proclaiming_tree_t *tsrc) {
-    if ((strlen(tsrc->name) == 0) || strlen(tsrc->name) > ESWB_TOPIC_NAME_MAX_LEN) {
+
+    if (strlen(tsrc->name) == 0) {
         return eswb_e_invargs;
+    }
+
+    if (strlen(tsrc->name) > ESWB_TOPIC_NAME_MAX_LEN) {
+        return eswb_e_name_too_long;
     }
 
     strncpy(t->name, tsrc->name, ESWB_TOPIC_NAME_MAX_LEN);
@@ -298,6 +303,12 @@ static eswb_rv_t fill_in_topic(topic_t *t, topic_proclaiming_tree_t *tsrc) {
 
 static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topic_struct, topic_t **rv_tpc,
                           int synced) {
+
+    topic_t *t = reg_find_topic_among_siblings(parent->first_child, topic_struct->name);
+
+    if (t != NULL) {
+        return eswb_e_topic_exist;
+    }
 
     topic_t *new = alloc_topic(parent->reg_ref);
 
@@ -474,7 +485,7 @@ eswb_rv_t reg_create(const char *root_name, registry_t **new_reg_rv, eswb_size_t
     }
 
     if (strlen(root_name) > ESWB_TOPIC_NAME_MAX_LEN ) {
-        return eswb_e_invargs;
+        return eswb_e_name_too_long;
     }
 
     eswb_rv_t rv;
