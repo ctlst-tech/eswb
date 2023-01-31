@@ -69,13 +69,6 @@ class MyQtWidget(QtWidgets.QWidget):
         return item
 
     @staticmethod
-    def translate_point(canvas, pt: QPointF, zero_offset_x=0, zero_offset_y=0):
-        cwidth = canvas.device().width()
-        cheight = canvas.device().height()
-        dx, dy = cwidth / 2 + zero_offset_x, cheight / 2 + zero_offset_y
-        return QPointF(pt.x() + dx, pt.y() + dy)
-
-    @staticmethod
     def draw_item(canvas, item, width=0, height=0, zero_offset_x=0, zero_offset_y=0):
         canvas.save()
 
