@@ -23,8 +23,8 @@ class ApplicationWindow(QtWidgets.QMainWindow):
         self.timer.timeout.connect(self.redraw)
         self.timer.start()
 
-    def add_ew(self, widget):
-        self.main_layout.addWidget(widget)
+    def add_ew(self, widget, stretch=0):
+        self.main_layout.addWidget(widget, stretch=stretch)
 
     def reg_widget(self, widget):
         self.widgets.append(widget)
@@ -59,6 +59,7 @@ class Monitor:
         self.app_window = ApplicationWindow(tabs=tabs)
         self.service_bus_name = monitor_bus_name
         self.tab_widget = None
+        self.app.setStyleSheet("QLineEdit[readOnly=\"true\"] {color: #808080; background-color: #F0F0F0; padding: 0}")
         pass
 
     def connect(self):
@@ -72,8 +73,8 @@ class Monitor:
         self.show()
         sys.exit(self.app.exec_())
 
-    def add_widget(self, w):
-        self.app_window.add_ew(w)
+    def add_widget(self, w, stretch=0):
+        self.app_window.add_ew(w, stretch=stretch)
         self.app_window.reg_widget(w)
 
     def add_button(self, btn: QPushButton):

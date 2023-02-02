@@ -22,6 +22,8 @@ rp = EwRelativePosition([
     DataSourceConst('target_r', value=160),
 ])
 
+
+
 mon.add_widget(EwGroup([rp]))
 
 mon.app_window.resize(800, 800)
