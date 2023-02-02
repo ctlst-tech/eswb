@@ -304,7 +304,10 @@ class EwCursor(MyQtWidget, EwBasic):
                 x = self.rel_x(self.data[i][0])
                 y = self.rel_y(self.data[i][1])
                 d_2 = d / 2
-                painter.drawEllipse(int(x - d_2), int(y - d_2), int(d), int(d))
+                try:
+                    painter.drawEllipse(int(x - d_2), int(y - d_2), int(d), int(d))
+                except:
+                    pass
 
     def __init__(self, data_sources: List[Tuple[DataSourceBasic, DataSourceBasic]],
                  data_range=((-1.0, 1.0), (-1.0, 1.0)), *args, **kwargs):
