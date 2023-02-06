@@ -17,10 +17,13 @@ extern "C" {
 #endif
 
 typedef uint32_t eswb_index_t;
+typedef uint32_t eswb_update_counter_t;
 typedef uint16_t eswb_fifo_index_t;
 typedef uint32_t eswb_size_t;
 typedef uint32_t eswb_topic_id_t;
 typedef uint32_t eswb_event_queue_mask_t;
+
+#define ESWB_UPDATE_COUNTER_MAX UINT32_MAX
 
 typedef enum {
     tt_none         = 0x00,
@@ -29,6 +32,7 @@ typedef enum {
 
     tt_struct       = 0x02,
     tt_fifo         = 0x03,
+    tt_vector       = 0x04,
 
     tt_uint8        = 0x10,
     tt_int8         = 0x11,
@@ -56,6 +60,7 @@ typedef enum {
     upd_proclaim_topic,
     upd_update_topic,
     upd_push_fifo,
+    upd_write_vector,
     upd_push_event_queue,
     upd_withdraw_topic
 } eswb_update_t;
@@ -93,6 +98,12 @@ typedef struct {
     topic_data_type_t type;
     eswb_size_t size;
 } topic_params_t;
+
+typedef struct {
+    eswb_size_t elems_num;
+    eswb_size_t elem_index;
+    uint32_t flags;
+} array_alter_t;
 
 const char *eswb_type_name(topic_data_type_t t);
 

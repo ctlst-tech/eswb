@@ -133,6 +133,16 @@ eswb_rv_t eswb_read (eswb_topic_descr_t td, void *data);
 eswb_rv_t eswb_get_update (eswb_topic_descr_t td, void *data);
 
 /**
+ * Read topic's data and check either topic was published (update) from prior call of this function for
+ * desired topic descriptor.
+ * @param td topic descriptor
+ * @param data data to read; must have a size according to the topic size
+ * @return eswb_e_ok either topic was update from prior call or eswb_e_no_update if there was no update;
+ * if topic is not inited, function returns eswb_e_no_update
+ */
+eswb_rv_t eswb_read_check_update(eswb_topic_descr_t td, void *data);
+
+/**
  * Get topic's information by its descriptor
  * @param td topic descriptor
  * @param params pointer to an allocated parameters strucutre to store parameters on success
@@ -140,6 +150,14 @@ eswb_rv_t eswb_get_update (eswb_topic_descr_t td, void *data);
  */
 eswb_rv_t eswb_get_topic_params (eswb_topic_descr_t td, topic_params_t *params);
 
+/**
+ * Convenience function for checking topic expected type, e.g. when subscribing
+ * @param td topic descriptor
+ * @param expected_type expected topic type
+ * @param expected_size expected topic size
+ * @return eswb_e_ok on match, eswb_e_type_missmatch on mismatch
+ */
+eswb_rv_t eswb_check_topic_type(eswb_topic_descr_t td, topic_data_type_t expected_type, eswb_size_t expected_size);
 
 /**
  * Retrieve topics
@@ -162,6 +180,57 @@ eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next
  * @return eswb_e_ok on success
  */
 eswb_rv_t eswb_get_topic_path (eswb_topic_descr_t td, char *path);
+
+
+#define ESWB_VECTOR_WRITE_OPT_FLAG_DEFINE_END (1 << 0)
+
+/**
+ * Write *len* numberr of array elements from *data* to position *pos*
+ * @param td topic descriptor (must be tt_vector type)
+ * @param pos position in vector to write elements
+ * @param data array elements data buffer
+ * @param len number of elements to write
+ * @param option_flags flags to control array, might be:
+ *      ESWB_VECTOR_WRITE_OPT_FLAG_DEFINE_END - redefine vector size by the position of last written element (pos + len)
+ * @return eswb_e_ok on success
+ */
+eswb_rv_t eswb_vector_write(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, uint32_t option_flags);
+
+/**
+ * Read *len* vector elements from position *pos* to *data* and store read number elements in *len_rv*
+ * @param td topic descriptor (must be tt_vector type)
+ * @param data data to store read elements
+ * @param pos position in vector to read from
+ * @param len elements to read
+ * @param len_rv pointer to store actual number of read elements
+ * @return eswb_e_ok on success
+ */
+eswb_rv_t eswb_vector_read(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv);
+
+/**
+ * Read *len* vector elements from position *pos* to *data* and store read number elements in *len_rv*
+ * Difference from eswb_vector_read is that function checks either vector was update between reads
+ * @param td topic descriptor (must be tt_vector type)
+ * @param data data to store read elements
+ * @param pos position in vector to read from
+ * @param len elements to read
+ * @param len_rv pointer to store actual number of read elements
+ * @return eswb_e_ok either topic was update from prior call or eswb_e_no_update if there was no update;
+ * if topic is not inited, function returns eswb_e_no_update
+ */
+eswb_rv_t
+eswb_vector_read_check_update(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv);
+
+/**
+ * Waits update and read *len* vector elements from position *pos* to *data* and store read number elements in *len_rv*
+ * @param td topic descriptor (must be tt_vector type)
+ * @param data data to store read elements
+ * @param pos position in vector to read from
+ * @param len elements to read
+ * @param len_rv pointer to store actual number of read elements
+ * @return eswb_e_ok on success
+ */
+eswb_rv_t eswb_vector_get_update(eswb_topic_descr_t td, eswb_index_t pos, void *data, eswb_index_t len, eswb_index_t *len_rv);
 
 /**
  * Subscribe on fifo topic
@@ -262,6 +331,16 @@ const char *eswb_get_bus_prefix(eswb_type_t type);
  * @return eswb_e_ok on success
  */
 eswb_rv_t eswb_path_compose(eswb_type_t type, const char *bus_name, const char *topic_subpath, char *result);
+
+/**
+ * Decompose ESWB path by its components
+ * @param connection_point
+ * @param t
+ * @param bus_name
+ * @param local_path
+ * @return
+ */
+eswb_rv_t eswb_parse_path(const char *connection_point, eswb_type_t *t, char *bus_name, char *local_path);
 
 /**
  * Split a full path to the specific topic

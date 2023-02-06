@@ -5,7 +5,9 @@ const char *eswb_strerror(eswb_rv_t e) {
 
     switch (e) {
         case eswb_e_ok:                     return "OK";
+        case eswb_e_name_too_long:          return "Name is too long";
         case eswb_e_invargs:                return "Invalid arguments";
+        case eswb_e_type_missmatch:         return "Type missmatch";
         case eswb_e_notdir:                 return "Mount point is not a directory";
         case eswb_e_path_too_long:          return "Path is too long";
         case eswb_e_timedout:               return "Call is timed out";
@@ -16,6 +18,7 @@ const char *eswb_strerror(eswb_rv_t e) {
         case eswb_e_sync_wait:              return "Sync wait failed";
         case eswb_e_sync_broadcast:         return "Sync broadcast failed";
         case eswb_e_no_update:              return "No update";
+        case eswb_e_mem_topic_max:          return "Maximum topics on a bridge is reached";
         case eswb_e_mem_reg_na:             return "Registry allocation failed";
         case eswb_e_mem_topic_na:           return "Topic allocation failed";
         case eswb_e_mem_sync_na:            return "Sync allocation failed";
@@ -27,6 +30,7 @@ const char *eswb_strerror(eswb_rv_t e) {
         case eswb_e_topic_exist:            return "Topic exists";
         case eswb_e_topic_is_not_dir:       return "Topic is not a directory";
         case eswb_e_not_fifo:               return "Topic is not a FIFO";
+        case eswb_e_not_vector:             return "Topic is not a vector";
         case eswb_e_not_evq:                return "Topic is not an event queue";
         case eswb_e_fifo_rcvr_underrun:     return "Fifo under run detected";
         case eswb_e_not_supported:          return "Call is not supported";
@@ -41,6 +45,8 @@ const char *eswb_strerror(eswb_rv_t e) {
         case eswb_e_map_key_exists:         return "Replication map key is alredy exists";
         case eswb_e_map_no_mem:             return "Replication map allocation failed";
         case eswb_e_map_no_match:           return "Replication map have no match";
+        case eswb_e_vector_inv_index:       return "Vector operation is out of bound";
+        case eswb_e_vector_len_exceeded:    return "Vector write beyond its size";
         default:                            return "Unknown!";
     }
 }

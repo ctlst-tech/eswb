@@ -16,11 +16,19 @@ extern "C" {
 
 #define BRIDGE_NAME_MAX 30
 
+typedef enum {
+    bridge_default = 0,
+    bridge_vector
+} eswb_bridge_type_t;
+
 typedef struct {
     char name[BRIDGE_NAME_MAX + 1];
     eswb_size_t max_tds;
     eswb_index_t tds_num;
     void *buffer2post;
+
+    eswb_bridge_type_t type;
+
     eswb_size_t buffer2post_size;
 
     eswb_topic_descr_t dest_td;

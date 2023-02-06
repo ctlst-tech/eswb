@@ -43,14 +43,14 @@ eswb_rv_t alloc_topic_data(topic_t *t) {
 }
 
 eswb_rv_t topic_dealloc_resources(topic_t *t) {
-    if (!(t->flags & TOPIC_FLAG_MAPPED_TO_PARENT)) {
-        if (t->fifo_ext != NULL) {
-            free(t->fifo_ext);
+    if (!(t->flags & TOPIC_FLAGS_MAPPED_TO_PARENT)) {
+        if (t->array_ext != NULL) {
+            free(t->array_ext);
         }
         if (t->data != NULL) {
             free(t->data);
         }
-        if (!(t->flags & TOPIC_FLAG_USES_PARENT_SYNC)) {
+        if (!(t->flags & TOPIC_FLAGS_USES_PARENT_SYNC)) {
             if (t->sync != NULL) {
                 sync_destroy(t->sync);
             }
@@ -68,29 +68,29 @@ eswb_rv_t reg_destroy(registry_t *reg) {
     return eswb_e_ok;
 }
 
-static eswb_rv_t alloc_fifo_topic_data_generalized(topic_t *t, eswb_size_t fifo_elem_data_size, int do_align) {
+static eswb_rv_t alloc_array_topic_data_generalized(topic_t *t, eswb_size_t elem_size, int do_align) {
 
-    t->fifo_ext = calloc(1, sizeof(*t->fifo_ext));
-    if (t->fifo_ext == NULL) {
+    t->array_ext = calloc(1, sizeof(*t->array_ext));
+    if (t->array_ext == NULL) {
         return eswb_e_mem_data_na;
     }
 
     if (do_align) {
-        eswb_size_t dword_size = (fifo_elem_data_size >> 2) + ((fifo_elem_data_size & 0x03) ? 1 : 0);
-        t->fifo_ext->elem_step = dword_size << 2; // align to dword;
+        eswb_size_t dword_size = (elem_size >> 2) + ((elem_size & 0x03) ? 1 : 0);
+        t->array_ext->elem_step = dword_size << 2; // align to dword;
     } else {
-        t->fifo_ext->elem_step = fifo_elem_data_size;
+        t->array_ext->elem_step = elem_size;
     }
 
-    t->fifo_ext->elem_size = fifo_elem_data_size;
-    t->fifo_ext->fifo_size = t->data_size;
+    t->array_ext->elem_size = elem_size;
+    t->array_ext->len = t->data_size;
 
-    t->fifo_ext->state.head = 0;
-    t->fifo_ext->state.lap_num = 0;
+    t->array_ext->state.head = 0;
+    t->array_ext->state.lap_num = 0;
 
-    t->data = calloc(t->fifo_ext->fifo_size, t->fifo_ext->elem_step);
-    if (t->data == NULL ) {
-        free(t->fifo_ext);
+    t->data = calloc(t->array_ext->len, t->array_ext->elem_step);
+    if (t->data == NULL) {
+        free(t->array_ext);
         return eswb_e_mem_data_na;
     }
 
@@ -98,11 +98,20 @@ static eswb_rv_t alloc_fifo_topic_data_generalized(topic_t *t, eswb_size_t fifo_
 }
 
 eswb_rv_t alloc_fifo_topic_data(topic_t *t, eswb_size_t fifo_elem_data_size) {
-    return alloc_fifo_topic_data_generalized(t, fifo_elem_data_size, -1);
+    return alloc_array_topic_data_generalized(t, fifo_elem_data_size, -1);
 }
 
 eswb_rv_t alloc_buffer_data(topic_t *t) {
-    return alloc_fifo_topic_data_generalized(t, 1, 0);
+    return alloc_array_topic_data_generalized(t, 1, 0);
+}
+
+eswb_rv_t alloc_vector_data(topic_t *t, eswb_size_t elem_size) {
+    eswb_rv_t rv = alloc_array_topic_data_generalized(t, elem_size, 0);
+    if (rv == eswb_e_ok) {
+        t->array_ext->curr_len = 0;
+    }
+
+    return rv;
 }
 
 void dealloc_topic(topic_t *t) {
@@ -226,7 +235,7 @@ static int walk_through_tree(topic_t *t, char *dir_ptrs[], crawling_lambda_t lam
 
     for (topic_t *n = t; n != NULL; n = n->next_sibling) {
         if (match_str(n->name, dir_ptrs[0])) {
-            int wt_rv = walk_through_tree(t->first_child, &dir_ptrs[1], lambda, usr_l_data);
+            int wt_rv = walk_through_tree(n->first_child, &dir_ptrs[1], lambda, usr_l_data);
             switch (wt_rv) {
                 case WALK_RV_NO_NESTED_TOPIC:
                 case WALK_RV_TERMINAL:
@@ -249,8 +258,15 @@ eswb_rv_t topic_mem_walk_through (topic_t *root, const char *find_path, crawling
 
     memset(dir_ptrs, 0, sizeof(dir_ptrs));
 
+    const char *find_path_start = strstr(find_path, ":/");
+    if (find_path_start == NULL) {
+        find_path_start = find_path;
+    } else {
+        find_path_start += 2;
+    }
+
     char path[ESWB_TOPIC_MAX_PATH_LEN+1];
-    strncpy(path, find_path, ESWB_TOPIC_MAX_PATH_LEN);
+    strncpy(path, find_path_start, ESWB_TOPIC_MAX_PATH_LEN);
 
     eswb_rv_t rv = parse_path(path, MAX_LEVELS, dir_ptrs);
     if (rv != eswb_e_ok) {
@@ -268,8 +284,13 @@ eswb_rv_t topic_mem_walk_through (topic_t *root, const char *find_path, crawling
 }
 
 static eswb_rv_t fill_in_topic(topic_t *t, topic_proclaiming_tree_t *tsrc) {
-    if ((strlen(tsrc->name) == 0) || strlen(tsrc->name) > ESWB_TOPIC_NAME_MAX_LEN) {
+
+    if (strlen(tsrc->name) == 0) {
         return eswb_e_invargs;
+    }
+
+    if (strlen(tsrc->name) > ESWB_TOPIC_NAME_MAX_LEN) {
+        return eswb_e_name_too_long;
     }
 
     strncpy(t->name, tsrc->name, ESWB_TOPIC_NAME_MAX_LEN);
@@ -283,10 +304,16 @@ static eswb_rv_t fill_in_topic(topic_t *t, topic_proclaiming_tree_t *tsrc) {
 static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topic_struct, topic_t **rv_tpc,
                           int synced) {
 
+    topic_t *t = reg_find_topic_among_siblings(parent->first_child, topic_struct->name);
+
+    if (t != NULL) {
+        return eswb_e_topic_exist;
+    }
+
     topic_t *new = alloc_topic(parent->reg_ref);
 
     if (new == NULL) {
-        return eswb_e_mem_topic_na;
+        return eswb_e_mem_topic_max;
     }
 
     topic_struct->topic_id = new->id;
@@ -298,16 +325,15 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
         return rv;
     }
 
-    if (topic_struct->flags & TOPIC_FLAG_MAPPED_TO_PARENT) {
+    if (topic_struct->flags & TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT) {
         new->sync = parent->sync;
         if ((parent->type == tt_fifo) || (parent->type == tt_event_queue)) {
             new->data = parent->data;
-            new->fifo_ext = parent->fifo_ext;
         } else {
             new->data = parent->data + topic_struct->data_offset;
         }
-        new->fifo_ext = parent->fifo_ext; // dont care if it is null
-        new->flags |= TOPIC_FLAG_MAPPED_TO_PARENT;
+        new->array_ext = parent->array_ext; // don't care if it is null
+        new->flags |= TOPIC_FLAGS_MAPPED_TO_PARENT;
     } else {
         do {
             // topics might be added created only inside directories
@@ -344,9 +370,12 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
                     rv = alloc_fifo_topic_data(new, topic_struct[topic_struct->first_child_ind].data_size);
                     break;
 
-
                 case tt_byte_buffer:
                     rv = alloc_buffer_data(new);
+                    break;
+
+                case tt_vector:
+                    rv = alloc_vector_data(new, topic_struct[topic_struct->first_child_ind].data_size);
                     break;
             }
 
@@ -354,15 +383,17 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
                 break;
             }
 
-            if (topic_struct->flags & TOPIC_FLAG_USES_PARENT_SYNC) {
+            if (topic_struct->flags & TOPIC_PROCLAIMING_FLAG_USES_PARENT_SYNC) {
                 new->sync = parent->sync;
-                new->flags |= TOPIC_FLAG_USES_PARENT_SYNC;
+                new->flags |= TOPIC_FLAGS_USES_PARENT_SYNC;
             } else {
                 if (synced) {
                     rv = sync_create(&new->sync);
                     if (rv != eswb_e_ok) {
                         break;
                     }
+                } else {
+                    new->sync = NULL;
                 }
             }
         } while(0);
@@ -426,7 +457,8 @@ static eswb_rv_t topics_tree_register(topic_t *mount_point, topic_proclaiming_tr
     return eswb_e_ok;
 }
 
-eswb_rv_t reg_tree_register(registry_t *reg, topic_t *mounting_topic, topic_proclaiming_tree_t *new_topic_struct, int synced) {
+eswb_rv_t reg_tree_register(registry_t *reg, topic_t *mounting_topic, topic_proclaiming_tree_t *new_topic_struct) {
+    int synced = REG_SYNCED(reg);
     if (synced) sync_take(reg->sync);
     eswb_rv_t rv = topics_tree_register(mounting_topic, new_topic_struct, synced);
     if (synced) sync_give(reg->sync);
@@ -435,56 +467,54 @@ eswb_rv_t reg_tree_register(registry_t *reg, topic_t *mounting_topic, topic_proc
 }
 
 
-topic_t *reg_find_topic(registry_t *reg, const char *path, int synced) {
+topic_t *reg_find_topic(registry_t *reg, const char *path) {
 
-    if (synced) sync_take(reg->sync);
+    if (REG_SYNCED(reg)) sync_take(reg->sync);
     topic_t *rv = find_topic(&reg->topics[0], path);
-    if (synced) sync_give(reg->sync);
+    if (REG_SYNCED(reg)) sync_give(reg->sync);
 
     return rv;
 }
 
 
-eswb_rv_t reg_create(const char *root_name, registry_t **new_reg, eswb_size_t max_topics, int synced) {
-    registry_t *nr = alloc_registry(max_topics);
+eswb_rv_t reg_create(const char *root_name, registry_t **new_reg_rv, eswb_size_t max_topics, int synced) {
+    registry_t *new_reg = alloc_registry(max_topics);
 
-    if (nr == NULL) {
+    if (new_reg == NULL) {
         return eswb_e_mem_reg_na;
     }
 
     if (strlen(root_name) > ESWB_TOPIC_NAME_MAX_LEN ) {
-        return eswb_e_invargs;
+        return eswb_e_name_too_long;
     }
 
     eswb_rv_t rv;
 
 
-    topic_t *root = alloc_topic(nr);
+    topic_t *root = alloc_topic(new_reg);
     if (root == NULL) {
-        // TODO dealloc nr
         return eswb_e_mem_topic_na;
-    }
-
-    rv = sync_create(&root->sync);
-    if (rv != eswb_e_ok) {
-        // TODO dealloc nr and root
-        return rv;
     }
 
     strncpy(root->name, root_name, ESWB_TOPIC_NAME_MAX_LEN);
     root->type = tt_dir;
 
     if (synced) {
-        rv = sync_create(&nr->sync);
+        rv = sync_create(&root->sync);
         if (rv != eswb_e_ok) {
-            // TODO dealloc reg
+            return rv;
+        }
+
+        rv = sync_create(&new_reg->sync);
+        if (rv != eswb_e_ok) {
             return rv;
         }
     } else {
         root->sync = NULL;
+        new_reg->sync = NULL;
     }
 
-    *new_reg = nr;
+    *new_reg_rv = new_reg;
     return eswb_e_ok;
 }
 
@@ -544,8 +574,10 @@ int parent_has_child(topic_t *parent, topic_t *child) {
 }
 
 eswb_rv_t
-reg_get_next_topic_info(registry_t *reg, topic_t *parent, eswb_topic_id_t id, topic_extract_t *extract, int synced) {
+reg_get_next_topic_info(registry_t *reg, topic_t *parent, eswb_topic_id_t id, topic_extract_t *extract) {
     eswb_rv_t rv = eswb_e_ok;
+
+    int synced = REG_SYNCED(reg);
 
     if (synced) sync_take(reg->sync);
 
@@ -566,7 +598,7 @@ reg_get_next_topic_info(registry_t *reg, topic_t *parent, eswb_topic_id_t id, to
         extract->parent_id = t->parent != NULL ? t->parent->id : 0;
         extract->info.type = t->type;
         extract->info.data_size = t->data_size;
-        extract->info.data_offset = t->flags & TOPIC_FLAG_MAPPED_TO_PARENT ? t->data - t->parent->data : 0;
+        extract->info.data_offset = t->flags & TOPIC_FLAGS_MAPPED_TO_PARENT ? t->data - t->parent->data : 0;
         extract->info.flags = t->flags;
         extract->info.topic_id = t->id;
         extract->info.abs_ind = 0;
