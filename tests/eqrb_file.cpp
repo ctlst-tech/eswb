@@ -6,6 +6,7 @@
 #include <string>
 
 #include "../src/lib/include/public/eswb/api.h"
+#include "../src/lib/include/public/eswb/services/eqrb.h"
 #include "../src/lib/services/eqrb/eqrb_priv.h"
 
 extern const eqrb_media_driver_t eqrb_drv_file;

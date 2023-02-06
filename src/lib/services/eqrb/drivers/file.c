@@ -76,6 +76,7 @@ eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh) {
         file_params[fd] = param;
         *(int *)dh = fd;
         const char bus[32];
+        chmod(file_name,  S_IRWXO | S_IRWXG | S_IRWXU);
         int bus_len = snprintf(bus, sizeof(bus), "%s", p->bus);
         size_t bw = write(fd, bus, bus_len);
         sync();

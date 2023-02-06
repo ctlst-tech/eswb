@@ -49,7 +49,7 @@ set(ESWB_UTIL_EQRB_SRC
         services/eqrb/eqrb_misc.c
         services/eqrb/eqrb_priv.h
         services/eqrb/drivers/sdtl.c
-#        services/eqrb/drivers/file.c
+        services/eqrb/drivers/file.c
         include/public/eswb/services/eqrb.h
         )
 

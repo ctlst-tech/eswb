@@ -93,7 +93,7 @@ std::list<option *> parse_options(int argc, char *argv[]) {
 
 void init_options() {
     new option("read_serial", 1, 2);
-    new option("convert_raw", 2, 2);
+    new option("convert_to_csv", 2, 2);
 };
 
 int main(int argc, char *argv[]) {
@@ -106,8 +106,12 @@ int main(int argc, char *argv[]) {
                 eswb::read_sdtl_bridge_serial(o->arg_as_string(0),
                                               o->arg_as_int(1, 115200));
             }
-            if (o->is("convert_raw")) {
-                std::cout << "convert_raw" << std::endl;
+            if (o->is("convert_to_csv")) {
+                const std::string path_to_raw(argv[2]);
+                const std::string path_to_csv(argv[3]);
+                eswb::ConverterToCsv converter_to_csv(path_to_raw, path_to_csv);
+                converter_to_csv.convert();
+
             }
         }
     } catch (const std::string &s) {
