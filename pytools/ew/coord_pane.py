@@ -137,12 +137,17 @@ class EwCoordPane(MyQtWidget, EwBasic):
 
     def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         if len(self.data_sources) > 0:
-            self.set_phi(vals[0])
-            self._phi_editing_finish()
-            self.set_radius(vals[1])
-            self._radius_editing_finish()
-            self.set_alt(vals[2])
-            self._alt_editing_finish()
+            if not isinstance(vals[0], NoDataStub):
+                self.set_phi(vals[0])
+                self._phi_editing_finish()
+
+            if not isinstance(vals[1], NoDataStub):
+                self.set_radius(vals[1])
+                self._radius_editing_finish()
+
+            if not isinstance(vals[2], NoDataStub):
+                self.set_alt(vals[2])
+                self._alt_editing_finish()
 
 
 class EwCoordCoursePane(EwCoordPane):
@@ -178,12 +183,16 @@ class EwCoordCoursePane(EwCoordPane):
 
     def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         if len(self.data_sources) > 0:
-            self.set_phi(vals[0])
-            self._phi_editing_finish()
-            self.set_radius(vals[1])
-            self._radius_editing_finish()
-            self.set_alt(vals[2])
-            self._alt_editing_finish()
-            self.set_course(vals[3])
-            self._course_editing_finish()
+            if not isinstance(vals[0], NoDataStub):
+                self.set_phi(vals[0])
+                self._phi_editing_finish()
+            if not isinstance(vals[1], NoDataStub):
+                self.set_radius(vals[1])
+                self._radius_editing_finish()
+            if not isinstance(vals[2], NoDataStub):
+                self.set_alt(vals[2])
+                self._alt_editing_finish()
+            if not isinstance(vals[3], NoDataStub):
+                self.set_course(vals[3])
+                self._course_editing_finish()
 

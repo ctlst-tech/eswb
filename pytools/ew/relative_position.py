@@ -175,12 +175,15 @@ class EwRelativePosition(MyQtWidget, EwBasic):
 
     def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         count = len(vals) // ds_tuple_size
+        def check_stub(d):
+            return d if not isinstance(d, NoDataStub) else 0.0
+
         for i in range(0, count):
             idx = i * ds_tuple_size
-            self.markers[i].phi = vals[idx + 1]
-            self.markers[i].r = vals[idx + 2]
-            self.markers[i].alt = vals[idx + 3]
-            self.markers[i].azimuth = vals[idx + 4]
+            self.markers[i].phi = check_stub(vals[idx + 1])
+            self.markers[i].r = check_stub(vals[idx + 2])
+            self.markers[i].alt = check_stub(vals[idx + 3])
+            self.markers[i].azimuth = check_stub(vals[idx + 4])
 
         self.repaint()
 
