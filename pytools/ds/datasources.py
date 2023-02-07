@@ -1,9 +1,7 @@
+import math
+import time
 from abc import abstractmethod
 from typing import List, Union
-import time
-import math
-
-from PyQt5.QtWidgets import QLineEdit
 
 
 class NoDataStub:
@@ -106,6 +104,7 @@ class DataSourceTimeline(DataSourceBasic):
     def read(self) -> Union[float, int, str, NoDataStub]:
         self.time += self.delta_time
         return self.time
+
 
 class DataSourceSinus(DataSourceBasic):
     def __init__(self, name, *, omega=1.0, iphase=0.0, bias=0.0, **kwargs):

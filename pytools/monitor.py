@@ -89,7 +89,8 @@ class Worker(QRunnable):
         Your code goes in this function
         """
         print("Thread start")
-        self.job(self.process_events)
+        self.job()
+        self.process_events()
         print("Thread finished")
 
 
