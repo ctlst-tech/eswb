@@ -154,8 +154,10 @@ class EswbMonitor(Monitor):
     def mkdir(self, dirname):
         self.bus.mkdir(dirname)
 
-    def bridge_sdtl(self, *, path, baudrate, bridge_to):
+    def bridge_sdtl(self, *, path, baudrate, bridge_to, additional_channels: List[e.SDTLchannel] = None):
         sdtl_service_name = 'sdtl_serial'
+        if not additional_channels:
+            additional_channels = []
         self.sdtl_service = e.SDTLserialService(service_name=sdtl_service_name, device_path=path, mtu=0,
                                                 baudrate=int(baudrate),
                                                 channels=[
@@ -163,6 +165,7 @@ class EswbMonitor(Monitor):
                                                                   ch_type=e.SDTLchannelType.rel),
                                                     e.SDTLchannel(name='bus_sync_sk', ch_id=2,
                                                                   ch_type=e.SDTLchannelType.unrel),
+                                                    *additional_channels
                                                 ]
                                                 )
 

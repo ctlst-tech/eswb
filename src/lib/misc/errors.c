@@ -18,6 +18,7 @@ const char *eswb_strerror(eswb_rv_t e) {
         case eswb_e_sync_wait:              return "Sync wait failed";
         case eswb_e_sync_broadcast:         return "Sync broadcast failed";
         case eswb_e_no_update:              return "No update";
+        case eswb_e_mem_topic_max:          return "Maximum topics on a bridge is reached";
         case eswb_e_mem_reg_na:             return "Registry allocation failed";
         case eswb_e_mem_topic_na:           return "Topic allocation failed";
         case eswb_e_mem_sync_na:            return "Sync allocation failed";

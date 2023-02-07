@@ -26,6 +26,7 @@ typedef enum {
     eswb_e_sync_wait,
     eswb_e_sync_broadcast,
     eswb_e_no_update,
+    eswb_e_mem_topic_max,
     eswb_e_mem_reg_na,
     eswb_e_mem_topic_na,
     eswb_e_mem_sync_na,

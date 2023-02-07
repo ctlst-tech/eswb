@@ -899,97 +899,99 @@ user_off_t = c_int64# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/in
 
 syscall_arg_t = u_int64_t# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 104
 
-enum_anon_2 = c_int# /usr/local/include/eswb/errors.h: 58
+enum_anon_2 = c_int# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_ok = 0# /usr/local/include/eswb/errors.h: 58
+eswb_e_ok = 0# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_name_too_long = (eswb_e_ok + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_name_too_long = (eswb_e_ok + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_invargs = (eswb_e_name_too_long + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_invargs = (eswb_e_name_too_long + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_type_missmatch = (eswb_e_invargs + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_type_missmatch = (eswb_e_invargs + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_notdir = (eswb_e_type_missmatch + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_notdir = (eswb_e_type_missmatch + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_path_too_long = (eswb_e_notdir + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_path_too_long = (eswb_e_notdir + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_timedout = (eswb_e_path_too_long + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_timedout = (eswb_e_path_too_long + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_sync_init = (eswb_e_timedout + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_sync_init = (eswb_e_timedout + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_sync_take = (eswb_e_sync_init + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_sync_take = (eswb_e_sync_init + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_sync_inconsistent = (eswb_e_sync_take + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_sync_inconsistent = (eswb_e_sync_take + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_sync_give = (eswb_e_sync_inconsistent + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_sync_give = (eswb_e_sync_inconsistent + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_sync_wait = (eswb_e_sync_give + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_sync_wait = (eswb_e_sync_give + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_sync_broadcast = (eswb_e_sync_wait + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_sync_broadcast = (eswb_e_sync_wait + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_no_update = (eswb_e_sync_broadcast + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_no_update = (eswb_e_sync_broadcast + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_mem_reg_na = (eswb_e_no_update + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_mem_topic_max = (eswb_e_no_update + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_mem_topic_na = (eswb_e_mem_reg_na + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_mem_reg_na = (eswb_e_mem_topic_max + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_mem_sync_na = (eswb_e_mem_topic_na + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_mem_topic_na = (eswb_e_mem_reg_na + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_mem_data_na = (eswb_e_mem_sync_na + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_mem_sync_na = (eswb_e_mem_topic_na + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_mem_static_exceeded = (eswb_e_mem_data_na + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_mem_data_na = (eswb_e_mem_sync_na + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_vector_inv_index = (eswb_e_mem_static_exceeded + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_mem_static_exceeded = (eswb_e_mem_data_na + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_vector_len_exceeded = (eswb_e_vector_inv_index + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_vector_inv_index = (eswb_e_mem_static_exceeded + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_inv_naming = (eswb_e_vector_len_exceeded + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_vector_len_exceeded = (eswb_e_vector_inv_index + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_inv_bus_spec = (eswb_e_inv_naming + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_inv_naming = (eswb_e_vector_len_exceeded + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_no_topic = (eswb_e_inv_bus_spec + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_inv_bus_spec = (eswb_e_inv_naming + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_topic_exist = (eswb_e_no_topic + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_no_topic = (eswb_e_inv_bus_spec + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_topic_is_not_dir = (eswb_e_topic_exist + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_topic_exist = (eswb_e_no_topic + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_not_fifo = (eswb_e_topic_is_not_dir + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_topic_is_not_dir = (eswb_e_topic_exist + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_not_vector = (eswb_e_not_fifo + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_not_fifo = (eswb_e_topic_is_not_dir + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_not_evq = (eswb_e_not_vector + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_not_vector = (eswb_e_not_fifo + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_fifo_rcvr_underrun = (eswb_e_not_evq + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_not_evq = (eswb_e_not_vector + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_not_supported = (eswb_e_fifo_rcvr_underrun + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_fifo_rcvr_underrun = (eswb_e_not_evq + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_bus_not_exist = (eswb_e_not_supported + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_not_supported = (eswb_e_fifo_rcvr_underrun + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_bus_exists = (eswb_e_bus_not_exist + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_bus_not_exist = (eswb_e_not_supported + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_max_busses_reached = (eswb_e_bus_exists + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_bus_exists = (eswb_e_bus_not_exist + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_max_topic_desrcs = (eswb_e_max_busses_reached + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_max_busses_reached = (eswb_e_bus_exists + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_ev_queue_payload_too_large = (eswb_e_max_topic_desrcs + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_max_topic_desrcs = (eswb_e_max_busses_reached + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_ev_queue_not_enabled = (eswb_e_ev_queue_payload_too_large + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_ev_queue_payload_too_large = (eswb_e_max_topic_desrcs + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_repl_prtree_fraiming_error = (eswb_e_ev_queue_not_enabled + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_ev_queue_not_enabled = (eswb_e_ev_queue_payload_too_large + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_map_full = (eswb_e_repl_prtree_fraiming_error + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_repl_prtree_fraiming_error = (eswb_e_ev_queue_not_enabled + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_map_key_exists = (eswb_e_map_full + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_map_full = (eswb_e_repl_prtree_fraiming_error + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_map_no_mem = (eswb_e_map_key_exists + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_map_key_exists = (eswb_e_map_full + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_map_no_match = (eswb_e_map_no_mem + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_map_no_mem = (eswb_e_map_key_exists + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_e_bridge_vector = (eswb_e_map_no_match + 1)# /usr/local/include/eswb/errors.h: 58
+eswb_e_map_no_match = (eswb_e_map_no_mem + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_rv_t = enum_anon_2# /usr/local/include/eswb/errors.h: 58
+eswb_e_bridge_vector = (eswb_e_map_no_match + 1)# /usr/local/include/eswb/errors.h: 59
 
-# /usr/local/include/eswb/errors.h: 60
+eswb_rv_t = enum_anon_2# /usr/local/include/eswb/errors.h: 59
+
+# /usr/local/include/eswb/errors.h: 61
 if _libs["eswb"].has("eswb_strerror", "cdecl"):
     eswb_strerror = _libs["eswb"].get("eswb_strerror", "cdecl")
     eswb_strerror.argtypes = [eswb_rv_t]
@@ -1007,101 +1009,103 @@ eswb_topic_id_t = uint32_t# /usr/local/include/eswb/types.h: 23
 
 eswb_event_queue_mask_t = uint32_t# /usr/local/include/eswb/types.h: 24
 
-enum_anon_3 = c_int# /usr/local/include/eswb/types.h: 55
+enum_anon_3 = c_int# /usr/local/include/eswb/types.h: 56
 
-tt_none = 0x00# /usr/local/include/eswb/types.h: 55
+tt_none = 0x00# /usr/local/include/eswb/types.h: 56
 
-tt_dir = 0x01# /usr/local/include/eswb/types.h: 55
+tt_dir = 0x01# /usr/local/include/eswb/types.h: 56
 
-tt_struct = 0x02# /usr/local/include/eswb/types.h: 55
+tt_struct = 0x02# /usr/local/include/eswb/types.h: 56
 
-tt_fifo = 0x03# /usr/local/include/eswb/types.h: 55
+tt_fifo = 0x03# /usr/local/include/eswb/types.h: 56
 
-tt_vector = 0x04# /usr/local/include/eswb/types.h: 55
+tt_vector = 0x04# /usr/local/include/eswb/types.h: 56
 
-tt_uint8 = 0x10# /usr/local/include/eswb/types.h: 55
+tt_bitfield = 0x04# /usr/local/include/eswb/types.h: 56
 
-tt_int8 = 0x11# /usr/local/include/eswb/types.h: 55
+tt_uint8 = 0x10# /usr/local/include/eswb/types.h: 56
 
-tt_uint16 = 0x12# /usr/local/include/eswb/types.h: 55
+tt_int8 = 0x11# /usr/local/include/eswb/types.h: 56
 
-tt_int16 = 0x13# /usr/local/include/eswb/types.h: 55
+tt_uint16 = 0x12# /usr/local/include/eswb/types.h: 56
 
-tt_uint32 = 0x14# /usr/local/include/eswb/types.h: 55
+tt_int16 = 0x13# /usr/local/include/eswb/types.h: 56
 
-tt_int32 = 0x15# /usr/local/include/eswb/types.h: 55
+tt_uint32 = 0x14# /usr/local/include/eswb/types.h: 56
 
-tt_uint64 = 0x16# /usr/local/include/eswb/types.h: 55
+tt_int32 = 0x15# /usr/local/include/eswb/types.h: 56
 
-tt_int64 = 0x17# /usr/local/include/eswb/types.h: 55
+tt_uint64 = 0x16# /usr/local/include/eswb/types.h: 56
 
-tt_float = 0x20# /usr/local/include/eswb/types.h: 55
+tt_int64 = 0x17# /usr/local/include/eswb/types.h: 56
 
-tt_double = 0x21# /usr/local/include/eswb/types.h: 55
+tt_float = 0x20# /usr/local/include/eswb/types.h: 56
 
-tt_string = 0x30# /usr/local/include/eswb/types.h: 55
+tt_double = 0x21# /usr/local/include/eswb/types.h: 56
 
-tt_plain_data = 0x31# /usr/local/include/eswb/types.h: 55
+tt_string = 0x30# /usr/local/include/eswb/types.h: 56
 
-tt_byte_buffer = 0x40# /usr/local/include/eswb/types.h: 55
+tt_plain_data = 0x31# /usr/local/include/eswb/types.h: 56
 
-tt_event_queue = 0xF0# /usr/local/include/eswb/types.h: 55
+tt_byte_buffer = 0x40# /usr/local/include/eswb/types.h: 56
 
-topic_data_type_t = enum_anon_3# /usr/local/include/eswb/types.h: 55
+tt_event_queue = 0xF0# /usr/local/include/eswb/types.h: 56
 
-topic_data_type_s_t = uint8_t# /usr/local/include/eswb/types.h: 57
+topic_data_type_t = enum_anon_3# /usr/local/include/eswb/types.h: 56
 
-enum_anon_4 = c_int# /usr/local/include/eswb/types.h: 66
+topic_data_type_s_t = uint8_t# /usr/local/include/eswb/types.h: 58
 
-upd_proclaim_topic = 0# /usr/local/include/eswb/types.h: 66
+enum_anon_4 = c_int# /usr/local/include/eswb/types.h: 67
 
-upd_update_topic = (upd_proclaim_topic + 1)# /usr/local/include/eswb/types.h: 66
+upd_proclaim_topic = 0# /usr/local/include/eswb/types.h: 67
 
-upd_push_fifo = (upd_update_topic + 1)# /usr/local/include/eswb/types.h: 66
+upd_update_topic = (upd_proclaim_topic + 1)# /usr/local/include/eswb/types.h: 67
 
-upd_write_vector = (upd_push_fifo + 1)# /usr/local/include/eswb/types.h: 66
+upd_push_fifo = (upd_update_topic + 1)# /usr/local/include/eswb/types.h: 67
 
-upd_push_event_queue = (upd_write_vector + 1)# /usr/local/include/eswb/types.h: 66
+upd_write_vector = (upd_push_fifo + 1)# /usr/local/include/eswb/types.h: 67
 
-upd_withdraw_topic = (upd_push_event_queue + 1)# /usr/local/include/eswb/types.h: 66
+upd_push_event_queue = (upd_write_vector + 1)# /usr/local/include/eswb/types.h: 67
 
-eswb_update_t = enum_anon_4# /usr/local/include/eswb/types.h: 66
+upd_withdraw_topic = (upd_push_event_queue + 1)# /usr/local/include/eswb/types.h: 67
 
-enum_anon_5 = c_int# /usr/local/include/eswb/types.h: 74
+eswb_update_t = enum_anon_4# /usr/local/include/eswb/types.h: 67
 
-eswb_not_defined = 0# /usr/local/include/eswb/types.h: 74
+enum_anon_5 = c_int# /usr/local/include/eswb/types.h: 75
 
-eswb_non_synced = (eswb_not_defined + 1)# /usr/local/include/eswb/types.h: 74
+eswb_not_defined = 0# /usr/local/include/eswb/types.h: 75
 
-eswb_inter_thread = (eswb_non_synced + 1)# /usr/local/include/eswb/types.h: 74
+eswb_non_synced = (eswb_not_defined + 1)# /usr/local/include/eswb/types.h: 75
 
-eswb_inter_process = (eswb_inter_thread + 1)# /usr/local/include/eswb/types.h: 74
+eswb_inter_thread = (eswb_non_synced + 1)# /usr/local/include/eswb/types.h: 75
 
-eswb_type_t = enum_anon_5# /usr/local/include/eswb/types.h: 74
+eswb_inter_process = (eswb_inter_thread + 1)# /usr/local/include/eswb/types.h: 75
 
-enum_anon_6 = c_int# /usr/local/include/eswb/types.h: 85
+eswb_type_t = enum_anon_5# /usr/local/include/eswb/types.h: 75
 
-eswb_ctl_enable_event_queue = 0# /usr/local/include/eswb/types.h: 85
+enum_anon_6 = c_int# /usr/local/include/eswb/types.h: 86
 
-eswb_ctl_request_topics_to_evq = (eswb_ctl_enable_event_queue + 1)# /usr/local/include/eswb/types.h: 85
+eswb_ctl_enable_event_queue = 0# /usr/local/include/eswb/types.h: 86
 
-eswb_ctl_evq_set_receive_mask = (eswb_ctl_request_topics_to_evq + 1)# /usr/local/include/eswb/types.h: 85
+eswb_ctl_request_topics_to_evq = (eswb_ctl_enable_event_queue + 1)# /usr/local/include/eswb/types.h: 86
 
-eswb_ctl_evq_get_params = (eswb_ctl_evq_set_receive_mask + 1)# /usr/local/include/eswb/types.h: 85
+eswb_ctl_evq_set_receive_mask = (eswb_ctl_request_topics_to_evq + 1)# /usr/local/include/eswb/types.h: 86
 
-eswb_ctl_get_topic_path = (eswb_ctl_evq_get_params + 1)# /usr/local/include/eswb/types.h: 85
+eswb_ctl_evq_get_params = (eswb_ctl_evq_set_receive_mask + 1)# /usr/local/include/eswb/types.h: 86
 
-eswb_ctl_get_next_proclaiming_info = (eswb_ctl_get_topic_path + 1)# /usr/local/include/eswb/types.h: 85
+eswb_ctl_get_topic_path = (eswb_ctl_evq_get_params + 1)# /usr/local/include/eswb/types.h: 86
 
-eswb_ctl_fifo_flush = (eswb_ctl_get_next_proclaiming_info + 1)# /usr/local/include/eswb/types.h: 85
+eswb_ctl_get_next_proclaiming_info = (eswb_ctl_get_topic_path + 1)# /usr/local/include/eswb/types.h: 86
 
-eswb_ctl_arm_timeout = (eswb_ctl_fifo_flush + 1)# /usr/local/include/eswb/types.h: 85
+eswb_ctl_fifo_flush = (eswb_ctl_get_next_proclaiming_info + 1)# /usr/local/include/eswb/types.h: 86
 
-eswb_ctl_t = enum_anon_6# /usr/local/include/eswb/types.h: 85
+eswb_ctl_arm_timeout = (eswb_ctl_fifo_flush + 1)# /usr/local/include/eswb/types.h: 86
 
-eswb_topic_descr_t = c_int# /usr/local/include/eswb/types.h: 93
+eswb_ctl_t = enum_anon_6# /usr/local/include/eswb/types.h: 86
 
-# /usr/local/include/eswb/types.h: 100
+eswb_topic_descr_t = c_int# /usr/local/include/eswb/types.h: 94
+
+# /usr/local/include/eswb/types.h: 101
 class struct_anon_7(Structure):
     pass
 
@@ -1118,9 +1122,9 @@ struct_anon_7._fields_ = [
     ('size', eswb_size_t),
 ]
 
-topic_params_t = struct_anon_7# /usr/local/include/eswb/types.h: 100
+topic_params_t = struct_anon_7# /usr/local/include/eswb/types.h: 101
 
-# /usr/local/include/eswb/types.h: 106
+# /usr/local/include/eswb/types.h: 107
 class struct_anon_8(Structure):
     pass
 
@@ -1135,9 +1139,9 @@ struct_anon_8._fields_ = [
     ('flags', uint32_t),
 ]
 
-array_alter_t = struct_anon_8# /usr/local/include/eswb/types.h: 106
+array_alter_t = struct_anon_8# /usr/local/include/eswb/types.h: 107
 
-# /usr/local/include/eswb/types.h: 108
+# /usr/local/include/eswb/types.h: 109
 if _libs["eswb"].has("eswb_type_name", "cdecl"):
     eswb_type_name = _libs["eswb"].get("eswb_type_name", "cdecl")
     eswb_type_name.argtypes = [topic_data_type_t]
@@ -1577,10 +1581,10 @@ if _libs["eswb"].has("eqrb_sdtl_server_start", "cdecl"):
 # eswb/src/lib/include/public/eswb/services/eqrb.h: 54
 if _libs["eswb"].has("eqrb_sdtl_client_connect", "cdecl"):
     eqrb_sdtl_client_connect = _libs["eswb"].get("eqrb_sdtl_client_connect", "cdecl")
-    eqrb_sdtl_client_connect.argtypes = [String, String, String, String, uint32_t]
+    eqrb_sdtl_client_connect.argtypes = [String, String, String, String, uint32_t, c_int]
     eqrb_sdtl_client_connect.restype = eqrb_rv_t
 
-# eswb/src/lib/include/public/eswb/services/eqrb.h: 60
+# eswb/src/lib/include/public/eswb/services/eqrb.h: 61
 for _lib in _libs.values():
     if not _lib.has("eqrb_file_server_start", "cdecl"):
         continue
@@ -1589,7 +1593,7 @@ for _lib in _libs.values():
     eqrb_file_server_start.restype = eqrb_rv_t
     break
 
-# eswb/src/lib/include/public/eswb/services/eqrb.h: 65
+# eswb/src/lib/include/public/eswb/services/eqrb.h: 66
 for _lib in _libs.values():
     if not _lib.has("eqrb_file_client_connect", "cdecl"):
         continue
@@ -1598,7 +1602,7 @@ for _lib in _libs.values():
     eqrb_file_client_connect.restype = eqrb_rv_t
     break
 
-# eswb/src/lib/include/public/eswb/services/eqrb.h: 71
+# eswb/src/lib/include/public/eswb/services/eqrb.h: 72
 if _libs["eswb"].has("eqrb_strerror", "cdecl"):
     eqrb_strerror = _libs["eswb"].get("eqrb_strerror", "cdecl")
     eqrb_strerror.argtypes = [eqrb_rv_t]
@@ -2120,19 +2124,19 @@ try:
 except:
     pass
 
-# /usr/local/include/eswb/types.h: 88
+# /usr/local/include/eswb/types.h: 89
 try:
     ESWB_BUS_NAME_MAX_LEN = 32
 except:
     pass
 
-# /usr/local/include/eswb/types.h: 89
+# /usr/local/include/eswb/types.h: 90
 try:
     ESWB_TOPIC_NAME_MAX_LEN = 30
 except:
     pass
 
-# /usr/local/include/eswb/types.h: 90
+# /usr/local/include/eswb/types.h: 91
 try:
     ESWB_TOPIC_MAX_PATH_LEN = 100
 except:

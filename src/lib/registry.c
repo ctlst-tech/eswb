@@ -313,7 +313,7 @@ static eswb_rv_t topic_add_child(topic_t *parent, topic_proclaiming_tree_t *topi
     topic_t *new = alloc_topic(parent->reg_ref);
 
     if (new == NULL) {
-        return eswb_e_mem_topic_na;
+        return eswb_e_mem_topic_max;
     }
 
     topic_struct->topic_id = new->id;

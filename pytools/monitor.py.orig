@@ -1,8 +1,9 @@
 import sys
+import time
 from typing import List
 
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtCore import QObject, pyqtSignal, QThreadPool, QRunnable, pyqtSlot
+from PyQt5.QtCore import QThread, QObject, pyqtSignal, QThreadPool, QRunnable, pyqtSlot
 from PyQt5.QtWidgets import QPushButton, QApplication
 
 
@@ -76,6 +77,8 @@ class Worker(QRunnable):
     def terminate(self):
         self.finished = True
 
+<<<<<<< HEAD
+=======
     def process_events(self):
         QApplication.processEvents()
         if self.finished:
@@ -83,14 +86,25 @@ class Worker(QRunnable):
 
         return True
 
+>>>>>>> origin/dev
     @pyqtSlot()
     def run(self):
         """
         Your code goes in this function
         """
         print("Thread start")
+<<<<<<< HEAD
+        while True:
+            time.sleep(self.sleep)
+            self.job()
+            QApplication.processEvents()
+            if self.finished:
+                print("Thread finished")
+                break
+=======
         self.job(self.process_events)
         print("Thread finished")
+>>>>>>> origin/dev
 
 
 class Monitor:
@@ -109,7 +123,11 @@ class Monitor:
             r.signals.close.emit()
 
     def run_task(self, runnable: QRunnable):
+<<<<<<< HEAD
+        self.runnables.append(runnable);
+=======
         self.runnables.append(runnable)
+>>>>>>> origin/dev
         pool = QThreadPool.globalInstance()
         pool.start(runnable)
 

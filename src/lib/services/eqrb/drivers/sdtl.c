@@ -221,7 +221,7 @@ static eqrb_rv_t init_handle(eqrb_handle_common_t *h, const char *service_name, 
 
 static eqrb_rv_t
 instantiate_client(const char *service_name, const char *sdtl_ch_name, const char *mount_point, uint32_t repl_map_size,
-                   int stream_only, eqrb_client_handle_t **sidekick_ch) {
+                   int stream_only, eqrb_client_handle_t **sidekick_ch, int verbosity) {
     eqrb_client_handle_t *ch = calloc(1, sizeof(*ch));
 
     if (ch == NULL) {
@@ -232,6 +232,8 @@ instantiate_client(const char *service_name, const char *sdtl_ch_name, const cha
     if (rv != eqrb_rv_ok) {
         return rv;
     }
+
+    ch->verbosity = verbosity;
 
     if (stream_only) {
         // FIXME sidekick will use common ids_map in READ ONLY mode, but still it is not  thread safe
@@ -247,17 +249,17 @@ instantiate_client(const char *service_name, const char *sdtl_ch_name, const cha
 
 
 eqrb_rv_t eqrb_sdtl_client_connect(const char *service_name, const char *sdtl_ch1_name, const char *sdtl_ch2_name,
-                                   const char *mount_point, uint32_t repl_map_size) {
+                                   const char *mount_point, uint32_t repl_map_size, int verbosity) {
 
     eqrb_client_handle_t *ch;
 
-    eqrb_rv_t rv = instantiate_client(service_name, sdtl_ch1_name, mount_point, repl_map_size, 0, &ch);
+    eqrb_rv_t rv = instantiate_client(service_name, sdtl_ch1_name, mount_point, repl_map_size, 0, &ch, 0);
     if (rv != eqrb_rv_ok) {
         return rv;
     }
 
     if (sdtl_ch2_name != NULL) {
-        rv = instantiate_client(service_name, sdtl_ch2_name, mount_point, repl_map_size, -1, &ch);
+        rv = instantiate_client(service_name, sdtl_ch2_name, mount_point, repl_map_size, -1, &ch, 0);
         if (rv != eqrb_rv_ok) {
             return rv;
         }

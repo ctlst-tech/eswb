@@ -108,11 +108,12 @@ class DataSourceTimeline(DataSourceBasic):
         return self.time
 
 class DataSourceSinus(DataSourceBasic):
-    def __init__(self, name, *, omega=1.0, iphase=0.0, **kwargs):
+    def __init__(self, name, *, omega=1.0, iphase=0.0, bias=0.0, **kwargs):
         super().__init__(name, **kwargs)
         self.time = 0
         self.delta_time = 0.01
         self.omega = omega
+        self.bias = bias
         self.initial_phase = iphase
 
     def connect(self):
@@ -120,7 +121,7 @@ class DataSourceSinus(DataSourceBasic):
 
     def read(self) -> Union[float, int, str, NoDataStub]:
         self.time += self.delta_time
-        return self.mult * math.sin(self.initial_phase + self.omega * self.time)
+        return self.mult * math.sin(self.initial_phase + self.omega * self.time) + self.bias
 
 
 def find_data_source(lst: List[DataSourceBasic], name: str):

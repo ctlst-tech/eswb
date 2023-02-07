@@ -53,6 +53,10 @@ static eqrb_rv_t client_submit_repl_event (eqrb_client_handle_t *handle,
     return rv;
 }
 
+static void eqrb_client_print_state(eqrb_client_handle_t *h) {
+
+}
+
 void *eqrb_client_thread(eqrb_client_handle_t *p) {
     eqrb_client_handle_t *h = p;
     eswb_rv_t erv;

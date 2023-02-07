@@ -55,7 +55,8 @@ eqrb_rv_t eqrb_sdtl_client_connect(const char *service_name,
                                    const char *sdtl_ch1_name,
                                    const char *sdtl_ch2_name,
                                    const char *mount_point,
-                                   uint32_t repl_map_size);
+                                   uint32_t repl_map_size,
+                                   int verbosity);
 
 eqrb_rv_t eqrb_file_server_start(const char *eqrb_service_name,
                                  const char *file_prefix, const char *dst_dir,
