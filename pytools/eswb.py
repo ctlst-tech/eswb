@@ -272,7 +272,8 @@ class EQRB_SDTL:
                                          self.c_ch1,
                                          self.c_ch2,
                                          self.c_replicate_to_path,
-                                         self.repl_map_size
+                                         self.repl_map_size,
+                                         0
                                          )
 
         if rv != 0:
