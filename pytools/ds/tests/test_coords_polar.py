@@ -1,3 +1,5 @@
+import math
+
 import mymath
 from unittest import TestCase
 
@@ -18,25 +20,25 @@ class TestDataSourcePolar(TestCase):
         polar_ds = DataSourceCoordsPolar("to_polar", 10, 10, decimals=decimals)
         [phi, r] = polar_ds.read()
         self.assertEqual(45.0, phi)
-        self.assertEqual(round(mymath.hypot(10, 10), decimals), r)
+        self.assertEqual(round(math.hypot(10, 10), decimals), r)
 
     def test_pt2(self):
         decimals = 3
         polar_ds = DataSourceCoordsPolar("to_polar", x=10, y=-10, decimals=decimals)
         [phi, r] = polar_ds.read()
         self.assertEqual(phi, 45.0 + 90.0)
-        self.assertEqual(round(mymath.hypot(10, 10), decimals), r)
+        self.assertEqual(round(math.hypot(10, 10), decimals), r)
 
     def test_pt3(self):
         decimals = 3
         polar_ds = DataSourceCoordsPolar("to_polar", x=-10, y=-10, decimals=decimals)
         [phi, r] = polar_ds.read()
         self.assertEqual(phi, 45.0 + 180.0)
-        self.assertEqual(r, round(mymath.hypot(10, 10), decimals))
+        self.assertEqual(r, round(math.hypot(10, 10), decimals))
 
     def test_pt4(self):
         decimals = 3
         polar_ds = DataSourceCoordsPolar("to_polar", x=-10, y=10, decimals=decimals)
         [phi, r] = polar_ds.read()
         self.assertEqual(phi, 45.0 + 270.0)
-        self.assertEqual(round(mymath.hypot(10, 10), decimals), r)
+        self.assertEqual(round(math.hypot(10, 10), decimals), r)
