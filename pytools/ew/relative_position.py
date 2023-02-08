@@ -68,11 +68,11 @@ class EwRelativePosition(MyQtWidget, EwBasic):
                                             QPointF(_x, _y),
                                             center[0], center[1]))
 
-    def __init__(self, data_sources: List[DataSourceBasic], fixed_size=None, **kwargs):
+    def __init__(self, data_sources: List[DataSourceBasic], fixed_size=None, default_scale=1,  **kwargs):
         MyQtWidget.__init__(self, **kwargs)
         EwBasic.__init__(self)
 
-        self.scale_m = 1
+        self.scale_m = default_scale
         self.markers = []
         self.center = [0.0, 0.0]
 
