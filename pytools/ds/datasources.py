@@ -1,9 +1,7 @@
+import math
+import time
 from abc import abstractmethod
 from typing import List, Union
-import time
-import math
-
-from PyQt5.QtWidgets import QLineEdit
 
 
 class NoDataStub:

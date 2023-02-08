@@ -1,4 +1,4 @@
-import math
+import mymath
 from abc import abstractmethod
 from typing import List, Union, Dict, Tuple
 
@@ -456,11 +456,11 @@ class EwAttitudeIndicator(MyQtWidget, EwBasic):
         _scaleX = _width / _originalWidth
         _scaleY = _height / _originalHeight
 
-        roll_rad = math.pi * self._roll / 180.0
+        roll_rad = mymath.pi * self._roll / 180.0
         delta = 1.7 * self._pitch
 
-        _faceDeltaX_new = _scaleX * delta * math.sin(roll_rad)
-        _faceDeltaY_new = _scaleY * delta * math.cos(roll_rad)
+        _faceDeltaX_new = _scaleX * delta * mymath.sin(roll_rad)
+        _faceDeltaY_new = _scaleY * delta * mymath.cos(roll_rad)
 
         offs_x = _faceDeltaX_new - self._faceDeltaX_old
         offs_y = _faceDeltaY_new - self._faceDeltaY_old

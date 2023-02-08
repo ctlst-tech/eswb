@@ -5,9 +5,9 @@ from .datasources import (
     DataSourceTimeline,
     DataSourceSum,
     NoDataStub,
-    DataSourceCalcFilteredRate
+    DataSourceCalcFilteredRate,
 )
-from .qt import DataSourceWidget
+from .qt import DataSourceLineEdit, DataSourceButtons
 
 __all__ = [
     "DataSourceBasic",
@@ -17,5 +17,6 @@ __all__ = [
     "DataSourceSum",
     "DataSourceCalcFilteredRate",
     "DataSourceTimeline",
-    "DataSourceWidget"
+    "DataSourceLineEdit",
+    "DataSourceButtons"
 ]
