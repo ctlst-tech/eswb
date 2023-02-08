@@ -36,19 +36,21 @@ class DataSourceEswbTopic(DataSourceBasic):
 
 
 class EswbApplicationWindow(ApplicationWindow):
-    def __init__(self, title="ESWB display", bus: e.Bus = None, tabs=False):
+    def __init__(self, title="ESWB display", bus: e.Bus = None, tabs=False, print_tree=True):
         super().__init__(title=title, tabs=tabs)
-
+        self.print_tree = print_tree
         self.bus = bus
         if self.bus:
             self.timer_print_bus = QtCore.QTimer()
-            self.timer_print_bus.setInterval(200)
+            self.timer_print_bus.setInterval(50)
             self.timer_print_bus.timeout.connect(self.print_bus_tree)
             self.timer_print_bus.start()
 
     def print_bus_tree(self):
         self.bus.update_tree()
-        self.bus.topic_tree.print()
+
+        if self.print_tree:
+            self.bus.topic_tree.print()
 
 
 class SdtlTelemetryData(EwBasic):
