@@ -47,6 +47,44 @@ class DataSourceSum(DataSourceBasic):
         return rv
 
 
+class DataSourceMath(DataSourceBasic):
+    def __init__(self, name, sources: List[DataSourceBasic], math_lmb, **kwargs):
+        super().__init__(name, **kwargs)
+        self.data_sources = sources
+        self.lmb = math_lmb
+
+    def connect(self):
+        for s in self.data_sources:
+            s.connect()
+
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        args = []
+        for s in self.data_sources:
+            v = s.read()
+            if isinstance(v, NoDataStub):
+                return v
+            else:
+                args.append(v)
+
+        return self.lmb(args)
+
+
+class DataSourceInvert(DataSourceBasic):
+    def __init__(self, name, source: DataSourceBasic, **kwargs):
+        super().__init__(name, **kwargs)
+        self.data_sources = [source]
+
+    def connect(self):
+        self.data_sources[0].connect()
+
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        v = self.data_sources[0].read()
+        if isinstance(v, NoDataStub):
+            return v
+        else:
+            return -v
+
+
 class DataSourceCalcFilteredRate(DataSourceBasic):
     def __init__(self, name, data_source: DataSourceBasic, factor=0.01, **kwargs):
         super().__init__(name, **kwargs)
@@ -106,6 +144,7 @@ class DataSourceTimeline(DataSourceBasic):
     def read(self) -> Union[float, int, str, NoDataStub]:
         self.time += self.delta_time
         return self.time
+
 
 class DataSourceSinus(DataSourceBasic):
     def __init__(self, name, *, omega=1.0, iphase=0.0, bias=0.0, **kwargs):
