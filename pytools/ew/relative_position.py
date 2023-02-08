@@ -47,8 +47,9 @@ class EwRelativePosition(MyQtWidget, EwBasic):
     rings = [10, 20, 50, 100, 150, 200, 300, 500]
 
     class Marker:
-        def __init__(self, icon='aim-yellow'):
-            self.svg_icon = EwRelativePosition.mk_svg(rel_path(f"images/vehicle/{icon}.svg"))
+        def __init__(self, icon='aim-yellow', custom_icon_path=None):
+            icon_path = rel_path(f"images/vehicle/{icon}.svg") if not custom_icon_path else custom_icon_path
+            self.svg_icon = EwRelativePosition.mk_svg(icon_path)
             self.phi = 0.0
             self.r = 0.0
             self.alt = 0.0
@@ -86,7 +87,10 @@ class EwRelativePosition(MyQtWidget, EwBasic):
         count = len(data_sources) // ds_tuple_size
         for i in range(0, count):
             icon = data_sources[i * ds_tuple_size].read()
-            self.markers.append(self.Marker(icon=icon))
+            if '/' in icon:
+                self.markers.append(self.Marker(custom_icon_path=icon))
+            else:
+                self.markers.append(self.Marker(icon=icon))
 
     def set_scale(self, scale):
         """  pixels per meter """
