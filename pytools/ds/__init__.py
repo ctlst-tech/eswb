@@ -3,11 +3,12 @@ from .datasources import (
     DataSourceConst,
     DataSourceSinus,
     DataSourceTimeline,
+    DataSourceEnum,
     DataSourceSum,
     NoDataStub,
     DataSourceCalcFilteredRate
 )
-from .qt import DataSourceWidget
+from .qt import DataSourceWidget, DataSourceButtons
 
 __all__ = [
     "DataSourceBasic",
@@ -17,5 +18,7 @@ __all__ = [
     "DataSourceSum",
     "DataSourceCalcFilteredRate",
     "DataSourceTimeline",
-    "DataSourceWidget"
+    "DataSourceEnum",
+    "DataSourceWidget",
+    "DataSourceButtons"
 ]

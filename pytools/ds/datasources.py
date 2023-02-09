@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Union
+from typing import List, Union, Dict
 import time
 import math
 
@@ -67,6 +67,33 @@ class DataSourceMath(DataSourceBasic):
                 args.append(v)
 
         return self.lmb(args)
+
+
+class DataSourceEnum(DataSourceBasic):
+    def __init__(self, name, sources: List[DataSourceBasic], enum_table: Dict[int, str], **kwargs):
+        super().__init__(name, **kwargs)
+        self.data_sources = sources
+        self.enum_table = enum_table
+
+    def connect(self):
+        for s in self.data_sources:
+            s.connect()
+
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        v = self.data_sources[0].read()
+        if isinstance(v, NoDataStub):
+            return v
+        else:
+            rv = ''
+            if not isinstance(v, int):
+                rv = f'inv type ({v})'
+            else:
+                if v in self.enum_table:
+                    rv = self.enum_table[v]
+                else:
+                    rv = f'unknown value ({v})'
+
+        return rv
 
 
 class DataSourceInvert(DataSourceBasic):
