@@ -60,10 +60,63 @@ public:
         sin_data.out = sin(sin_data.in) * m_amp;
         eswb_update_topic(topic_desc, &sin_data);
         m_counter++;
-        usleep(1000);
+        usleep(10000);
         return 0;
     }
 };
+
+// class DeepTopicGenerator final : public BasePublisher {
+// private:
+//     struct InternalStruct {
+//         double f1;
+//         double f2;
+//     };
+//     struct DeepTopicGen {
+//         struct InternalStruct internal;
+//         double in;
+//         double out;
+//     } m_deeptopic;
+//     double m_period_scaler;
+//     uint64_t m_counter;
+
+// public:
+//     DeepTopicGenerator(const std::string &pub_name, const std::string &bus_name,
+//                  int amp, double period_scaler)
+//         : m_period_scaler(period_scaler), m_counter(0) {
+//         pub = std::move(pub_name);
+//         bus = std::move(bus_name);
+//     }
+
+//     virtual int init(void) final {
+//         TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 10);
+
+//         topic_proclaiming_tree_t *rt =
+//             usr_topic_set_struct(cntx, m_deeptopic, pub.c_str());
+//         usr_topic_add_struct_child(cntx, rt, struct DeepTopicGen, in, "in",
+//                                    tt_double);
+//         usr_topic_add_struct_child(cntx, rt, struct DeepTopicGen, out, "out",
+//                                    tt_double);
+//         usr_topic_add_struct_child(cntx, rt, struct InternalStruct, internal, "internal",
+//                                    tt_struct);
+//         eswb_rv_t rv = eswb_proclaim_tree_by_path(
+//             this->bus.c_str(), rt, cntx->t_num, &this->topic_desc);
+//         // REQUIRE(rv == eswb_e_ok);
+
+//         return 0;
+//     }
+
+//     virtual int update(void) final {
+//         struct DeepTopicGen deeptopic_data;
+//         deeptopic_data.in = m_counter / m_period_scaler;
+//         deeptopic_data.out = m_counter * m_period_scaler;
+//         deeptopic_data.internal.f1 = -1.0 * m_counter;
+//         deeptopic_data.internal.f2 = 1.0 * m_counter;
+//         eswb_update_topic(topic_desc, &deeptopic_data);
+//         m_counter++;
+//         usleep(1000);
+//         return 0;
+//     }
+// };
 
 void *publisherThread(void *p) {
     BasePublisher *publisher = static_cast<BasePublisher *>(p);
