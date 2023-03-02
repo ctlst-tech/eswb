@@ -12,7 +12,7 @@
 
 namespace eswb {
 
-// TODO: use headers with definitions
+// TODO: use headers with definitions of eqrb structures
 typedef struct __attribute__((packed)) eqrb_interaction_header {
     uint8_t msg_code;
     uint8_t reserved[3];
@@ -44,6 +44,36 @@ typedef enum {
     EQRB_CMD_SERVER_TOPIC = 3,
 } eqrb_cmd_code_t;
 
+struct TopicNode {
+    uint16_t parent_id;
+    topic_proclaiming_tree_t topic;
+    std::vector<uint16_t> child;
+    std::vector<uint16_t> primitive_topic;
+};
+
+class TopicTree {
+private:
+    std::unordered_map<uint16_t, struct TopicNode> m_topic_tree;
+
+public:
+    TopicTree() {
+        struct TopicNode root;
+        root.topic.topic_id = 0;
+        m_topic_tree[0] = root;
+    }
+
+public:
+    int addChildTopic(uint16_t parent_id, topic_proclaiming_tree_t *topic);
+    bool isPrimitiveType(uint16_t id);
+    int addPrimitiveTypeTopic(uint16_t id);
+    std::string getTopicPath(uint16_t id);
+    std::string getTopicName(uint16_t id);
+    std::string convertRawToString(uint16_t id, void *raw);
+    std::vector<uint16_t> getPrimitiveTypeTopics(uint16_t id);
+    uint16_t getTopicSize(uint16_t id);
+    uint16_t getTopicOffset(uint16_t id);
+};
+
 class ConverterToCsv {
 private:
     const std::string m_path_to_raw;
@@ -54,9 +84,11 @@ private:
     std::string m_bus;
 
 private:
+    TopicTree m_topic_tree;
+
+private:
     std::vector<std::string> m_header;
     std::vector<std::string> m_raw;
-    std::unordered_map<uint16_t, topic_proclaiming_tree_t> m_topic;
     std::unordered_map<uint16_t, uint16_t> m_topic_column_num;
     uint16_t m_column_num;
 

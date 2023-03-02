@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <cstring>
 #include <fstream>
-#include <memory>
 
 char *eswb::ConverterToCsv::findSep(char *str, char *end_ptr, const char *sep) {
     char *rv;
@@ -102,6 +101,7 @@ int eswb::ConverterToCsv::convert(void) {
         m_raw[0] = timestamp;
         topic_start += strlen(timestamp);
 
+        // TODO: replace this to TopicTree class
         h = (eswb::eqrb_interaction_header_t *)topic_start;
         event = (eswb::event_queue_transfer_t
                      *)(topic_start + sizeof(eswb::eqrb_interaction_header_t));
@@ -109,52 +109,42 @@ int eswb::ConverterToCsv::convert(void) {
         topic = (eswb::topic_proclaiming_tree_t *)data;
 
         if (h->msg_code == eswb::EQRB_CMD_SERVER_TOPIC) {
-            m_topic[topic->topic_id] = *topic;
-            if (topic->type == tt_double) {
-                m_topic_column_num[topic->topic_id] = m_column_num;
-                size_t buf_size = 1024;
-                auto buf = std::make_unique<char[]>(buf_size);
-                std::snprintf(buf.get(), buf_size, "%s_%s",
-                              m_topic[event->topic_id].name, topic->name);
-                m_header.push_back(buf.get());
+            int id = m_topic_tree.addChildTopic(event->topic_id, topic);
+            if (id < 0) {
+                std::cout << "No such parent topic id: " << event->topic_id;
+            }
+            if (m_topic_tree.isPrimitiveType(id)) {
+                m_topic_tree.addPrimitiveTypeTopic(id);
+                if (m_topic_column_num.count(id)) {
+                    std::cout << "This id already exists: " << id;
+                }
+                m_topic_column_num[id] = m_column_num;
+                std::string name = m_topic_tree.getTopicPath(id);
+                m_header.push_back(name);
                 // TODO: Add columns on the go
                 append(csv_log, m_header[m_column_num].data(),
                        m_header[m_column_num].length());
                 m_column_num++;
                 m_raw.push_back("0.0");
             }
-        } else {
+        } else if (h->msg_code == eswb::EQRB_CMD_SERVER_EVENT) {
             new_line(csv_log);
-            std::cout << m_raw.size() << std::endl;
-            std::cout << "topic_name: " << m_topic[event->topic_id].name
-                      << std::endl;
-            std::cout << "timestamp: " << timestamp << std::endl;
-            for (int i = 1;
-                 i <= m_topic[event->topic_id].data_size / sizeof(double);
-                 i++) {
-                std::cout << "column_index: "
-                          << m_topic_column_num[event->topic_id + i]
-                          << std::endl;
-                std::cout << "column_name: "
-                          << m_header[m_topic_column_num[event->topic_id + i]]
-                          << std::endl;
-                std::cout << "value: "
-                          << (double)(*(double *)(data +
-                                                  (i - 1) * sizeof(double)))
-                          << std::endl;
+            std::vector<uint16_t> topics =
+                m_topic_tree.getPrimitiveTypeTopics(event->topic_id);
+            for (int i = 0; i < topics.size(); i++) {
+                uint16_t id = topics[i];
+                uint16_t offset = m_topic_tree.getTopicOffset(id);
+                uint16_t size = m_topic_tree.getTopicSize(id);
+                std::string string_value = m_topic_tree.convertRawToString(id, data);
+                std::cout << "name: " << m_topic_tree.getTopicPath(id) << std::endl;
+                std::cout << "value: " << string_value << std::endl;
+                std::cout << "size: " << size << std::endl;
+                std::cout << "offset: " << offset << std::endl;
+                int sd = m_topic_column_num[id];
+                m_raw[sd] = string_value;
+                data += size;
             }
             std::cout << std::endl;
-            m_raw[0] = timestamp;
-            for (int i = 1;
-                 i <= m_topic[event->topic_id].data_size / sizeof(double);
-                 i++) {
-                size_t buf_size = 1024;
-                auto buf = std::make_unique<char[]>(buf_size);
-                std::snprintf(
-                    buf.get(), buf_size, "%lf",
-                    (double)(*(double *)(data + (i - 1) * sizeof(double))));
-                m_raw[m_topic_column_num[event->topic_id + i]] = buf.get();
-            }
             for (auto i = 0; i < m_raw.size(); i++) {
                 append(csv_log, m_raw[i].data(), m_raw[i].length());
             }
@@ -165,5 +155,109 @@ int eswb::ConverterToCsv::convert(void) {
     csv_log.close();
     delete[] raw_buf;
 
+    return rv;
+}
+
+int eswb::TopicTree::addChildTopic(uint16_t parent_id,
+                                   topic_proclaiming_tree_t *topic) {
+    int rv = -1;
+    struct TopicNode topic_node;
+    if (m_topic_tree.count(parent_id)) {
+        topic_node.topic = *topic;
+        topic_node.parent_id = parent_id;
+        m_topic_tree[topic->topic_id] = topic_node;
+        m_topic_tree[parent_id].child.push_back(topic->topic_id);
+        rv = topic->topic_id;
+    }
+    return rv;
+}
+
+bool eswb::TopicTree::isPrimitiveType(uint16_t id) {
+    bool rv = false;
+    if (m_topic_tree[id].topic.type >= tt_uint8 &&
+        m_topic_tree[id].topic.type <= tt_string) {
+        rv = true;
+    }
+    return rv;
+}
+
+int eswb::TopicTree::addPrimitiveTypeTopic(uint16_t id) {
+    uint16_t current_id = id;
+    while (current_id != 0) {
+        m_topic_tree[current_id].primitive_topic.push_back(id);
+        current_id = m_topic_tree[current_id].parent_id;
+    }
+    return id;
+}
+
+std::vector<uint16_t> eswb::TopicTree::getPrimitiveTypeTopics(uint16_t id) {
+    return m_topic_tree[id].primitive_topic;
+}
+
+std::string eswb::TopicTree::getTopicPath(uint16_t id) {
+    std::string path(m_topic_tree[id].topic.name);
+    uint16_t parent_id = m_topic_tree[id].parent_id;
+    while (parent_id != 0) {
+        path.insert(0, "_");
+        path.insert(0, m_topic_tree[parent_id].topic.name);
+        parent_id = m_topic_tree[parent_id].parent_id;
+    }
+    return path;
+}
+
+std::string eswb::TopicTree::getTopicName(uint16_t id) {
+    return std::string(m_topic_tree[id].topic.name);
+}
+
+uint16_t eswb::TopicTree::getTopicSize(uint16_t id) {
+    return m_topic_tree[id].topic.data_size;
+}
+
+uint16_t eswb::TopicTree::getTopicOffset(uint16_t id) {
+    return m_topic_tree[id].topic.data_offset;
+}
+
+std::string eswb::TopicTree::convertRawToString(uint16_t id, void *raw) {
+    std::string rv;
+    topic_data_type_s_t type = m_topic_tree[id].topic.type;
+#define CAST_DREF2VAL(__t) (*((__t *)raw))
+    switch (type) {
+        default:
+            rv = "";
+            break;
+        case tt_float:
+            rv = std::to_string(CAST_DREF2VAL(float));
+            break;
+        case tt_double:
+            rv = std::to_string(CAST_DREF2VAL(double));
+            break;
+        case tt_uint8:
+            rv = std::to_string(CAST_DREF2VAL(uint8_t));
+            break;
+        case tt_int8:
+            rv = std::to_string(CAST_DREF2VAL(int8_t));
+            break;
+        case tt_uint16:
+            rv = std::to_string(CAST_DREF2VAL(uint16_t));
+            break;
+        case tt_int16:
+            rv = std::to_string(CAST_DREF2VAL(int16_t));
+            break;
+        case tt_uint32:
+            rv = std::to_string(CAST_DREF2VAL(uint32_t));
+            break;
+        case tt_int32:
+            rv = std::to_string(CAST_DREF2VAL(int32_t));
+            break;
+        case tt_uint64:
+            rv = std::to_string(CAST_DREF2VAL(uint64_t));
+            break;
+        case tt_int64:
+            rv = std::to_string(CAST_DREF2VAL(int64_t));
+            break;
+        case tt_string:
+            rv = "\"" + std::string((const char *)raw) + "\"";
+            break;
+    }
     return rv;
 }
