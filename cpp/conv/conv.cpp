@@ -4,15 +4,57 @@
 #include <cstring>
 #include <fstream>
 
-char *eswb::ConverterToCsv::findSep(char *str, char *end_ptr, const char *sep) {
-    char *rv;
-    int length;
+using namespace std;
+
+eswb::ConverterToCsv::ConverterToCsv(const std::string &path_to_raw,
+                                     const std::string &path_to_csv)
+    : m_path_to_csv(path_to_csv), m_path_to_raw(path_to_raw), m_column_num(0) {
+    m_raw_log.open(m_path_to_raw, ios::in);
+    m_csv_log.open(m_path_to_csv, ios::out | ios::trunc | ios::binary);
+
+    if (!m_raw_log.is_open()) {
+        cout << "Failed to open raw log: " << m_path_to_raw << endl;
+    }
+
+    if (!m_csv_log.is_open()) {
+        cout << "Failed to create csv log: " << m_path_to_csv << endl;
+    }
+
+    getline(m_raw_log, m_bus);
+    getline(m_raw_log, m_frame_sep);
+
+    m_raw_log.seekg(0, ios::end);
+    m_file_size = m_raw_log.tellg();
+    m_raw_log.seekg(0, ios::beg);
+    m_file_ptr = new char[m_file_size];
+
+    if (m_file_ptr == nullptr) {
+        cout << "Failed to create raw buf: " << endl;
+    } else {
+        m_raw_log.read(m_file_ptr, m_file_size);
+    }
+}
+
+eswb::ConverterToCsv::~ConverterToCsv() {
+    if (m_file_ptr != nullptr) {
+        delete[] m_file_ptr;
+    }
+    if (m_raw_log.is_open()) {
+        m_raw_log.close();
+    }
+    if (m_csv_log.is_open()) {
+        m_csv_log.close();
+    }
+}
+
+char *eswb::ConverterToCsv::findSep(char *str, const char *end_ptr,
+                                    const char *sep) {
     while (1) {
         if (str >= end_ptr) {
             return nullptr;
         }
-        rv = strstr(str, sep);
-        length = strnlen(str, end_ptr - str);
+        char *rv = strstr(str, sep);
+        int length = strnlen(str, end_ptr - str);
         length = (length < 1 ? 1 : length);
         if (rv == nullptr) {
             str += length;
@@ -22,140 +64,144 @@ char *eswb::ConverterToCsv::findSep(char *str, char *end_ptr, const char *sep) {
     }
 }
 
-void eswb::ConverterToCsv::append(std::ofstream &log, const char *data,
-                                  std::streamsize size) {
+void eswb::ConverterToCsv::newColumn(ofstream &log, const char *data,
+                                     streamsize size) {
     log.write(data, size);
     log.write(",", 1);
 }
 
-void eswb::ConverterToCsv::new_line(std::ofstream &log) {
+void eswb::ConverterToCsv::newRow(ofstream &log) {
     log.write("\n", 1);
 }
 
-int eswb::ConverterToCsv::convert(void) {
-    int rv;
-    std::ifstream raw_log;
-    std::ofstream csv_log;
-    std::string raw_string;
-
-    raw_log.open(this->m_path_to_raw, std::ios::in);
-    csv_log.open(this->m_path_to_csv,
-                 std::ios::out | std::ios::trunc | std::ios::binary);
-
-    if (!raw_log.is_open()) {
-        std::cout << "Failed to open raw log: " << this->m_path_to_raw
-                  << std::endl;
-        return -1;
+bool eswb::ConverterToCsv::convert(void) {
+    if (m_file_ptr == nullptr || !m_raw_log.is_open() || !m_csv_log.is_open()) {
+        return false;
     }
 
-    if (!csv_log.is_open()) {
-        std::cout << "Failed to create csv log: " << this->m_path_to_csv
-                  << std::endl;
-        return -1;
-    }
+    std::vector<std::string> m_header;
+    std::vector<std::string> m_row;
 
-    std::getline(raw_log, this->m_bus);
-    std::cout << "Bus: " << this->m_bus << std::endl;
-
-    raw_log.seekg(0, std::ios::end);
-    size_t raw_length = raw_log.tellg();
-    raw_log.seekg(0, std::ios::beg);
-    char *raw_buf = new char[raw_length];
-
-    if (raw_buf == nullptr) {
-        std::cout << "Failed to create raw buf: " << std::endl;
-    }
-
-    raw_log.read(raw_buf, raw_length);
-    char *raw_end_ptr = raw_buf + raw_length;
-
-    bool loop = true;
-    char *topic_start = raw_buf;
-    char *topic_end = raw_buf;
-    int topic_length;
-
-    eswb::eqrb_interaction_header_t *h;
-    eswb::event_queue_transfer_t *event;
-    eswb::topic_proclaiming_tree_t *topic;
+    char *topic_start = m_file_ptr;
+    char *file_end_ptr = m_file_ptr + m_file_size;
     char timestamp[32];
-    char *data;
+    char dt[32];
+
     m_header.push_back("Time");
-    m_raw.push_back("0.0");
-    append(csv_log, m_header[0].data(), m_header[0].length());
+    m_row.push_back("0.0");
+    m_column_num++;
+    m_header.push_back("Period");
+    m_row.push_back("0.0");
+    m_column_num++;
+
+    newColumn(m_csv_log, m_header[0].data(), m_header[0].length());
+    newColumn(m_csv_log, m_header[1].data(), m_header[1].length());
 
     while (1) {
-        topic_start = findSep(topic_start, raw_end_ptr, m_frame_sep.data());
+        topic_start = findSep(topic_start, file_end_ptr, m_frame_sep.data());
         if (topic_start == nullptr) {
             break;
         }
 
-        topic_end = topic_start + m_frame_sep.length();
-        topic_end = findSep(topic_end, raw_end_ptr, m_frame_sep.data());
-        if (topic_end == nullptr) {
-            topic_end = raw_end_ptr;
-        }
+        char *topic_end = topic_start + m_frame_sep.length();
+        topic_end = findSep(topic_end, file_end_ptr, m_frame_sep.data());
 
-        topic_length = topic_end - topic_start;
         topic_start = topic_start + m_frame_sep.length();
-        sscanf(topic_start, "%[0-9.]", timestamp);
-        m_raw[0] = timestamp;
-        topic_start += strlen(timestamp);
 
-        // TODO: replace this to TopicTree class
-        h = (eswb::eqrb_interaction_header_t *)topic_start;
-        event = (eswb::event_queue_transfer_t
-                     *)(topic_start + sizeof(eswb::eqrb_interaction_header_t));
-        data = (char *)event + sizeof(eswb::event_queue_transfer_t);
-        topic = (eswb::topic_proclaiming_tree_t *)data;
+        eswb::eqrb_cmd_code_t cmd_code = m_topic_tree.getCmdCode(topic_start);
+        uint32_t event_id = m_topic_tree.getEventTopicId(topic_start);
+        char *data = static_cast<char *>(m_topic_tree.getData(topic_start));
 
-        if (h->msg_code == eswb::EQRB_CMD_SERVER_TOPIC) {
-            int id = m_topic_tree.addChildTopic(event->topic_id, topic);
+        if (cmd_code == eswb::EQRB_CMD_SERVER_TOPIC) {
+            int id = m_topic_tree.addChildTopic(
+                event_id, m_topic_tree.getTopicPtr(topic_start));
+
             if (id < 0) {
-                std::cout << "No such parent topic id: " << event->topic_id;
+                cout << "No such parent topic id: " << event_id;
             }
+
             if (m_topic_tree.isPrimitiveType(id)) {
                 m_topic_tree.addPrimitiveTypeTopic(id);
                 if (m_topic_column_num.count(id)) {
-                    std::cout << "This id already exists: " << id;
+                    cout << "This id already exists: " << id;
                 }
                 m_topic_column_num[id] = m_column_num;
-                std::string name = m_topic_tree.getTopicPath(id);
+                string name = m_topic_tree.getTopicPath(id);
                 m_header.push_back(name);
-                // TODO: Add columns on the go
-                append(csv_log, m_header[m_column_num].data(),
-                       m_header[m_column_num].length());
+                newColumn(m_csv_log, m_header[m_column_num].data(),
+                          m_header[m_column_num].length());
                 m_column_num++;
-                m_raw.push_back("0.0");
+                m_row.push_back("0.0");
             }
-        } else if (h->msg_code == eswb::EQRB_CMD_SERVER_EVENT) {
-            new_line(csv_log);
-            std::vector<uint16_t> topics =
-                m_topic_tree.getPrimitiveTypeTopics(event->topic_id);
+        } else if (cmd_code == eswb::EQRB_CMD_SERVER_EVENT) {
+            double time = m_topic_tree.getTimestampSec(topic_start);
+            sprintf(timestamp, "%lf", time);
+            m_row[0] = timestamp;
+
+            static double prev_time = 0.0;
+            sprintf(dt, "%lf", time - prev_time);
+            m_row[1] = dt;
+            newRow(m_csv_log);
+            vector<uint16_t> topics =
+                m_topic_tree.getPrimitiveTypeTopics(event_id);
             for (int i = 0; i < topics.size(); i++) {
                 uint16_t id = topics[i];
                 uint16_t offset = m_topic_tree.getTopicOffset(id);
                 uint16_t size = m_topic_tree.getTopicSize(id);
-                std::string string_value = m_topic_tree.convertRawToString(id, data);
-                std::cout << "name: " << m_topic_tree.getTopicPath(id) << std::endl;
-                std::cout << "value: " << string_value << std::endl;
-                std::cout << "size: " << size << std::endl;
-                std::cout << "offset: " << offset << std::endl;
+                string string_value = m_topic_tree.convertRawToString(id, data);
                 int sd = m_topic_column_num[id];
-                m_raw[sd] = string_value;
+                m_row[sd] = string_value;
                 data += size;
             }
-            std::cout << std::endl;
-            for (auto i = 0; i < m_raw.size(); i++) {
-                append(csv_log, m_raw[i].data(), m_raw[i].length());
+            for (auto i = 0; i < m_row.size(); i++) {
+                newColumn(m_csv_log, m_row[i].data(), m_row[i].length());
             }
+            prev_time = time;
         }
     }
+    return true;
+}
 
-    raw_log.close();
-    csv_log.close();
-    delete[] raw_buf;
+eswb::eqrb_cmd_code_t eswb::TopicTree::getCmdCode(char *event_raw) {
+    eswb::eqrb_interaction_header_t *h =
+        (eswb::eqrb_interaction_header_t *)event_raw;
+    return static_cast<eswb::eqrb_cmd_code_t>(h->msg_code);
+}
 
-    return rv;
+uint32_t eswb::TopicTree::getEventTopicId(char *event_raw) {
+    eswb::event_queue_transfer_t *event =
+        (eswb::event_queue_transfer_t *)(event_raw +
+                                         sizeof(
+                                             eswb::eqrb_interaction_header_t));
+    return static_cast<uint32_t>(event->topic_id);
+}
+
+eswb::topic_proclaiming_tree_t *eswb::TopicTree::getTopicPtr(char *event_raw) {
+    eswb::event_queue_transfer_t *event =
+        (eswb::event_queue_transfer_t *)(event_raw +
+                                         sizeof(
+                                             eswb::eqrb_interaction_header_t));
+    char *data = (char *)event + sizeof(eswb::event_queue_transfer_t);
+    eswb::topic_proclaiming_tree_t *topic =
+        (eswb::topic_proclaiming_tree_t *)data;
+    return topic;
+}
+
+double eswb::TopicTree::getTimestampSec(char *event_raw) {
+    eswb::event_queue_transfer_t *event =
+        (eswb::event_queue_transfer_t *)(event_raw +
+                                         sizeof(
+                                             eswb::eqrb_interaction_header_t));
+    return event->timestamp.sec + event->timestamp.usec / 1000000.0;
+}
+
+void *eswb::TopicTree::getData(char *event_raw) {
+    eswb::event_queue_transfer_t *event =
+        (eswb::event_queue_transfer_t *)(event_raw +
+                                         sizeof(
+                                             eswb::eqrb_interaction_header_t));
+    char *data = (char *)event + sizeof(eswb::event_queue_transfer_t);
+    return (void *)data;
 }
 
 int eswb::TopicTree::addChildTopic(uint16_t parent_id,
@@ -190,12 +236,12 @@ int eswb::TopicTree::addPrimitiveTypeTopic(uint16_t id) {
     return id;
 }
 
-std::vector<uint16_t> eswb::TopicTree::getPrimitiveTypeTopics(uint16_t id) {
+vector<uint16_t> eswb::TopicTree::getPrimitiveTypeTopics(uint16_t id) {
     return m_topic_tree[id].primitive_topic;
 }
 
-std::string eswb::TopicTree::getTopicPath(uint16_t id) {
-    std::string path(m_topic_tree[id].topic.name);
+string eswb::TopicTree::getTopicPath(uint16_t id) {
+    string path(m_topic_tree[id].topic.name);
     uint16_t parent_id = m_topic_tree[id].parent_id;
     while (parent_id != 0) {
         path.insert(0, "_");
@@ -205,8 +251,8 @@ std::string eswb::TopicTree::getTopicPath(uint16_t id) {
     return path;
 }
 
-std::string eswb::TopicTree::getTopicName(uint16_t id) {
-    return std::string(m_topic_tree[id].topic.name);
+string eswb::TopicTree::getTopicName(uint16_t id) {
+    return string(m_topic_tree[id].topic.name);
 }
 
 uint16_t eswb::TopicTree::getTopicSize(uint16_t id) {
@@ -217,46 +263,45 @@ uint16_t eswb::TopicTree::getTopicOffset(uint16_t id) {
     return m_topic_tree[id].topic.data_offset;
 }
 
-std::string eswb::TopicTree::convertRawToString(uint16_t id, void *raw) {
-    std::string rv;
+string eswb::TopicTree::convertRawToString(uint16_t id, void *raw) {
+    string rv;
     topic_data_type_s_t type = m_topic_tree[id].topic.type;
-#define CAST_DREF2VAL(__t) (*((__t *)raw))
     switch (type) {
         default:
             rv = "";
             break;
         case tt_float:
-            rv = std::to_string(CAST_DREF2VAL(float));
+            rv = to_string(*static_cast<float *>(raw));
             break;
         case tt_double:
-            rv = std::to_string(CAST_DREF2VAL(double));
+            rv = to_string(*static_cast<double *>(raw));
             break;
         case tt_uint8:
-            rv = std::to_string(CAST_DREF2VAL(uint8_t));
+            rv = to_string(*static_cast<uint8_t *>(raw));
             break;
         case tt_int8:
-            rv = std::to_string(CAST_DREF2VAL(int8_t));
+            rv = to_string(*static_cast<int8_t *>(raw));
             break;
         case tt_uint16:
-            rv = std::to_string(CAST_DREF2VAL(uint16_t));
+            rv = to_string(*static_cast<uint16_t *>(raw));
             break;
         case tt_int16:
-            rv = std::to_string(CAST_DREF2VAL(int16_t));
+            rv = to_string(*static_cast<int16_t *>(raw));
             break;
         case tt_uint32:
-            rv = std::to_string(CAST_DREF2VAL(uint32_t));
+            rv = to_string(*static_cast<uint32_t *>(raw));
             break;
         case tt_int32:
-            rv = std::to_string(CAST_DREF2VAL(int32_t));
+            rv = to_string(*static_cast<int32_t *>(raw));
             break;
         case tt_uint64:
-            rv = std::to_string(CAST_DREF2VAL(uint64_t));
+            rv = to_string(*static_cast<uint64_t *>(raw));
             break;
         case tt_int64:
-            rv = std::to_string(CAST_DREF2VAL(int64_t));
+            rv = to_string(*static_cast<int64_t *>(raw));
             break;
         case tt_string:
-            rv = "\"" + std::string((const char *)raw) + "\"";
+            rv = "\"" + string(static_cast<const char *>(raw)) + "\"";
             break;
     }
     return rv;
