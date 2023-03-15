@@ -1,6 +1,9 @@
 #include <string.h>
+#include <time.h>
 #include "topic_mem.h"
 #include "eswb/event_queue.h"
+
+#include <stdio.h>
 
 
 eswb_rv_t topic_mem_simply_copy(topic_t *t, void *data) {
@@ -183,6 +186,21 @@ eswb_rv_t topic_mem_event_queue_write(topic_t *t, const event_queue_record_t *r)
 #   define CALC_INDEX(__i,__s) ((__i) > (__s) ? (__i) - (__s) : (__i))
 
     // push event
+    static struct timespec prev_timestamp;
+    struct timespec timestamp;
+    clock_gettime(CLOCK_MONOTONIC, &timestamp);
+    rts.timestamp.sec = (uint32_t)timestamp.tv_sec;
+    rts.timestamp.usec = (uint32_t)(timestamp.tv_nsec / 1000);
+
+    double tnow = timestamp.tv_sec + timestamp.tv_nsec / 1000000000.0;
+    double tprev = prev_timestamp.tv_sec + prev_timestamp.tv_nsec / 1000000000.0;
+    double dt = tnow - tprev;
+
+    if (dt > 0.004) {
+        printf("topic_mem_event_queue_write: t = %lf, dt = %lf\n", tnow, dt);
+    }
+    prev_timestamp = timestamp;
+
     topic_mem_write_fifo(t, &rts);
     void *buffer_tail = data_buf_topic->data + data_buf_topic->array_ext->state.head;
     uint32_t i = 0;

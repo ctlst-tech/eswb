@@ -170,7 +170,7 @@ public:
         //         file_prefix != NULL && dst_dir != NULL);
 
         eqrb_rv_t rv = eqrb_file_server_start(service_name, file_prefix,
-                                              dst_dir, bus2replicate, &err_msg);
+                                              dst_dir, bus2replicate, "ebdf", &err_msg);
         // REQUIRE(rv == eqrb_rv_ok);
 
         return 0;

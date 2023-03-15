@@ -60,6 +60,7 @@ eqrb_rv_t eqrb_sdtl_client_connect(const char *service_name,
 eqrb_rv_t eqrb_file_server_start(const char *eqrb_service_name,
                                  const char *file_prefix, const char *dst_dir,
                                  const char *bus2replicate,
+                                 const char *frame_separator,
                                  const char **err_msg);
 
 eqrb_rv_t eqrb_file_client_connect(const char *service_name,

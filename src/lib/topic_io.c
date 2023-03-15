@@ -259,7 +259,15 @@ eswb_rv_t topic_io_event_queue_pop(topic_t *t, eswb_event_queue_mask_t mask, fif
         eqt->size = event.size;
         eqt->topic_id = event.topic_id;
         eqt->type = event.type;
+        eqt->timestamp = event.timestamp;
+        double tnow = eqt->timestamp.sec + eqt->timestamp.usec / 1000000.0;
+        static double tprev = 0;
+        double dt = tnow - tprev;
+        if (dt > 0.004) {
+            printf("topic_io_event_queue_pop: t = %lf, dt = %lf\n", tnow, dt);
+        }
         rv = topic_mem_event_queue_get_data(t, &event, EVENT_QUEUE_TRANSFER_DATA(eqt));
+        tprev = tnow;
     }
 
     return rv;
