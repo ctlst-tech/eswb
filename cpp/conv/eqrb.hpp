@@ -1,12 +1,13 @@
 #ifndef EQRB_HPP
 #define EQRB_HPP
 
+#include <time.h>
+
 #include <iostream>
 #include <thread>
 #include <unordered_map>
 #include <vector>
 
-#include <time.h>
 #include "eswb.hpp"
 #include "eswb/services/eqrb.h"
 #include "eswb/services/sdtl.h"
@@ -14,7 +15,7 @@
 namespace eswb {
 
 // TODO: use headers with definitions of eqrb structures
-typedef struct  __attribute__((packed)) eqrb_interaction_header {
+typedef struct __attribute__((packed)) eqrb_interaction_header {
     uint8_t msg_code;
     uint8_t reserved[3];
 } eqrb_interaction_header_t;
@@ -24,12 +25,12 @@ typedef struct {
     uint32_t usec;
 } event_queue_timestamp_t;
 
-typedef struct  __attribute__((packed)) event_queue_transfer {
+typedef struct __attribute__((packed)) event_queue_transfer {
     uint32_t size;
     uint32_t topic_id;
-    uint8_t  type;
+    uint8_t type;
     event_queue_timestamp_t timestamp;
- /* uint8_t  data[size]; */
+    /* uint8_t  data[size]; */
 } event_queue_transfer_t;
 
 typedef struct __attribute__((packed)) {

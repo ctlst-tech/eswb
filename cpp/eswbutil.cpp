@@ -101,17 +101,25 @@ int main(int argc, char *argv[]) {
     try {
         auto opts = parse_options(argc - 1, &argv[1]);
 
+        if (opts.size() == 0) {
+            std::cout << "Available commands: " << std::endl;
+            for (auto cmd : options) {
+                std::cout << '\t' << cmd.first << std::endl;
+            }
+        }
+
         for (auto o : opts) {
             if (o->is("read_serial")) {
                 eswb::read_sdtl_bridge_serial(o->arg_as_string(0),
                                               o->arg_as_int(1, 115200));
-            }
-            if (o->is("convert_to_csv")) {
+            } else if (o->is("convert_to_csv")) {
                 const std::string path_to_raw(argv[2]);
                 const std::string path_to_csv(argv[3]);
                 eswb::ConverterToCsv converter_to_csv(path_to_raw, path_to_csv);
-                converter_to_csv.convert();
-
+                if (converter_to_csv.convert()) {
+                    std::cout << "Conversion completed successfully"
+                              << std::endl;
+                }
             }
         }
     } catch (const std::string &s) {

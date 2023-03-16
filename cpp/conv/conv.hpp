@@ -82,7 +82,7 @@ public:
 
 private:
     ConverterToCsv(const ConverterToCsv &c);
-    ConverterToCsv& operator=(const ConverterToCsv &c);
+    ConverterToCsv &operator=(const ConverterToCsv &c);
 
 public:
     bool convert(void);

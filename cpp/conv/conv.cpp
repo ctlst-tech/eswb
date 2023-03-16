@@ -13,25 +13,30 @@ eswb::ConverterToCsv::ConverterToCsv(const std::string &path_to_raw,
     m_csv_log.open(m_path_to_csv, ios::out | ios::trunc | ios::binary);
 
     if (!m_raw_log.is_open()) {
+        cout << strerror(errno) << endl;
         cout << "Failed to open raw log: " << m_path_to_raw << endl;
     }
 
     if (!m_csv_log.is_open()) {
+        cout << strerror(errno) << endl;
         cout << "Failed to create csv log: " << m_path_to_csv << endl;
     }
 
-    getline(m_raw_log, m_bus);
-    getline(m_raw_log, m_frame_sep);
+    if (m_csv_log.is_open() && m_raw_log.is_open()) {
+        getline(m_raw_log, m_bus);
+        getline(m_raw_log, m_frame_sep);
 
-    m_raw_log.seekg(0, ios::end);
-    m_file_size = m_raw_log.tellg();
-    m_raw_log.seekg(0, ios::beg);
-    m_file_ptr = new char[m_file_size];
+        m_raw_log.seekg(0, ios::end);
+        m_file_size = m_raw_log.tellg();
+        m_raw_log.seekg(0, ios::beg);
+        m_file_ptr = new char[m_file_size];
 
-    if (m_file_ptr == nullptr) {
-        cout << "Failed to create raw buf: " << endl;
-    } else {
-        m_raw_log.read(m_file_ptr, m_file_size);
+        if (m_file_ptr == nullptr) {
+            cout << strerror(errno) << endl;
+            cout << "Failed to create raw buf: " << endl;
+        } else {
+            m_raw_log.read(m_file_ptr, m_file_size);
+        }
     }
 }
 
@@ -76,6 +81,7 @@ void eswb::ConverterToCsv::newRow(ofstream &log) {
 
 bool eswb::ConverterToCsv::convert(void) {
     if (m_file_ptr == nullptr || !m_raw_log.is_open() || !m_csv_log.is_open()) {
+        cout << "Initialization failed" << endl;
         return false;
     }
 
@@ -117,13 +123,13 @@ bool eswb::ConverterToCsv::convert(void) {
                 event_id, m_topic_tree.getTopicPtr(topic_start));
 
             if (id < 0) {
-                cout << "No such parent topic id: " << event_id;
+                cout << "No such parent topic id: " << event_id << endl;
             }
 
             if (m_topic_tree.isPrimitiveType(id)) {
                 m_topic_tree.addPrimitiveTypeTopic(id);
                 if (m_topic_column_num.count(id)) {
-                    cout << "This id already exists: " << id;
+                    cout << "This id already exists: " << id << endl;
                 }
                 m_topic_column_num[id] = m_column_num;
                 string name = m_topic_tree.getTopicPath(id);
@@ -141,9 +147,12 @@ bool eswb::ConverterToCsv::convert(void) {
             static double prev_time = 0.0;
             sprintf(dt, "%lf", time - prev_time);
             m_row[1] = dt;
+
             newRow(m_csv_log);
+
             vector<uint16_t> topics =
                 m_topic_tree.getPrimitiveTypeTopics(event_id);
+
             for (int i = 0; i < topics.size(); i++) {
                 uint16_t id = topics[i];
                 uint16_t offset = m_topic_tree.getTopicOffset(id);
@@ -157,6 +166,8 @@ bool eswb::ConverterToCsv::convert(void) {
                 newColumn(m_csv_log, m_row[i].data(), m_row[i].length());
             }
             prev_time = time;
+        } else {
+            cout << "Unhandled cmd code: " << cmd_code << endl;
         }
     }
     return true;
