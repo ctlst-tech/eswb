@@ -272,7 +272,8 @@ class EQRB_SDTL:
                                          self.c_ch1,
                                          self.c_ch2,
                                          self.c_replicate_to_path,
-                                         self.repl_map_size
+                                         self.repl_map_size,
+                                         0
                                          )
 
         if rv != 0:
@@ -299,17 +300,37 @@ class SDTLchannel:
         self.name = name
         self.id = ch_id
         self.type = ch_type
+        self.service = None
+
+        self.cfg = ce.sdtl_channel_cfg_t()
+        self.cfg.name = cstr(self.name)
+        self.cfg.id = self.id
+        self.cfg.mtu_override = 0
+        self.cfg.type = ce.SDTL_CHANNEL_RELIABLE if self.type == SDTLchannelType.rel else ce.SDTL_CHANNEL_UNRELIABLE
+
+        self.ch_descr = None
 
     def register(self, service):
-        cfg = ce.sdtl_channel_cfg_t()
-        cfg.name = cstr(self.name)
-        cfg.id = self.id
-        cfg.mtu_override = 0
-        cfg.type = ce.SDTL_CHANNEL_RELIABLE if self.type == SDTLchannelType.rel else ce.SDTL_CHANNEL_UNRELIABLE
+        self.service = service
 
-        rv = ce.sdtl_channel_create(service, byref(cfg))
+        rv = ce.sdtl_channel_create(self.service, byref(self.cfg))
         if rv != 0:
             raise SDTLexception(f'sdtl_channel_create failed', rv)
+
+    def open(self):
+        if self.ch_descr:
+            raise SDTLexception(f'Already open', 0)
+
+        self.ch_descr = POINTER(ce.sdtl_channel_handle_t)()
+
+        rv = ce.sdtl_channel_open(self.service, self.cfg.name, byref(self.ch_descr))
+        if rv != 0:
+            raise SDTLexception(f'sdtl_channel_open failed', rv)
+
+    def send(self, data, lng):
+        rv = ce.sdtl_channel_send_data(self.ch_descr, data, lng)
+        if rv != 0:
+            raise SDTLexception(f'sdtl_channel_send_data failed', rv)
 
 
 class SDTLserialService:

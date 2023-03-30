@@ -490,7 +490,7 @@ public:
     void start() {
         sdtl_start();
         eqrb_rv_t rv = eqrb_sdtl_client_connect(service_name.c_str(), EQRB_SDTL_TEST_CHANEL_REL, EQRB_SDTL_TEST_CHANEL_UNREL,
-                                                replicate_to_path.c_str(), 100);
+                                                replicate_to_path.c_str(), 100, 0);
         REQUIRE(rv == eqrb_rv_ok);
     }
 

@@ -36,19 +36,21 @@ class DataSourceEswbTopic(DataSourceBasic):
 
 
 class EswbApplicationWindow(ApplicationWindow):
-    def __init__(self, title="ESWB display", bus: e.Bus = None, tabs=False):
+    def __init__(self, title="ESWB display", bus: e.Bus = None, tabs=False, print_tree=True):
         super().__init__(title=title, tabs=tabs)
-
+        self.print_tree = print_tree
         self.bus = bus
         if self.bus:
             self.timer_print_bus = QtCore.QTimer()
-            self.timer_print_bus.setInterval(200)
+            self.timer_print_bus.setInterval(50)
             self.timer_print_bus.timeout.connect(self.print_bus_tree)
             self.timer_print_bus.start()
 
     def print_bus_tree(self):
         self.bus.update_tree()
-        self.bus.topic_tree.print()
+
+        if self.print_tree:
+            self.bus.topic_tree.print()
 
 
 class SdtlTelemetryData(EwBasic):
@@ -154,8 +156,10 @@ class EswbMonitor(Monitor):
     def mkdir(self, dirname):
         self.bus.mkdir(dirname)
 
-    def bridge_sdtl(self, *, path, baudrate, bridge_to):
+    def bridge_sdtl(self, *, path, baudrate, bridge_to, additional_channels: List[e.SDTLchannel] = None):
         sdtl_service_name = 'sdtl_serial'
+        if not additional_channels:
+            additional_channels = []
         self.sdtl_service = e.SDTLserialService(service_name=sdtl_service_name, device_path=path, mtu=0,
                                                 baudrate=int(baudrate),
                                                 channels=[
@@ -163,6 +167,7 @@ class EswbMonitor(Monitor):
                                                                   ch_type=e.SDTLchannelType.rel),
                                                     e.SDTLchannel(name='bus_sync_sk', ch_id=2,
                                                                   ch_type=e.SDTLchannelType.unrel),
+                                                    *additional_channels
                                                 ]
                                                 )
 

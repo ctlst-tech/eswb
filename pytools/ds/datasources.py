@@ -1,5 +1,5 @@
 from abc import abstractmethod
-from typing import List, Union
+from typing import List, Union, Dict
 import time
 import math
 
@@ -45,6 +45,71 @@ class DataSourceSum(DataSourceBasic):
             else:
                 rv += v
         return rv
+
+
+class DataSourceMath(DataSourceBasic):
+    def __init__(self, name, sources: List[DataSourceBasic], math_lmb, **kwargs):
+        super().__init__(name, **kwargs)
+        self.data_sources = sources
+        self.lmb = math_lmb
+
+    def connect(self):
+        for s in self.data_sources:
+            s.connect()
+
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        args = []
+        for s in self.data_sources:
+            v = s.read()
+            if isinstance(v, NoDataStub):
+                return v
+            else:
+                args.append(v)
+
+        return self.lmb(args)
+
+
+class DataSourceEnum(DataSourceBasic):
+    def __init__(self, name, sources: List[DataSourceBasic], enum_table: Dict[int, str], **kwargs):
+        super().__init__(name, **kwargs)
+        self.data_sources = sources
+        self.enum_table = enum_table
+
+    def connect(self):
+        for s in self.data_sources:
+            s.connect()
+
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        v = self.data_sources[0].read()
+        if isinstance(v, NoDataStub):
+            return v
+        else:
+            rv = ''
+            if not isinstance(v, int):
+                rv = f'inv type ({v})'
+            else:
+                if v in self.enum_table:
+                    rv = self.enum_table[v]
+                else:
+                    rv = f'unknown value ({v})'
+
+        return rv
+
+
+class DataSourceInvert(DataSourceBasic):
+    def __init__(self, name, source: DataSourceBasic, **kwargs):
+        super().__init__(name, **kwargs)
+        self.data_sources = [source]
+
+    def connect(self):
+        self.data_sources[0].connect()
+
+    def read(self) -> Union[float, int, str, NoDataStub]:
+        v = self.data_sources[0].read()
+        if isinstance(v, NoDataStub):
+            return v
+        else:
+            return -v
 
 
 class DataSourceCalcFilteredRate(DataSourceBasic):
@@ -107,12 +172,14 @@ class DataSourceTimeline(DataSourceBasic):
         self.time += self.delta_time
         return self.time
 
+
 class DataSourceSinus(DataSourceBasic):
-    def __init__(self, name, *, omega=1.0, iphase=0.0, **kwargs):
+    def __init__(self, name, *, omega=1.0, iphase=0.0, bias=0.0, **kwargs):
         super().__init__(name, **kwargs)
         self.time = 0
         self.delta_time = 0.01
         self.omega = omega
+        self.bias = bias
         self.initial_phase = iphase
 
     def connect(self):
@@ -120,7 +187,7 @@ class DataSourceSinus(DataSourceBasic):
 
     def read(self) -> Union[float, int, str, NoDataStub]:
         self.time += self.delta_time
-        return self.mult * math.sin(self.initial_phase + self.omega * self.time)
+        return self.mult * math.sin(self.initial_phase + self.omega * self.time) + self.bias
 
 
 def find_data_source(lst: List[DataSourceBasic], name: str):

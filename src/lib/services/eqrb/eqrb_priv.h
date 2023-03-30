@@ -76,6 +76,7 @@ typedef struct eqrb_client_handle {
     topic_id_map_t *ids_map;
 
     int launch_sidekick;
+    int verbosity;
 
 } eqrb_client_handle_t;
 

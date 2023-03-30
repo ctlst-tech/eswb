@@ -21,6 +21,10 @@ class EwCommandPane(MyQtWidget, EwBasic):
         self.group.setLayout(self.form_layout)
         self.layout.addWidget(self.group)
 
+        self.idle_btn = QPushButton(self.group)
+        self.idle_btn.setText("Idle")
+        self.form_layout.addWidget(self.idle_btn, 1)
+
         self.take_off_btn = QPushButton(self.group)
         self.take_off_btn.setText("Take off!")
         self.form_layout.addWidget(self.take_off_btn, 1)

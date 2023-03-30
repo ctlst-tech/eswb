@@ -477,7 +477,7 @@ eswb_rv_t local_bus_create_event_queue(eswb_bus_handle_t *bh, eswb_size_t events
     }
 
     // TODO This is lame, must be removed in overall connectivity refactoring
-    char full_path[ESWB_TOPIC_NAME_MAX_LEN+1];
+    char full_path[ESWB_TOPIC_MAX_PATH_LEN+1];
     strcpy(full_path, bh->name );
     strcat(full_path, "/");
     strcat(full_path, BUS_EVENT_QUEUE_NAME);
