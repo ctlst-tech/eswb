@@ -6,9 +6,15 @@
 
 using namespace std;
 
-eswb::ConverterToCsv::ConverterToCsv(const std::string &path_to_raw,
-                                     const std::string &path_to_csv)
-    : m_path_to_csv(path_to_csv), m_path_to_raw(path_to_raw), m_column_num(0) {
+eswb::ConverterToCsv::ConverterToCsv(const string &path_to_raw,
+                                     const string &path_to_csv,
+                                     const string &frame_separator,
+                                     const char &column_separator)
+    : m_path_to_csv(path_to_csv),
+      m_path_to_raw(path_to_raw),
+      m_frame_sep(frame_separator),
+      m_column_sep(column_separator),
+      m_column_num(0) {
     m_raw_log.open(m_path_to_raw, ios::in);
     m_csv_log.open(m_path_to_csv, ios::out | ios::trunc | ios::binary);
 
@@ -24,7 +30,10 @@ eswb::ConverterToCsv::ConverterToCsv(const std::string &path_to_raw,
 
     if (m_csv_log.is_open() && m_raw_log.is_open()) {
         getline(m_raw_log, m_bus);
-        getline(m_raw_log, m_frame_sep);
+        getline(m_raw_log, m_sep);
+        if (m_sep != m_frame_sep) {
+            cout << "Invalid format" << endl;
+        }
 
         m_raw_log.seekg(0, ios::end);
         m_file_size = m_raw_log.tellg();
@@ -33,7 +42,7 @@ eswb::ConverterToCsv::ConverterToCsv(const std::string &path_to_raw,
 
         if (m_file_ptr == nullptr) {
             cout << strerror(errno) << endl;
-            cout << "Failed to create raw buf: " << endl;
+            cout << "Failed to create raw buf" << endl;
         } else {
             m_raw_log.read(m_file_ptr, m_file_size);
         }
@@ -69,39 +78,38 @@ char *eswb::ConverterToCsv::findSep(char *str, const char *end_ptr,
     }
 }
 
-void eswb::ConverterToCsv::newColumn(ofstream &log, const char *data,
-                                     streamsize size) {
-    log.write(data, size);
-    log.write(",", 1);
-}
-
-void eswb::ConverterToCsv::newRow(ofstream &log) {
-    log.write("\n", 1);
+void eswb::ConverterToCsv::newColumn(std::string &s, const char *data) {
+    s.append(data);
+    s.push_back(m_column_sep);
 }
 
 bool eswb::ConverterToCsv::convert(void) {
-    if (m_file_ptr == nullptr || !m_raw_log.is_open() || !m_csv_log.is_open()) {
-        cout << "Initialization failed" << endl;
+    if (m_file_ptr == nullptr || !m_raw_log.is_open() || !m_csv_log.is_open() ||
+        m_sep != m_frame_sep) {
         return false;
     }
 
-    std::vector<std::string> m_header;
-    std::vector<std::string> m_row;
+    if (findSep(m_file_ptr, m_file_ptr + m_file_size, m_frame_sep.data()) ==
+        nullptr) {
+        cout << "Unknown file format" << endl;
+        return false;
+    }
+
+    string header;
+    vector<string> row;
+    bool header_init = false;
 
     char *topic_start = m_file_ptr;
     char *file_end_ptr = m_file_ptr + m_file_size;
     char timestamp[32];
     char dt[32];
 
-    m_header.push_back("Time");
-    m_row.push_back("0.0");
+    newColumn(header, "Time");
+    newColumn(header, "Period");
+    row.push_back("0.0");
+    row.push_back("0.0");
     m_column_num++;
-    m_header.push_back("Period");
-    m_row.push_back("0.0");
     m_column_num++;
-
-    newColumn(m_csv_log, m_header[0].data(), m_header[0].length());
-    newColumn(m_csv_log, m_header[1].data(), m_header[1].length());
 
     while (1) {
         topic_start = findSep(topic_start, file_end_ptr, m_frame_sep.data());
@@ -133,22 +141,25 @@ bool eswb::ConverterToCsv::convert(void) {
                 }
                 m_topic_column_num[id] = m_column_num;
                 string name = m_topic_tree.getTopicPath(id);
-                m_header.push_back(name);
-                newColumn(m_csv_log, m_header[m_column_num].data(),
-                          m_header[m_column_num].length());
+                newColumn(header, name.data());
                 m_column_num++;
-                m_row.push_back("0.0");
+                row.push_back("0.0");
             }
         } else if (cmd_code == eswb::EQRB_CMD_SERVER_EVENT) {
+            if (header_init == false) {
+                header.pop_back();
+                m_csv_log.write(header.data(), header.size());
+                header_init = true;
+            }
             double time = m_topic_tree.getTimestampSec(topic_start);
             sprintf(timestamp, "%lf", time);
-            m_row[0] = timestamp;
+            row[0] = timestamp;
 
             static double prev_time = 0.0;
             sprintf(dt, "%lf", time - prev_time);
-            m_row[1] = dt;
+            row[1] = dt;
 
-            newRow(m_csv_log);
+            m_csv_log.write("\n", 1);
 
             vector<uint16_t> topics =
                 m_topic_tree.getPrimitiveTypeTopics(event_id);
@@ -159,12 +170,15 @@ bool eswb::ConverterToCsv::convert(void) {
                 uint16_t size = m_topic_tree.getTopicSize(id);
                 string string_value = m_topic_tree.convertRawToString(id, data);
                 int sd = m_topic_column_num[id];
-                m_row[sd] = string_value;
+                row[sd] = string_value;
                 data += size;
             }
-            for (auto i = 0; i < m_row.size(); i++) {
-                newColumn(m_csv_log, m_row[i].data(), m_row[i].length());
+            string out;
+            for (auto i = 0; i < row.size(); i++) {
+                newColumn(out, row[i].data());
             }
+            out.pop_back();
+            m_csv_log.write(out.data(), out.size());
             prev_time = time;
         } else {
             cout << "Unhandled cmd code: " << cmd_code << endl;

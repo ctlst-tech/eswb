@@ -115,9 +115,12 @@ int main(int argc, char *argv[]) {
             } else if (o->is("convert_to_csv")) {
                 const std::string path_to_raw(argv[2]);
                 const std::string path_to_csv(argv[3]);
-                eswb::ConverterToCsv converter_to_csv(path_to_raw, path_to_csv);
+                eswb::ConverterToCsv converter_to_csv(path_to_raw, path_to_csv, "ebdf", ',');
                 if (converter_to_csv.convert()) {
                     std::cout << "Conversion completed successfully"
+                              << std::endl;
+                } else {
+                    std::cout << "Conversion failed"
                               << std::endl;
                 }
             }

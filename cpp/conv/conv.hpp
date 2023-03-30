@@ -40,6 +40,8 @@ public:
     topic_proclaiming_tree_t *getTopicPtr(char *event_raw);
     double getTimestampSec(char *event_raw);
     void *getData(char *event_raw);
+
+public:
     int addChildTopic(uint16_t parent_id, topic_proclaiming_tree_t *topic);
     bool isPrimitiveType(uint16_t id);
     int addPrimitiveTypeTopic(uint16_t id);
@@ -55,14 +57,14 @@ class ConverterToCsv {
 private:
     const std::string m_path_to_raw;
     const std::string m_path_to_csv;
+    const std::string m_frame_sep;
+    const char m_column_sep;
+    std::string m_bus;
+    std::string m_sep;
 
 private:
     std::ifstream m_raw_log;
     std::ofstream m_csv_log;
-
-private:
-    std::string m_bus;
-    std::string m_frame_sep;
 
 private:
     char *m_file_ptr;
@@ -77,7 +79,9 @@ private:
 
 public:
     ConverterToCsv(const std::string &path_to_raw,
-                   const std::string &path_to_csv);
+                   const std::string &path_to_csv,
+                   const std::string &frame_separator,
+                   const char &column_separator);
     ~ConverterToCsv();
 
 private:
@@ -91,8 +95,7 @@ private:
     char *findSep(char *str, const char *end_ptr, const char *sep);
 
 private:
-    void newColumn(std::ofstream &log, const char *data, std::streamsize size);
-    void newRow(std::ofstream &log);
+    void newColumn(std::string &s, const char *data);
 };
 
 }  // namespace eswb
