@@ -92,7 +92,7 @@ public:
 
         return eqrb_sdtl_client_connect(
             service_name.c_str(), ch_cfgs[0].ch_name.c_str(),
-            ch_cfgs[1].ch_name.c_str(), replicate_to.c_str(), 1024);
+            ch_cfgs[1].ch_name.c_str(), replicate_to.c_str(), 1024, 0);
     }
 };
 
