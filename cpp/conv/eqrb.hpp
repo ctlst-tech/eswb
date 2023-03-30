@@ -53,6 +53,13 @@ typedef enum {
     EQRB_CMD_SERVER_TOPIC = 3,
 } eqrb_cmd_code_t;
 
+typedef enum {
+    eqr_none = 0,
+    eqr_topic_proclaim = 1,
+    eqr_topic_update = 2,
+    eqr_fifo_push = 3
+} event_queue_record_type_t;
+
 }  // namespace eswb
 
 #endif  // CONV_HPP

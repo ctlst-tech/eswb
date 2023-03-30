@@ -36,6 +36,7 @@ public:
 
 public:
     eqrb_cmd_code_t getCmdCode(char *event_raw);
+    event_queue_record_type_t getEventType(char *event_raw);
     uint32_t getEventTopicId(char *event_raw);
     topic_proclaiming_tree_t *getTopicPtr(char *event_raw);
     double getTimestampSec(char *event_raw);

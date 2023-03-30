@@ -89,12 +89,6 @@ bool eswb::ConverterToCsv::convert(void) {
         return false;
     }
 
-    if (findSep(m_file_ptr, m_file_ptr + m_file_size, m_frame_sep.data()) ==
-        nullptr) {
-        cout << "Unknown file format" << endl;
-        return false;
-    }
-
     string header;
     vector<string> row;
     bool header_init = false;
@@ -116,17 +110,16 @@ bool eswb::ConverterToCsv::convert(void) {
         if (topic_start == nullptr) {
             break;
         }
-
-        char *topic_end = topic_start + m_frame_sep.length();
-        topic_end = findSep(topic_end, file_end_ptr, m_frame_sep.data());
-
         topic_start = topic_start + m_frame_sep.length();
 
         eswb::eqrb_cmd_code_t cmd_code = m_topic_tree.getCmdCode(topic_start);
+        eswb::event_queue_record_type_t event_type =
+            m_topic_tree.getEventType(topic_start);
         uint32_t event_id = m_topic_tree.getEventTopicId(topic_start);
         char *data = static_cast<char *>(m_topic_tree.getData(topic_start));
 
-        if (cmd_code == eswb::EQRB_CMD_SERVER_TOPIC) {
+        if (cmd_code == EQRB_CMD_SERVER_TOPIC &&
+            event_type == eswb::eqr_topic_proclaim) {
             int id = m_topic_tree.addChildTopic(
                 event_id, m_topic_tree.getTopicPtr(topic_start));
 
@@ -145,7 +138,8 @@ bool eswb::ConverterToCsv::convert(void) {
                 m_column_num++;
                 row.push_back("0.0");
             }
-        } else if (cmd_code == eswb::EQRB_CMD_SERVER_EVENT) {
+        } else if (cmd_code == EQRB_CMD_SERVER_EVENT &&
+                   event_type == eswb::eqr_topic_update) {
             if (header_init == false) {
                 header.pop_back();
                 m_csv_log.write(header.data(), header.size());
@@ -181,7 +175,9 @@ bool eswb::ConverterToCsv::convert(void) {
             m_csv_log.write(out.data(), out.size());
             prev_time = time;
         } else {
+            cout << "Offset: " << topic_start - m_file_ptr << endl;
             cout << "Unhandled cmd code: " << cmd_code << endl;
+            cout << "Unhandled event type: " << event_type << endl << endl;
         }
     }
     return true;
@@ -191,6 +187,14 @@ eswb::eqrb_cmd_code_t eswb::TopicTree::getCmdCode(char *event_raw) {
     eswb::eqrb_interaction_header_t *h =
         (eswb::eqrb_interaction_header_t *)event_raw;
     return static_cast<eswb::eqrb_cmd_code_t>(h->msg_code);
+}
+
+eswb::event_queue_record_type_t eswb::TopicTree::getEventType(char *event_raw) {
+    eswb::event_queue_transfer_t *event =
+        (eswb::event_queue_transfer_t *)(event_raw +
+                                         sizeof(
+                                             eswb::eqrb_interaction_header_t));
+    return static_cast<eswb::event_queue_record_type_t>(event->type);
 }
 
 uint32_t eswb::TopicTree::getEventTopicId(char *event_raw) {
