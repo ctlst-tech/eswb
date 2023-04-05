@@ -5,11 +5,12 @@
 #include <fstream>
 
 using namespace std;
+using namespace eswb;
 
-eswb::ConverterToCsv::ConverterToCsv(const string &path_to_raw,
-                                     const string &path_to_csv,
-                                     const string &frame_separator,
-                                     const char &column_separator)
+ConverterToCsv::ConverterToCsv(const string &path_to_raw,
+                               const string &path_to_csv,
+                               const string &frame_separator,
+                               const char &column_separator)
     : m_path_to_csv(path_to_csv),
       m_path_to_raw(path_to_raw),
       m_frame_sep(frame_separator),
@@ -29,29 +30,31 @@ eswb::ConverterToCsv::ConverterToCsv(const string &path_to_raw,
     }
 
     if (m_csv_log.is_open() && m_raw_log.is_open()) {
-        getline(m_raw_log, m_bus);
-        getline(m_raw_log, m_sep);
-        if (m_sep != m_frame_sep) {
+        getline(m_raw_log, m_bus_from_file);
+        getline(m_raw_log, m_sep_from_file);
+        if (m_sep_from_file != m_frame_sep) {
             cout << "Invalid format" << endl;
         }
 
         m_raw_log.seekg(0, ios::end);
         m_file_size = m_raw_log.tellg();
         m_raw_log.seekg(0, ios::beg);
-        m_file_ptr = new char[m_file_size];
+        m_file_start_ptr = new char[m_file_size];
+        m_file_cur_ptr = m_file_start_ptr;
 
-        if (m_file_ptr == nullptr) {
+        if (m_file_start_ptr == nullptr) {
             cout << strerror(errno) << endl;
             cout << "Failed to create raw buf" << endl;
         } else {
-            m_raw_log.read(m_file_ptr, m_file_size);
+            m_file_end_ptr = m_file_start_ptr + m_file_size;
+            m_raw_log.read(m_file_start_ptr, m_file_size);
         }
     }
 }
 
-eswb::ConverterToCsv::~ConverterToCsv() {
-    if (m_file_ptr != nullptr) {
-        delete[] m_file_ptr;
+ConverterToCsv::~ConverterToCsv() {
+    if (m_file_start_ptr != nullptr) {
+        delete[] m_file_start_ptr;
     }
     if (m_raw_log.is_open()) {
         m_raw_log.close();
@@ -61,102 +64,98 @@ eswb::ConverterToCsv::~ConverterToCsv() {
     }
 }
 
-char *eswb::ConverterToCsv::findSep(char *str, const char *end_ptr,
-                                    const char *sep) {
+Event *ConverterToCsv::getNextEvent() {
     while (1) {
-        if (str >= end_ptr) {
+        if (m_file_cur_ptr >= m_file_end_ptr) {
             return nullptr;
         }
-        char *rv = strstr(str, sep);
-        int length = strnlen(str, end_ptr - str);
+        char *rv = strstr(m_file_cur_ptr, m_frame_sep.data());
+        int length = strnlen(m_file_cur_ptr, m_file_end_ptr - m_file_cur_ptr);
         length = (length < 1 ? 1 : length);
         if (rv == nullptr) {
-            str += length;
+            m_file_cur_ptr += length;
         } else {
-            return rv;
+            m_file_cur_ptr = rv + m_frame_sep.length();
+            return reinterpret_cast<Event *>(rv + m_frame_sep.length());
         }
     }
 }
 
-void eswb::ConverterToCsv::newColumn(std::string &s, const char *data) {
+void ConverterToCsv::newColumn(std::string &s, const char *data) {
     s.append(data);
     s.push_back(m_column_sep);
 }
 
-bool eswb::ConverterToCsv::convert(void) {
-    if (m_file_ptr == nullptr || !m_raw_log.is_open() || !m_csv_log.is_open() ||
-        m_sep != m_frame_sep) {
+void ConverterToCsv::addColumnToHeader(const std::string &s) {
+    newColumn(m_header, s.data());
+    m_values.push_back("0.0");
+    m_column_num++;
+}
+
+bool ConverterToCsv::convert(void) {
+    if (m_file_start_ptr == nullptr || !m_raw_log.is_open() ||
+        !m_csv_log.is_open() || m_sep_from_file != m_frame_sep) {
         return false;
     }
 
-    string header;
-    vector<string> row;
-    bool header_init = false;
+    Event *event = getNextEvent();
+    if (event == nullptr) {
+        return false;
+    }
 
-    char *topic_start = m_file_ptr;
-    char *file_end_ptr = m_file_ptr + m_file_size;
-    char timestamp[32];
-    char dt[32];
-
-    newColumn(header, "Time");
-    newColumn(header, "Period");
-    row.push_back("0.0");
-    row.push_back("0.0");
-    m_column_num++;
-    m_column_num++;
+    addColumnToHeader("Time");
+    addColumnToHeader("Period");
 
     while (1) {
-        topic_start = findSep(topic_start, file_end_ptr, m_frame_sep.data());
-        if (topic_start == nullptr) {
+        event = getNextEvent();
+        if (event == nullptr) {
             break;
         }
-        topic_start = topic_start + m_frame_sep.length();
 
-        eswb::eqrb_cmd_code_t cmd_code = m_topic_tree.getCmdCode(topic_start);
-        eswb::event_queue_record_type_t event_type =
-            m_topic_tree.getEventType(topic_start);
-        uint32_t event_id = m_topic_tree.getEventTopicId(topic_start);
-        char *data = static_cast<char *>(m_topic_tree.getData(topic_start));
-
-        if (cmd_code == EQRB_CMD_SERVER_TOPIC &&
-            event_type == eswb::eqr_topic_proclaim) {
-            int id = m_topic_tree.addChildTopic(
-                event_id, m_topic_tree.getTopicPtr(topic_start));
-
-            if (id < 0) {
-                cout << "No such parent topic id: " << event_id << endl;
-            }
-
-            if (m_topic_tree.isPrimitiveType(id)) {
-                m_topic_tree.addPrimitiveTypeTopic(id);
-                if (m_topic_column_num.count(id)) {
-                    cout << "This id already exists: " << id << endl;
+        if (event->event.type == eqr_topic_proclaim) {
+            int topic_num = 0;
+            int num_of_topics =
+                event->event.size / sizeof(topic_proclaiming_tree_t);
+            uint16_t parent_id = event->event.topic_id;
+            while (topic_num < num_of_topics) {
+                topic_proclaiming_tree_t *topic =
+                    &event->payload.topic + topic_num;
+                if (topic->parent_ind != -1024) {
+                    parent_id = topic->topic_id + topic->parent_ind;
                 }
-                m_topic_column_num[id] = m_column_num;
-                string name = m_topic_tree.getTopicPath(id);
-                newColumn(header, name.data());
-                m_column_num++;
-                row.push_back("0.0");
-            }
-        } else if (cmd_code == EQRB_CMD_SERVER_EVENT &&
-                   event_type == eswb::eqr_topic_update) {
-            if (header_init == false) {
-                header.pop_back();
-                m_csv_log.write(header.data(), header.size());
-                header_init = true;
-            }
-            double time = m_topic_tree.getTimestampSec(topic_start);
-            sprintf(timestamp, "%lf", time);
-            row[0] = timestamp;
+                int id = m_topic_tree.addChildTopic(parent_id, topic);
+                if (id < 0) {
+                    cout << "No such parent topic id: " << parent_id << endl;
+                }
 
-            static double prev_time = 0.0;
-            sprintf(dt, "%lf", time - prev_time);
-            row[1] = dt;
-
+                if (m_topic_tree.isPrimitiveType(id)) {
+                    m_topic_tree.addPrimitiveTypeTopic(id);
+                    if (m_topic_column_num.count(id)) {
+                        cout << "This id already exists: " << id << endl;
+                    }
+                    m_topic_column_num[id] = m_column_num;
+                    string name = m_topic_tree.getTopicPath(id);
+                    addColumnToHeader(name);
+                }
+                topic_num++;
+            }
+        } else if (event->header.msg_code == EQRB_CMD_SERVER_EVENT &&
+                   event->event.type == eqr_topic_update) {
+            if (m_header_init == false) {
+                m_header.pop_back();
+                m_csv_log.write(m_header.data(), m_header.size());
+                m_header_init = true;
+            }
             m_csv_log.write("\n", 1);
 
+            char *data = event->payload.data;
+            m_time = event->event.timestamp.sec * 1.0 +
+                     event->event.timestamp.usec / 1000000.0;
+            m_values[0] = to_string(m_time);
+            m_values[1] = to_string(m_time - m_prev_time);
+
             vector<uint16_t> topics =
-                m_topic_tree.getPrimitiveTypeTopics(event_id);
+                m_topic_tree.getPrimitiveTypeTopics(event->event.topic_id);
 
             for (int i = 0; i < topics.size(); i++) {
                 uint16_t id = topics[i];
@@ -164,77 +163,30 @@ bool eswb::ConverterToCsv::convert(void) {
                 uint16_t size = m_topic_tree.getTopicSize(id);
                 string string_value = m_topic_tree.convertRawToString(id, data);
                 int sd = m_topic_column_num[id];
-                row[sd] = string_value;
+                m_values[sd] = string_value;
                 data += size;
             }
+
             string out;
-            for (auto i = 0; i < row.size(); i++) {
-                newColumn(out, row[i].data());
+            for (auto i = 0; i < m_values.size(); i++) {
+                newColumn(out, m_values[i].data());
             }
             out.pop_back();
+
             m_csv_log.write(out.data(), out.size());
-            prev_time = time;
+            m_prev_time = m_time;
         } else {
-            cout << "Offset: " << topic_start - m_file_ptr << endl;
-            cout << "Unhandled cmd code: " << cmd_code << endl;
-            cout << "Unhandled event type: " << event_type << endl << endl;
+            cout << "Offset: " << m_file_cur_ptr - m_file_start_ptr << endl;
+            cout << "Unhandled cmd code: " << event->header.msg_code << endl;
+            cout << "Unhandled event type: " << event->event.type << endl
+                 << endl;
         }
     }
     return true;
 }
 
-eswb::eqrb_cmd_code_t eswb::TopicTree::getCmdCode(char *event_raw) {
-    eswb::eqrb_interaction_header_t *h =
-        (eswb::eqrb_interaction_header_t *)event_raw;
-    return static_cast<eswb::eqrb_cmd_code_t>(h->msg_code);
-}
-
-eswb::event_queue_record_type_t eswb::TopicTree::getEventType(char *event_raw) {
-    eswb::event_queue_transfer_t *event =
-        (eswb::event_queue_transfer_t *)(event_raw +
-                                         sizeof(
-                                             eswb::eqrb_interaction_header_t));
-    return static_cast<eswb::event_queue_record_type_t>(event->type);
-}
-
-uint32_t eswb::TopicTree::getEventTopicId(char *event_raw) {
-    eswb::event_queue_transfer_t *event =
-        (eswb::event_queue_transfer_t *)(event_raw +
-                                         sizeof(
-                                             eswb::eqrb_interaction_header_t));
-    return static_cast<uint32_t>(event->topic_id);
-}
-
-eswb::topic_proclaiming_tree_t *eswb::TopicTree::getTopicPtr(char *event_raw) {
-    eswb::event_queue_transfer_t *event =
-        (eswb::event_queue_transfer_t *)(event_raw +
-                                         sizeof(
-                                             eswb::eqrb_interaction_header_t));
-    char *data = (char *)event + sizeof(eswb::event_queue_transfer_t);
-    eswb::topic_proclaiming_tree_t *topic =
-        (eswb::topic_proclaiming_tree_t *)data;
-    return topic;
-}
-
-double eswb::TopicTree::getTimestampSec(char *event_raw) {
-    eswb::event_queue_transfer_t *event =
-        (eswb::event_queue_transfer_t *)(event_raw +
-                                         sizeof(
-                                             eswb::eqrb_interaction_header_t));
-    return event->timestamp.sec + event->timestamp.usec / 1000000.0;
-}
-
-void *eswb::TopicTree::getData(char *event_raw) {
-    eswb::event_queue_transfer_t *event =
-        (eswb::event_queue_transfer_t *)(event_raw +
-                                         sizeof(
-                                             eswb::eqrb_interaction_header_t));
-    char *data = (char *)event + sizeof(eswb::event_queue_transfer_t);
-    return (void *)data;
-}
-
-int eswb::TopicTree::addChildTopic(uint16_t parent_id,
-                                   topic_proclaiming_tree_t *topic) {
+int TopicTree::addChildTopic(uint16_t parent_id,
+                             topic_proclaiming_tree_t *topic) {
     int rv = -1;
     struct TopicNode topic_node;
     if (m_topic_tree.count(parent_id)) {
@@ -243,11 +195,13 @@ int eswb::TopicTree::addChildTopic(uint16_t parent_id,
         m_topic_tree[topic->topic_id] = topic_node;
         m_topic_tree[parent_id].child.push_back(topic->topic_id);
         rv = topic->topic_id;
+        cout << parent_id << " " << topic->topic_id << " " << topic->name
+             << endl;
     }
     return rv;
 }
 
-bool eswb::TopicTree::isPrimitiveType(uint16_t id) {
+bool TopicTree::isPrimitiveType(uint16_t id) {
     bool rv = false;
     if (m_topic_tree[id].topic.type >= tt_uint8 &&
         m_topic_tree[id].topic.type <= tt_string) {
@@ -256,7 +210,7 @@ bool eswb::TopicTree::isPrimitiveType(uint16_t id) {
     return rv;
 }
 
-int eswb::TopicTree::addPrimitiveTypeTopic(uint16_t id) {
+int TopicTree::addPrimitiveTypeTopic(uint16_t id) {
     uint16_t current_id = id;
     while (current_id != 0) {
         m_topic_tree[current_id].primitive_topic.push_back(id);
@@ -265,11 +219,11 @@ int eswb::TopicTree::addPrimitiveTypeTopic(uint16_t id) {
     return id;
 }
 
-vector<uint16_t> eswb::TopicTree::getPrimitiveTypeTopics(uint16_t id) {
+vector<uint16_t> TopicTree::getPrimitiveTypeTopics(uint16_t id) {
     return m_topic_tree[id].primitive_topic;
 }
 
-string eswb::TopicTree::getTopicPath(uint16_t id) {
+string TopicTree::getTopicPath(uint16_t id) {
     string path(m_topic_tree[id].topic.name);
     uint16_t parent_id = m_topic_tree[id].parent_id;
     while (parent_id != 0) {
@@ -280,19 +234,23 @@ string eswb::TopicTree::getTopicPath(uint16_t id) {
     return path;
 }
 
-string eswb::TopicTree::getTopicName(uint16_t id) {
+string TopicTree::getTopicName(uint16_t id) {
     return string(m_topic_tree[id].topic.name);
 }
 
-uint16_t eswb::TopicTree::getTopicSize(uint16_t id) {
+topic_data_type_s_t TopicTree::getTopicType(uint16_t id) {
+    return m_topic_tree[id].topic.type;
+}
+
+uint16_t TopicTree::getTopicSize(uint16_t id) {
     return m_topic_tree[id].topic.data_size;
 }
 
-uint16_t eswb::TopicTree::getTopicOffset(uint16_t id) {
+uint16_t TopicTree::getTopicOffset(uint16_t id) {
     return m_topic_tree[id].topic.data_offset;
 }
 
-string eswb::TopicTree::convertRawToString(uint16_t id, void *raw) {
+string TopicTree::convertRawToString(uint16_t id, void *raw) {
     string rv;
     topic_data_type_s_t type = m_topic_tree[id].topic.type;
     switch (type) {

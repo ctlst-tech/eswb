@@ -82,7 +82,7 @@ eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh) {
         int len = snprintf(buf, sizeof(buf), "%s\n", p->bus);
         len += snprintf(buf + len, sizeof(buf), "%s\n", p->sep);
         size_t bw = write(fd, buf, len);
-        sync();
+        fsync(fd);
         if (bw > 0) {
             rv = eqrb_rv_ok;
         } else {
@@ -103,7 +103,7 @@ size_t eqrb_drv_file_write(device_descr_t dh, void *data, size_t size) {
     int fd = (int)dh;
 
     if (file_params[fd]->wbuf_offset > EQRB_FILE_SYNC_SIZE) {
-        sync();
+        fsync(fd);
         file_params[fd]->wbuf_offset = 0;
     }
     size = write(fd, data, size);
