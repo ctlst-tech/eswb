@@ -95,10 +95,8 @@ public:
                    const std::string &frame_separator,
                    const char &column_separator);
     ~ConverterToCsv();
-
-private:
-    ConverterToCsv(const ConverterToCsv &c);
-    ConverterToCsv &operator=(const ConverterToCsv &c);
+    ConverterToCsv(const ConverterToCsv &c) = delete;
+    ConverterToCsv &operator=(const ConverterToCsv &c) = delete;
 
 public:
     bool convert(void);
