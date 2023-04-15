@@ -33,6 +33,7 @@ typedef enum {
     tt_struct       = 0x02,
     tt_fifo         = 0x03,
     tt_vector       = 0x04,
+    tt_bitfield     = 0x04,
 
     tt_uint8        = 0x10,
     tt_int8         = 0x11,
