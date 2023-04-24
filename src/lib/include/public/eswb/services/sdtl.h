@@ -61,21 +61,19 @@ typedef struct sdtl_service_media {
     media_close_t close;
 } sdtl_service_media_t;
 
+typedef struct sdtl_service sdtl_service_t;
+typedef struct sdtl_channel_cfg sdtl_channel_cfg_t;
 
-typedef struct sdtl_channel_cfg {
+typedef struct sdtl_channel_handle sdtl_channel_handle_t;
+
+struct sdtl_channel_cfg {
     const char *name;
 
     uint8_t id;
     sdtl_channel_type_t type;
 
     uint32_t mtu_override;
-} sdtl_channel_cfg_t;
-
-
-typedef struct sdtl_service sdtl_service_t;
-typedef struct sdtl_channel_cfg sdtl_channel_cfg_t;
-
-typedef struct sdtl_channel_handle sdtl_channel_handle_t;
+};
 
 /**
  * Media drivers and theirs parameter structures:

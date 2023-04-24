@@ -52,7 +52,9 @@ eswb_rv_t sync_create(posix_sync_t **s){
     return eswb_e_ok;
 }
 
-
+// Stub for QNX target
+#undef ENOTRECOVERABLE
+#define ENOTRECOVERABLE 131
 
 eswb_rv_t sync_take(posix_sync_t *ps){
 

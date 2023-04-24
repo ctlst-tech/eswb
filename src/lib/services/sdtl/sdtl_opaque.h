@@ -23,7 +23,7 @@ typedef struct sdtl_tx_stat {
     uint32_t    frames_sent;
 } sdtl_tx_stat_t;
 
-typedef struct sdtl_service {
+struct sdtl_service {
     const char *service_name;
     char *service_eswb_root;
     uint32_t mtu;
@@ -43,7 +43,7 @@ typedef struct sdtl_service {
     sdtl_rx_stat_t rx_stat;
     eswb_topic_descr_t rx_stat_td;
 
-} sdtl_service_t;
+};
 
 
 
@@ -100,7 +100,7 @@ typedef struct sdtl_channel_state {
 } sdtl_channel_state_t;
 
 
-typedef struct sdtl_channel_handle {
+struct sdtl_channel_handle {
     eswb_topic_descr_t data_td;
     eswb_topic_descr_t ack_td;
     eswb_topic_descr_t rx_state_td;
@@ -126,7 +126,7 @@ typedef struct sdtl_channel_handle {
 
     unsigned tx_seq_num;
     unsigned tx_cmd_seq_num;
-} sdtl_channel_handle_t;
+};
 
 
 #define SDTL_PKT_ATTR_PKT_TYPE_DATA (0)
