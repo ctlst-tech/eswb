@@ -19,7 +19,7 @@ target_link_libraries(eswb-if INTERFACE eswb-static eswb-sync-static eswb-eqrb-s
 add_subdirectory(src/lib)
 add_subdirectory(src/lib/platformic/posix)
 
-if(ESWB_TEST STREQUAL "YES")
+if (ESWB_TEST STREQUAL "YES")
     find_package(Catch2 REQUIRED)
     set(TEST_SRC_COMMON
     tests/tooling.cpp
