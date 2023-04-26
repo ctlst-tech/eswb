@@ -16,8 +16,6 @@ static sdtl_rv_t ch_state_return_condition(sdtl_channel_handle_t *chh);
 
 static sdtl_rv_t send_ack(sdtl_channel_handle_t *chh, uint8_t pkt_cnt, sdtl_ack_code_t ack_code);
 
-sdtl_rv_t sdtl_channel_close(sdtl_channel_handle_t *chh);
-
 void sdtl_debug_msg(const char *fn, const char *txt, ...) {
     va_list (args);
     char pn[16];
