@@ -334,6 +334,50 @@ TEST_CASE("Vectors") {
     // TODO write array in random positions
 }
 
+TEST_CASE("Bitfields") {
+    eswb_local_init(1);
+
+    std::string bus_name("bus");
+    std::string bus_path = "itb:/" + bus_name;
+
+    eswb_rv_t rv = eswb_create(bus_name.c_str(), eswb_inter_thread, 20);
+    REQUIRE(rv == eswb_e_ok);
+
+    TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 2);
+
+    std::string bitfield_var_name = "bitfields";
+
+    // TODO set_bitfield
+
+    topic_proclaiming_tree_t *rt = usr_topic_set_vector(cntx, bitfield_var_name.c_str(), VECTOR_SIZE, tt_double, 8);
+    REQUIRE(rt != NULL);
+
+    // TODO define flags and enums
+
+    eswb_topic_descr_t publish_td;
+    eswb_topic_descr_t read_td;
+
+    rv = eswb_proclaim_tree_by_path(bus_path.c_str(), rt, cntx->t_num, &publish_td);
+    REQUIRE(rv == eswb_e_ok);
+
+    // TODO subscribe on subtopics
+
+    rv = eswb_connect((bus_path + '/' + bitfield_var_name).c_str(), &read_td);
+    REQUIRE(rv == eswb_e_ok);
+
+    // TODO toggle flags
+    // TODO get flags value
+    // TODO set ints
+    // TODO get ints
+
+    /*
+     * TODO req:
+     *  - map bitfields on parent
+     *  - copy on read in a wordwise way
+     *  - define offset in bits at proclaiming
+     *  - bitfield type of subtopics is always uint32_t
+     */
+}
 
 TEST_CASE("Timed out eswb_get_update wait") {
 

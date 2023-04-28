@@ -9,7 +9,7 @@
 
 #include "topic_io.h"
 
-#define ITB_TD_MAX 1024
+#define ITB_TD_MAX 1048
 #define LOCAL_INDEX_INIT 1
 
 static topic_local_index_t local_td_index[ITB_TD_MAX];

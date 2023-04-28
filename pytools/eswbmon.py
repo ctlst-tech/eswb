@@ -36,7 +36,7 @@ class DataSourceEswbTopic(DataSourceBasic):
 
 
 class EswbApplicationWindow(ApplicationWindow):
-    def __init__(self, title="ESWB display", bus: e.Bus = None, tabs=False, print_tree=True):
+    def __init__(self, title="ESWB display", bus: e.Bus = None, tabs=False, print_tree=False):
         super().__init__(title=title, tabs=tabs)
         self.print_tree = print_tree
         self.bus = bus

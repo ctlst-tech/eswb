@@ -157,8 +157,9 @@ class EwRelativePosition(MyQtWidget, EwBasic):
         canvas = QPainter(buffer)
         canvas.setRenderHint(QPainter.Antialiasing)
         canvas.setBackgroundMode(Qt.BGMode.OpaqueMode)
-        canvas.setBackground(Qt.black)
-        canvas.setBrush(QBrush(Qt.black))
+        bg_color = Qt.white
+        canvas.setBackground(bg_color)
+        canvas.setBrush(QBrush(bg_color))
         canvas.drawRect(self.rect())
 
         canvas.setBrush(QBrush(Qt.transparent))
