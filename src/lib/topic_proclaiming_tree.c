@@ -8,7 +8,7 @@
 static eswb_rv_t check_topic_naming(const char* name) {
     char nn[ESWB_TOPIC_NAME_MAX_LEN];
 
-    int rv = sscanf(name, "%[a-zA-Z0-9_-.]", nn);
+    int rv = sscanf(name, "%[.a-zA-Z0-9_]", nn);
 
     if (rv < 1) {
         return eswb_e_inv_naming;
