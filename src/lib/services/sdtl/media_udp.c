@@ -27,13 +27,13 @@ sdtl_rv_t sdtl_media_udp_open(const char *path, void *params, void **h_rv) {
         return SDTL_MEDIA_ERR;
     }
 
-    inst->tx_sock = socket(AF_INET, SOCK_DGRAM, 0);
+    inst->tx_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (inst->tx_sock < 0) {
         sdtl_dbg_msg("Failed to open tx socket: %s", strerror(errno));
         goto exit_fail;
     }
 
-    inst->rx_sock = socket(AF_INET, SOCK_DGRAM, 0);
+    inst->rx_sock = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP);
     if (inst->rx_sock < 0) {
         sdtl_dbg_msg("Failed to open rx socket: %s", strerror(errno));
         goto exit_fail;
@@ -91,29 +91,14 @@ exit_fail:
     return SDTL_MEDIA_ERR;
 }
 
-// #define SDTL_MEDIA_UDP_LOOPBACK
-
 sdtl_rv_t sdtl_media_udp_read(void *h, void *data, size_t l, size_t *lr) {
     media_udp_inst_t *inst = (media_udp_inst_t *)h;
     socklen_t addrlen = sizeof(inst->rx_addr);
 
-#ifndef SDTL_MEDIA_UDP_LOOPBACK
     int rv = recvfrom(inst->rx_sock, data, l, 0,
                       (struct sockaddr *)&inst->rx_addr, &addrlen);
-#else
-    uint8_t buf[1024];
-    int rv;
-    while (1) {
-        rv = recvfrom(inst->rx_sock, buf, sizeof(buf), 0,
-                          (struct sockaddr *)&inst->rx_addr, &addrlen);
-        sdtl_dbg_msg("Server: received %u bytes", (size_t)rv);
-        rv = sendto(inst->tx_sock, buf, (size_t)rv, 0,
-                    (struct sockaddr *)&inst->tx_addr,
-                    (socklen_t)sizeof(inst->tx_addr));
-        sdtl_dbg_msg("Server: sent %u bytes", (size_t)rv);
-    }
-#endif
-
+    sdtl_dbg_msg("Received %u bytes", (size_t)rv);
+    *lr = rv;
     if (rv == -1) {
         return SDTL_MEDIA_ERR;
     }
@@ -122,11 +107,10 @@ sdtl_rv_t sdtl_media_udp_read(void *h, void *data, size_t l, size_t *lr) {
 
 sdtl_rv_t sdtl_media_udp_write(void *h, void *data, size_t l) {
     media_udp_inst_t *inst = (media_udp_inst_t *)h;
-
     int rv = sendto(inst->tx_sock, data, (size_t)l, 0,
-                    (struct sockaddr *)&inst->tx_addr,
-                    (socklen_t)sizeof(inst->tx_addr));
-
+                   (struct sockaddr *)&inst->tx_addr,
+                   (socklen_t)sizeof(inst->tx_addr));
+    sdtl_dbg_msg("Sent %u bytes", (size_t)rv);
     if (rv == -1) {
         return SDTL_MEDIA_ERR;
     }
