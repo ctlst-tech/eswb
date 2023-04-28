@@ -191,28 +191,28 @@ class EswbMonitor(Monitor):
         path = ''
         sdtl_service_name = 'sdtl_udp'
         self.sdtl_service = e.SDTLudpService(
-               service_name=sdtl_service_name,
-               device_path=path,
-               ip_in=ip_in, port_in=port_in,
-               ip_out=ip_out, port_out=port_out,
-               mtu=0,
-               channels=[
-                    e.SDTLchannel(name='bus_sync', ch_id=1,
-                                  ch_type=e.SDTLchannelType.rel),
-                    e.SDTLchannel(name='bus_sync_sk', ch_id=2,
-                                  ch_type=e.SDTLchannelType.unrel),
-                    *additional_channels
-                ]
-               )
+            service_name=sdtl_service_name,
+            device_path=path,
+            ip_in=ip_in, port_in=port_in,
+            ip_out=ip_out, port_out=port_out,
+            mtu=0,
+            channels=[
+                e.SDTLchannel(name='bus_sync', ch_id=1,
+                              ch_type=e.SDTLchannelType.rel),
+                e.SDTLchannel(name='bus_sync_sk', ch_id=2,
+                              ch_type=e.SDTLchannelType.unrel),
+                *additional_channels
+            ]
+        )
         if not additional_channels:
             additional_channels = []
 
         self.sdtl_service.start()
 
         eqrb = e.EQRB_SDTL(sdtl_service_name=sdtl_service_name,
-                            replicate_to_path=f'{self.service_bus_name}/{bridge_to}',
-                            ch1='bus_sync',
-                            ch2='bus_sync_sk')
+                           replicate_to_path=f'{self.service_bus_name}/{bridge_to}',
+                           ch1='bus_sync',
+                           ch2='bus_sync_sk')
 
         eqrb.start()
         
