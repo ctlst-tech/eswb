@@ -334,7 +334,6 @@ class SDTLchannel:
 
 
 class SDTLserialService:
-
     def __init__(self, *, service_name: str, device_path: str,
                  mtu: int, baudrate: int, channels: List[SDTLchannel], ):
         self.service_name = service_name
@@ -377,6 +376,72 @@ class SDTLserialService:
     def start(self):
         media_params = ce.sdtl_media_serial_params_t()
         media_params.baudrate = self.baudrate
+
+        rv = ce.sdtl_service_start(self.service_ref,
+                                   cstr(self.device_path),
+                                   byref(media_params)
+                                   )
+
+        if rv != 0:
+            raise SDTLexception(f'sdtl_service_start failed', rv)
+
+    def print_stat(self):
+        for c in self.stat_topics_channel_trees.keys():
+            print(c)
+            self.stat_topics_channel_trees[c].print(indent=1)
+
+    def stop(self):
+        pass
+
+class SDTLudpService:
+    def __init__(self, *, service_name: str, device_path: str,
+                 mtu: int, ip_in: str, port_in: str, ip_out: str, port_out: str, channels: List[SDTLchannel], ):
+        self.service_name = service_name
+        self.c_service_name = cstr(service_name)  # need to be persistent pointer
+        self.device_path = device_path
+        self.channels: List[SDTLchannel] = channels
+        self.mtu = mtu
+        self.ip_in = cstr(ip_in)
+        self.port_in = cstr(port_in)
+        self.ip_out = cstr(ip_out)
+        self.port_out = cstr(port_out)
+
+        self.service_bus_name = 'sdtl'
+        self.service_bus = Bus(self.service_bus_name, bus_type=ce.eswb_inter_thread, topics_num=512)
+
+        self.service_ref = POINTER(ce.sdtl_service_t)()
+
+        rv = ce.sdtl_service_init_w(byref(self.service_ref),
+                                    self.c_service_name,
+                                    cstr(self.service_bus_name),
+                                    self.mtu,
+                                    8,  # max ch num
+                                    cstr('udp')
+                                    )
+        if rv != 0:
+            raise SDTLexception(f'sdtl_service_init failed', rv)
+
+        for c in self.channels:
+            c.register(self.service_ref)
+
+        self.service_bus.update_tree()
+
+        service_root_path = f'{self.service_bus_name}/{service_name}'
+
+        self.stat_topics_service_tree = self.service_bus.topic_tree.find(f'{service_root_path}/rx_stat')
+        self.stat_topics_channels_trees = {}
+        for c in self.channels:
+            self.stat_topics_channels_trees[c.name] = {
+                'rx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/rx_stat'),
+                'tx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/tx_stat')
+            }
+
+    def start(self):
+        media_params = ce.sdtl_media_udp_params_t()
+        media_params.ip_in = self.ip_in
+        media_params.port_in = self.port_in
+        media_params.ip_out = self.ip_out
+        media_params.port_out = self.port_out
 
         rv = ce.sdtl_service_start(self.service_ref,
                                    cstr(self.device_path),

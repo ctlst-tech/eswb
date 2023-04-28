@@ -1,7 +1,7 @@
 r"""Wrapper for api.h
 
 Generated with:
-/opt/homebrew/bin/ctypesgen -leswb ../src/lib/include/public/eswb/api.h ../src/lib/include/public/eswb/errors.h ../src/lib/include/public/eswb/types.h ../src/lib/include/public/eswb/event_queue.h ../src/lib/include/public/eswb/services/eqrb.h ../src/lib/include/public/eswb/services/sdtl.h ../src/lib/include/topic_mem.h ../src/lib/include/registry.h -o c_eswb_wrappers.py
+/home/optim/.local/bin/ctypesgen -leswb ../src/lib/include/public/eswb/api.h ../src/lib/include/public/eswb/errors.h ../src/lib/include/public/eswb/types.h ../src/lib/include/public/eswb/event_queue.h ../src/lib/include/public/eswb/services/eqrb.h ../src/lib/include/public/eswb/services/sdtl.h ../src/lib/include/topic_mem.h ../src/lib/include/registry.h -o c_eswb_wrappers.py
 
 Do not modify this file.
 """
@@ -867,39 +867,150 @@ _libs["eswb"] = load_library("eswb")
 
 # No modules
 
-uint8_t = c_ubyte# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint8_t.h: 31
+__u_char = c_ubyte# /usr/include/x86_64-linux-gnu/bits/types.h: 31
 
-uint16_t = c_ushort# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint16_t.h: 31
+__u_short = c_ushort# /usr/include/x86_64-linux-gnu/bits/types.h: 32
 
-uint32_t = c_uint# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/_types/_uint32_t.h: 31
+__u_int = c_uint# /usr/include/x86_64-linux-gnu/bits/types.h: 33
 
-__darwin_dev_t = c_int32# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types.h: 57
+__u_long = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 34
 
-u_int32_t = c_uint# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int32_t.h: 30
+__int8_t = c_char# /usr/include/x86_64-linux-gnu/bits/types.h: 37
 
-u_int64_t = c_ulonglong# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_u_int64_t.h: 30
+__uint8_t = c_ubyte# /usr/include/x86_64-linux-gnu/bits/types.h: 38
 
-register_t = c_int64# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 66
+__int16_t = c_short# /usr/include/x86_64-linux-gnu/bits/types.h: 39
 
-uintptr_t = c_ulong# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_uintptr_t.h: 34
+__uint16_t = c_ushort# /usr/include/x86_64-linux-gnu/bits/types.h: 40
 
-user_addr_t = u_int64_t# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 77
+__int32_t = c_int# /usr/include/x86_64-linux-gnu/bits/types.h: 41
 
-user_size_t = u_int64_t# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 78
+__uint32_t = c_uint# /usr/include/x86_64-linux-gnu/bits/types.h: 42
 
-user_ssize_t = c_int64# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 79
+__int64_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 44
 
-user_long_t = c_int64# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 80
+__uint64_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 45
 
-user_ulong_t = u_int64_t# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 81
+__int_least8_t = c_int8# /usr/include/x86_64-linux-gnu/bits/types.h: 52
 
-user_time_t = c_int64# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 82
+__uint_least8_t = __uint8_t# /usr/include/x86_64-linux-gnu/bits/types.h: 53
 
-user_off_t = c_int64# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 83
+__int_least16_t = c_int16# /usr/include/x86_64-linux-gnu/bits/types.h: 54
 
-syscall_arg_t = u_int64_t# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 104
+__uint_least16_t = __uint16_t# /usr/include/x86_64-linux-gnu/bits/types.h: 55
 
-enum_anon_2 = c_int# /usr/local/include/eswb/errors.h: 59
+__int_least32_t = c_int32# /usr/include/x86_64-linux-gnu/bits/types.h: 56
+
+__uint_least32_t = __uint32_t# /usr/include/x86_64-linux-gnu/bits/types.h: 57
+
+__int_least64_t = c_int64# /usr/include/x86_64-linux-gnu/bits/types.h: 58
+
+__uint_least64_t = __uint64_t# /usr/include/x86_64-linux-gnu/bits/types.h: 59
+
+__quad_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 63
+
+__u_quad_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 64
+
+__intmax_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 72
+
+__uintmax_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 73
+
+__dev_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 145
+
+__uid_t = c_uint# /usr/include/x86_64-linux-gnu/bits/types.h: 146
+
+__gid_t = c_uint# /usr/include/x86_64-linux-gnu/bits/types.h: 147
+
+__ino_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 148
+
+__ino64_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 149
+
+__mode_t = c_uint# /usr/include/x86_64-linux-gnu/bits/types.h: 150
+
+__nlink_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 151
+
+__off_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 152
+
+__off64_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 153
+
+__pid_t = c_int# /usr/include/x86_64-linux-gnu/bits/types.h: 154
+
+# /usr/include/x86_64-linux-gnu/bits/types.h: 155
+class struct_anon_1(Structure):
+    pass
+
+struct_anon_1.__slots__ = [
+    '__val',
+]
+struct_anon_1._fields_ = [
+    ('__val', c_int * int(2)),
+]
+
+__fsid_t = struct_anon_1# /usr/include/x86_64-linux-gnu/bits/types.h: 155
+
+__clock_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 156
+
+__rlim_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 157
+
+__rlim64_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 158
+
+__id_t = c_uint# /usr/include/x86_64-linux-gnu/bits/types.h: 159
+
+__time_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 160
+
+__useconds_t = c_uint# /usr/include/x86_64-linux-gnu/bits/types.h: 161
+
+__suseconds_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 162
+
+__suseconds64_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 163
+
+__daddr_t = c_int# /usr/include/x86_64-linux-gnu/bits/types.h: 165
+
+__key_t = c_int# /usr/include/x86_64-linux-gnu/bits/types.h: 166
+
+__clockid_t = c_int# /usr/include/x86_64-linux-gnu/bits/types.h: 169
+
+__timer_t = POINTER(None)# /usr/include/x86_64-linux-gnu/bits/types.h: 172
+
+__blksize_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 175
+
+__blkcnt_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 180
+
+__blkcnt64_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 181
+
+__fsblkcnt_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 184
+
+__fsblkcnt64_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 185
+
+__fsfilcnt_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 188
+
+__fsfilcnt64_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 189
+
+__fsword_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 192
+
+__ssize_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 194
+
+__syscall_slong_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 197
+
+__syscall_ulong_t = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 199
+
+__loff_t = __off64_t# /usr/include/x86_64-linux-gnu/bits/types.h: 203
+
+__caddr_t = String# /usr/include/x86_64-linux-gnu/bits/types.h: 204
+
+__intptr_t = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 207
+
+__socklen_t = c_uint# /usr/include/x86_64-linux-gnu/bits/types.h: 210
+
+__sig_atomic_t = c_int# /usr/include/x86_64-linux-gnu/bits/types.h: 215
+
+uint8_t = __uint8_t# /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h: 24
+
+uint16_t = __uint16_t# /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h: 25
+
+uint32_t = __uint32_t# /usr/include/x86_64-linux-gnu/bits/stdint-uintn.h: 26
+
+enum_anon_3 = c_int# /usr/local/include/eswb/errors.h: 59
 
 eswb_e_ok = 0# /usr/local/include/eswb/errors.h: 59
 
@@ -989,7 +1100,7 @@ eswb_e_map_no_match = (eswb_e_map_no_mem + 1)# /usr/local/include/eswb/errors.h:
 
 eswb_e_bridge_vector = (eswb_e_map_no_match + 1)# /usr/local/include/eswb/errors.h: 59
 
-eswb_rv_t = enum_anon_2# /usr/local/include/eswb/errors.h: 59
+eswb_rv_t = enum_anon_3# /usr/local/include/eswb/errors.h: 59
 
 # /usr/local/include/eswb/errors.h: 61
 if _libs["eswb"].has("eswb_strerror", "cdecl"):
@@ -1009,7 +1120,7 @@ eswb_topic_id_t = uint32_t# /usr/local/include/eswb/types.h: 23
 
 eswb_event_queue_mask_t = uint32_t# /usr/local/include/eswb/types.h: 24
 
-enum_anon_3 = c_int# /usr/local/include/eswb/types.h: 56
+enum_anon_4 = c_int# /usr/local/include/eswb/types.h: 56
 
 tt_none = 0x00# /usr/local/include/eswb/types.h: 56
 
@@ -1051,11 +1162,11 @@ tt_byte_buffer = 0x40# /usr/local/include/eswb/types.h: 56
 
 tt_event_queue = 0xF0# /usr/local/include/eswb/types.h: 56
 
-topic_data_type_t = enum_anon_3# /usr/local/include/eswb/types.h: 56
+topic_data_type_t = enum_anon_4# /usr/local/include/eswb/types.h: 56
 
 topic_data_type_s_t = uint8_t# /usr/local/include/eswb/types.h: 58
 
-enum_anon_4 = c_int# /usr/local/include/eswb/types.h: 67
+enum_anon_5 = c_int# /usr/local/include/eswb/types.h: 67
 
 upd_proclaim_topic = 0# /usr/local/include/eswb/types.h: 67
 
@@ -1069,9 +1180,9 @@ upd_push_event_queue = (upd_write_vector + 1)# /usr/local/include/eswb/types.h: 
 
 upd_withdraw_topic = (upd_push_event_queue + 1)# /usr/local/include/eswb/types.h: 67
 
-eswb_update_t = enum_anon_4# /usr/local/include/eswb/types.h: 67
+eswb_update_t = enum_anon_5# /usr/local/include/eswb/types.h: 67
 
-enum_anon_5 = c_int# /usr/local/include/eswb/types.h: 75
+enum_anon_6 = c_int# /usr/local/include/eswb/types.h: 75
 
 eswb_not_defined = 0# /usr/local/include/eswb/types.h: 75
 
@@ -1081,9 +1192,9 @@ eswb_inter_thread = (eswb_non_synced + 1)# /usr/local/include/eswb/types.h: 75
 
 eswb_inter_process = (eswb_inter_thread + 1)# /usr/local/include/eswb/types.h: 75
 
-eswb_type_t = enum_anon_5# /usr/local/include/eswb/types.h: 75
+eswb_type_t = enum_anon_6# /usr/local/include/eswb/types.h: 75
 
-enum_anon_6 = c_int# /usr/local/include/eswb/types.h: 86
+enum_anon_7 = c_int# /usr/local/include/eswb/types.h: 86
 
 eswb_ctl_enable_event_queue = 0# /usr/local/include/eswb/types.h: 86
 
@@ -1101,45 +1212,45 @@ eswb_ctl_fifo_flush = (eswb_ctl_get_next_proclaiming_info + 1)# /usr/local/inclu
 
 eswb_ctl_arm_timeout = (eswb_ctl_fifo_flush + 1)# /usr/local/include/eswb/types.h: 86
 
-eswb_ctl_t = enum_anon_6# /usr/local/include/eswb/types.h: 86
+eswb_ctl_t = enum_anon_7# /usr/local/include/eswb/types.h: 86
 
 eswb_topic_descr_t = c_int# /usr/local/include/eswb/types.h: 94
 
 # /usr/local/include/eswb/types.h: 101
-class struct_anon_7(Structure):
+class struct_anon_8(Structure):
     pass
 
-struct_anon_7.__slots__ = [
+struct_anon_8.__slots__ = [
     'name',
     'parent_name',
     'type',
     'size',
 ]
-struct_anon_7._fields_ = [
+struct_anon_8._fields_ = [
     ('name', c_char * int((30 + 1))),
     ('parent_name', c_char * int((30 + 1))),
     ('type', topic_data_type_t),
     ('size', eswb_size_t),
 ]
 
-topic_params_t = struct_anon_7# /usr/local/include/eswb/types.h: 101
+topic_params_t = struct_anon_8# /usr/local/include/eswb/types.h: 101
 
 # /usr/local/include/eswb/types.h: 107
-class struct_anon_8(Structure):
+class struct_anon_9(Structure):
     pass
 
-struct_anon_8.__slots__ = [
+struct_anon_9.__slots__ = [
     'elems_num',
     'elem_index',
     'flags',
 ]
-struct_anon_8._fields_ = [
+struct_anon_9._fields_ = [
     ('elems_num', eswb_size_t),
     ('elem_index', eswb_size_t),
     ('flags', uint32_t),
 ]
 
-array_alter_t = struct_anon_8# /usr/local/include/eswb/types.h: 107
+array_alter_t = struct_anon_9# /usr/local/include/eswb/types.h: 107
 
 # /usr/local/include/eswb/types.h: 109
 if _libs["eswb"].has("eswb_type_name", "cdecl"):
@@ -1148,11 +1259,10 @@ if _libs["eswb"].has("eswb_type_name", "cdecl"):
     eswb_type_name.restype = c_char_p
 
 # /usr/local/include/eswb/topic_proclaiming_tree.h: 43
-class struct_anon_9(Structure):
+class struct_anon_10(Structure):
     pass
 
-struct_anon_9._pack_ = 1
-struct_anon_9.__slots__ = [
+struct_anon_10.__slots__ = [
     'name',
     'abs_ind',
     'type',
@@ -1164,7 +1274,7 @@ struct_anon_9.__slots__ = [
     'first_child_ind',
     'next_sibling_ind',
 ]
-struct_anon_9._fields_ = [
+struct_anon_10._fields_ = [
     ('name', c_char * int(((30 + 1) + ((30 + 1) % 4)))),
     ('abs_ind', c_int32),
     ('type', topic_data_type_s_t),
@@ -1177,7 +1287,7 @@ struct_anon_9._fields_ = [
     ('next_sibling_ind', c_int16),
 ]
 
-topic_proclaiming_tree_t = struct_anon_9# /usr/local/include/eswb/topic_proclaiming_tree.h: 43
+topic_proclaiming_tree_t = struct_anon_10# /usr/local/include/eswb/topic_proclaiming_tree.h: 43
 
 # /usr/local/include/eswb/topic_proclaiming_tree.h: 48
 class struct_topic_extract(Structure):
@@ -1416,7 +1526,7 @@ if _libs["eswb"].has("eswb_set_delta_priority", "cdecl"):
     eswb_set_delta_priority.argtypes = [c_int]
     eswb_set_delta_priority.restype = None
 
-enum_anon_11 = c_int# eswb/src/lib/include/public/eswb/event_queue.h: 18
+enum_anon_12 = c_int# eswb/src/lib/include/public/eswb/event_queue.h: 18
 
 eqr_none = 0# eswb/src/lib/include/public/eswb/event_queue.h: 18
 
@@ -1426,105 +1536,123 @@ eqr_topic_update = 2# eswb/src/lib/include/public/eswb/event_queue.h: 18
 
 eqr_fifo_push = 3# eswb/src/lib/include/public/eswb/event_queue.h: 18
 
-event_queue_record_type_t = enum_anon_11# eswb/src/lib/include/public/eswb/event_queue.h: 18
+event_queue_record_type_t = enum_anon_12# eswb/src/lib/include/public/eswb/event_queue.h: 18
 
 event_queue_record_type_s_t = uint8_t# eswb/src/lib/include/public/eswb/event_queue.h: 20
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 28
-class struct_anon_12(Structure):
+# eswb/src/lib/include/public/eswb/event_queue.h: 24
+class struct_anon_13(Structure):
     pass
 
-struct_anon_12.__slots__ = [
+struct_anon_13.__slots__ = [
+    'sec',
+    'usec',
+]
+struct_anon_13._fields_ = [
+    ('sec', uint32_t),
+    ('usec', uint32_t),
+]
+
+event_queue_timestamp_t = struct_anon_13# eswb/src/lib/include/public/eswb/event_queue.h: 24
+
+# eswb/src/lib/include/public/eswb/event_queue.h: 33
+class struct_anon_14(Structure):
+    pass
+
+struct_anon_14.__slots__ = [
     'size',
     'topic_id',
     'ch_mask',
     'type',
+    'timestamp',
     'data',
 ]
-struct_anon_12._fields_ = [
+struct_anon_14._fields_ = [
     ('size', eswb_size_t),
     ('topic_id', eswb_topic_id_t),
     ('ch_mask', eswb_event_queue_mask_t),
     ('type', event_queue_record_type_s_t),
+    ('timestamp', event_queue_timestamp_t),
     ('data', POINTER(None)),
 ]
 
-event_queue_record_t = struct_anon_12# eswb/src/lib/include/public/eswb/event_queue.h: 28
+event_queue_record_t = struct_anon_14# eswb/src/lib/include/public/eswb/event_queue.h: 33
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 35
+# eswb/src/lib/include/public/eswb/event_queue.h: 41
 class struct_event_queue_transfer(Structure):
     pass
 
-struct_event_queue_transfer._pack_ = 1
 struct_event_queue_transfer.__slots__ = [
     'size',
     'topic_id',
     'type',
+    'timestamp',
 ]
 struct_event_queue_transfer._fields_ = [
     ('size', uint32_t),
     ('topic_id', uint32_t),
     ('type', uint8_t),
+    ('timestamp', event_queue_timestamp_t),
 ]
 
-event_queue_transfer_t = struct_event_queue_transfer# eswb/src/lib/include/public/eswb/event_queue.h: 35
+event_queue_transfer_t = struct_event_queue_transfer# eswb/src/lib/include/public/eswb/event_queue.h: 41
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 42
-class struct_anon_13(Structure):
+# eswb/src/lib/include/public/eswb/event_queue.h: 48
+class struct_anon_15(Structure):
     pass
 
-struct_anon_13.__slots__ = [
+struct_anon_15.__slots__ = [
     'subch_ind',
     'path_mask_2order',
 ]
-struct_anon_13._fields_ = [
+struct_anon_15._fields_ = [
     ('subch_ind', eswb_index_t),
     ('path_mask_2order', c_char * int((100 + 1))),
 ]
 
-eswb_ctl_evq_order_t = struct_anon_13# eswb/src/lib/include/public/eswb/event_queue.h: 42
+eswb_ctl_evq_order_t = struct_anon_15# eswb/src/lib/include/public/eswb/event_queue.h: 48
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 50
+# eswb/src/lib/include/public/eswb/event_queue.h: 56
 if _libs["eswb"].has("eswb_event_queue_enable", "cdecl"):
     eswb_event_queue_enable = _libs["eswb"].get("eswb_event_queue_enable", "cdecl")
     eswb_event_queue_enable.argtypes = [eswb_topic_descr_t, eswb_size_t, eswb_size_t]
     eswb_event_queue_enable.restype = eswb_rv_t
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 51
+# eswb/src/lib/include/public/eswb/event_queue.h: 57
 if _libs["eswb"].has("eswb_event_queue_order_topic", "cdecl"):
     eswb_event_queue_order_topic = _libs["eswb"].get("eswb_event_queue_order_topic", "cdecl")
     eswb_event_queue_order_topic.argtypes = [eswb_topic_descr_t, String, eswb_index_t]
     eswb_event_queue_order_topic.restype = eswb_rv_t
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 53
+# eswb/src/lib/include/public/eswb/event_queue.h: 59
 if _libs["eswb"].has("eswb_event_queue_set_receive_mask", "cdecl"):
     eswb_event_queue_set_receive_mask = _libs["eswb"].get("eswb_event_queue_set_receive_mask", "cdecl")
     eswb_event_queue_set_receive_mask.argtypes = [eswb_topic_descr_t, eswb_event_queue_mask_t]
     eswb_event_queue_set_receive_mask.restype = eswb_rv_t
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 54
+# eswb/src/lib/include/public/eswb/event_queue.h: 60
 if _libs["eswb"].has("eswb_event_queue_subscribe", "cdecl"):
     eswb_event_queue_subscribe = _libs["eswb"].get("eswb_event_queue_subscribe", "cdecl")
     eswb_event_queue_subscribe.argtypes = [String, POINTER(eswb_topic_descr_t)]
     eswb_event_queue_subscribe.restype = eswb_rv_t
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 57
+# eswb/src/lib/include/public/eswb/event_queue.h: 63
 if _libs["eswb"].has("eswb_event_queue_pop", "cdecl"):
     eswb_event_queue_pop = _libs["eswb"].get("eswb_event_queue_pop", "cdecl")
     eswb_event_queue_pop.argtypes = [eswb_topic_descr_t, POINTER(event_queue_transfer_t)]
     eswb_event_queue_pop.restype = eswb_rv_t
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 59
+# eswb/src/lib/include/public/eswb/event_queue.h: 65
 class struct_topic_id_map(Structure):
     pass
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 61
+# eswb/src/lib/include/public/eswb/event_queue.h: 67
 if _libs["eswb"].has("eswb_event_queue_replicate", "cdecl"):
     eswb_event_queue_replicate = _libs["eswb"].get("eswb_event_queue_replicate", "cdecl")
     eswb_event_queue_replicate.argtypes = [eswb_topic_descr_t, POINTER(struct_topic_id_map), POINTER(event_queue_transfer_t)]
     eswb_event_queue_replicate.restype = eswb_rv_t
 
-enum_anon_14 = c_int# eswb/src/lib/include/public/eswb/services/eqrb.h: 38
+enum_anon_16 = c_int# eswb/src/lib/include/public/eswb/services/eqrb.h: 38
 
 eqrb_rv_ok = 0# eswb/src/lib/include/public/eswb/services/eqrb.h: 38
 
@@ -1562,15 +1690,15 @@ eqrb_server_already_launched = (eqrb_media_remote_need_reset + 1)# eswb/src/lib/
 
 eqrb_rv_rx_eswb_fatal_err = (eqrb_server_already_launched + 1)# eswb/src/lib/include/public/eswb/services/eqrb.h: 38
 
-eqrb_rv_t = enum_anon_14# eswb/src/lib/include/public/eswb/services/eqrb.h: 38
+eqrb_rv_t = enum_anon_16# eswb/src/lib/include/public/eswb/services/eqrb.h: 38
 
-enum_anon_15 = c_int# eswb/src/lib/include/public/eswb/services/eqrb.h: 43
+enum_anon_17 = c_int# eswb/src/lib/include/public/eswb/services/eqrb.h: 43
 
 eqrb_cmd_reset_remote = 0# eswb/src/lib/include/public/eswb/services/eqrb.h: 43
 
 eqrb_cmd_reset_local_state = (eqrb_cmd_reset_remote + 1)# eswb/src/lib/include/public/eswb/services/eqrb.h: 43
 
-eqrb_cmd_t = enum_anon_15# eswb/src/lib/include/public/eswb/services/eqrb.h: 43
+eqrb_cmd_t = enum_anon_17# eswb/src/lib/include/public/eswb/services/eqrb.h: 43
 
 # eswb/src/lib/include/public/eswb/services/eqrb.h: 47
 if _libs["eswb"].has("eqrb_sdtl_server_start", "cdecl"):
@@ -1585,24 +1713,18 @@ if _libs["eswb"].has("eqrb_sdtl_client_connect", "cdecl"):
     eqrb_sdtl_client_connect.restype = eqrb_rv_t
 
 # eswb/src/lib/include/public/eswb/services/eqrb.h: 61
-for _lib in _libs.values():
-    if not _lib.has("eqrb_file_server_start", "cdecl"):
-        continue
-    eqrb_file_server_start = _lib.get("eqrb_file_server_start", "cdecl")
-    eqrb_file_server_start.argtypes = [String, String, String, String, POINTER(POINTER(c_char))]
+if _libs["eswb"].has("eqrb_file_server_start", "cdecl"):
+    eqrb_file_server_start = _libs["eswb"].get("eqrb_file_server_start", "cdecl")
+    eqrb_file_server_start.argtypes = [String, String, String, String, String, POINTER(POINTER(c_char))]
     eqrb_file_server_start.restype = eqrb_rv_t
-    break
 
-# eswb/src/lib/include/public/eswb/services/eqrb.h: 66
-for _lib in _libs.values():
-    if not _lib.has("eqrb_file_client_connect", "cdecl"):
-        continue
-    eqrb_file_client_connect = _lib.get("eqrb_file_client_connect", "cdecl")
+# eswb/src/lib/include/public/eswb/services/eqrb.h: 67
+if _libs["eswb"].has("eqrb_file_client_connect", "cdecl"):
+    eqrb_file_client_connect = _libs["eswb"].get("eqrb_file_client_connect", "cdecl")
     eqrb_file_client_connect.argtypes = [String, String, String, String, uint32_t, POINTER(POINTER(c_char))]
     eqrb_file_client_connect.restype = eqrb_rv_t
-    break
 
-# eswb/src/lib/include/public/eswb/services/eqrb.h: 72
+# eswb/src/lib/include/public/eswb/services/eqrb.h: 73
 if _libs["eswb"].has("eqrb_strerror", "cdecl"):
     eqrb_strerror = _libs["eswb"].get("eqrb_strerror", "cdecl")
     eqrb_strerror.argtypes = [eqrb_rv_t]
@@ -1709,9 +1831,23 @@ struct_sdtl_service_media._fields_ = [
 
 sdtl_service_media_t = struct_sdtl_service_media# eswb/src/lib/include/public/eswb/services/sdtl.h: 62
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 72
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 64
+class struct_sdtl_service(Structure):
+    pass
+
+sdtl_service_t = struct_sdtl_service# eswb/src/lib/include/public/eswb/services/sdtl.h: 64
+
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 69
 class struct_sdtl_channel_cfg(Structure):
     pass
+
+sdtl_channel_cfg_t = struct_sdtl_channel_cfg# eswb/src/lib/include/public/eswb/services/sdtl.h: 65
+
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 67
+class struct_sdtl_channel_handle(Structure):
+    pass
+
+sdtl_channel_handle_t = struct_sdtl_channel_handle# eswb/src/lib/include/public/eswb/services/sdtl.h: 67
 
 struct_sdtl_channel_cfg.__slots__ = [
     'name',
@@ -1726,21 +1862,7 @@ struct_sdtl_channel_cfg._fields_ = [
     ('mtu_override', uint32_t),
 ]
 
-sdtl_channel_cfg_t = struct_sdtl_channel_cfg# eswb/src/lib/include/public/eswb/services/sdtl.h: 72
-
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 75
-class struct_sdtl_service(Structure):
-    pass
-
-sdtl_service_t = struct_sdtl_service# eswb/src/lib/include/public/eswb/services/sdtl.h: 75
-
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 78
-class struct_sdtl_channel_handle(Structure):
-    pass
-
-sdtl_channel_handle_t = struct_sdtl_channel_handle# eswb/src/lib/include/public/eswb/services/sdtl.h: 78
-
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 85
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 83
 class struct_sdtl_media_serial_params(Structure):
     pass
 
@@ -1751,139 +1873,206 @@ struct_sdtl_media_serial_params._fields_ = [
     ('baudrate', uint32_t),
 ]
 
-sdtl_media_serial_params_t = struct_sdtl_media_serial_params# eswb/src/lib/include/public/eswb/services/sdtl.h: 85
+sdtl_media_serial_params_t = struct_sdtl_media_serial_params# eswb/src/lib/include/public/eswb/services/sdtl.h: 83
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 87
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 90
+class struct_sdtl_media_udp_params(Structure):
+    pass
+
+struct_sdtl_media_udp_params.__slots__ = [
+    'ip_in',
+    'port_in',
+    'ip_out',
+    'port_out',
+]
+struct_sdtl_media_udp_params._fields_ = [
+    ('ip_in', String),
+    ('port_in', String),
+    ('ip_out', String),
+    ('port_out', String),
+]
+
+sdtl_media_udp_params_t = struct_sdtl_media_udp_params# eswb/src/lib/include/public/eswb/services/sdtl.h: 90
+
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 92
 try:
     sdtl_media_serial = (sdtl_service_media_t).in_dll(_libs["eswb"], "sdtl_media_serial")
 except:
     pass
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 98
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 93
+try:
+    sdtl_media_udp = (sdtl_service_media_t).in_dll(_libs["eswb"], "sdtl_media_udp")
+except:
+    pass
+
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 104
 if _libs["eswb"].has("sdtl_service_init", "cdecl"):
     sdtl_service_init = _libs["eswb"].get("sdtl_service_init", "cdecl")
     sdtl_service_init.argtypes = [POINTER(POINTER(sdtl_service_t)), String, String, c_size_t, c_size_t, POINTER(sdtl_service_media_t)]
     sdtl_service_init.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 100
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 106
 if _libs["eswb"].has("sdtl_service_init_w", "cdecl"):
     sdtl_service_init_w = _libs["eswb"].get("sdtl_service_init_w", "cdecl")
     sdtl_service_init_w.argtypes = [POINTER(POINTER(sdtl_service_t)), String, String, c_size_t, c_size_t, String]
     sdtl_service_init_w.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 103
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 109
 if _libs["eswb"].has("sdtl_service_lookup", "cdecl"):
     sdtl_service_lookup = _libs["eswb"].get("sdtl_service_lookup", "cdecl")
     sdtl_service_lookup.argtypes = [String]
     sdtl_service_lookup.restype = POINTER(sdtl_service_t)
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 104
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 110
 if _libs["eswb"].has("sdtl_service_start", "cdecl"):
     sdtl_service_start = _libs["eswb"].get("sdtl_service_start", "cdecl")
     sdtl_service_start.argtypes = [POINTER(sdtl_service_t), String, POINTER(None)]
     sdtl_service_start.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 105
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 111
 if _libs["eswb"].has("sdtl_service_stop", "cdecl"):
     sdtl_service_stop = _libs["eswb"].get("sdtl_service_stop", "cdecl")
     sdtl_service_stop.argtypes = [POINTER(sdtl_service_t)]
     sdtl_service_stop.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 107
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 113
 if _libs["eswb"].has("sdtl_channel_create", "cdecl"):
     sdtl_channel_create = _libs["eswb"].get("sdtl_channel_create", "cdecl")
     sdtl_channel_create.argtypes = [POINTER(sdtl_service_t), POINTER(sdtl_channel_cfg_t)]
     sdtl_channel_create.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 109
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 115
 if _libs["eswb"].has("sdtl_channel_open", "cdecl"):
     sdtl_channel_open = _libs["eswb"].get("sdtl_channel_open", "cdecl")
     sdtl_channel_open.argtypes = [POINTER(sdtl_service_t), String, POINTER(POINTER(sdtl_channel_handle_t))]
     sdtl_channel_open.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 110
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 116
 if _libs["eswb"].has("sdtl_channel_close", "cdecl"):
     sdtl_channel_close = _libs["eswb"].get("sdtl_channel_close", "cdecl")
     sdtl_channel_close.argtypes = [POINTER(sdtl_channel_handle_t)]
     sdtl_channel_close.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 112
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 118
 if _libs["eswb"].has("sdtl_channel_recv_arm_timeout", "cdecl"):
     sdtl_channel_recv_arm_timeout = _libs["eswb"].get("sdtl_channel_recv_arm_timeout", "cdecl")
     sdtl_channel_recv_arm_timeout.argtypes = [POINTER(sdtl_channel_handle_t), uint32_t]
     sdtl_channel_recv_arm_timeout.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 114
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 120
 if _libs["eswb"].has("sdtl_channel_recv_data", "cdecl"):
     sdtl_channel_recv_data = _libs["eswb"].get("sdtl_channel_recv_data", "cdecl")
     sdtl_channel_recv_data.argtypes = [POINTER(sdtl_channel_handle_t), POINTER(None), uint32_t, POINTER(c_size_t)]
     sdtl_channel_recv_data.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 115
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 121
 if _libs["eswb"].has("sdtl_channel_send_data", "cdecl"):
     sdtl_channel_send_data = _libs["eswb"].get("sdtl_channel_send_data", "cdecl")
     sdtl_channel_send_data.argtypes = [POINTER(sdtl_channel_handle_t), POINTER(None), uint32_t]
     sdtl_channel_send_data.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 120
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 126
 if _libs["eswb"].has("sdtl_channel_send_cmd", "cdecl"):
     sdtl_channel_send_cmd = _libs["eswb"].get("sdtl_channel_send_cmd", "cdecl")
     sdtl_channel_send_cmd.argtypes = [POINTER(sdtl_channel_handle_t), uint8_t]
     sdtl_channel_send_cmd.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 121
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 127
 if _libs["eswb"].has("sdtl_channel_reset_condition", "cdecl"):
     sdtl_channel_reset_condition = _libs["eswb"].get("sdtl_channel_reset_condition", "cdecl")
     sdtl_channel_reset_condition.argtypes = [POINTER(sdtl_channel_handle_t)]
     sdtl_channel_reset_condition.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 122
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 128
 if _libs["eswb"].has("sdtl_channel_check_reset_condition", "cdecl"):
     sdtl_channel_check_reset_condition = _libs["eswb"].get("sdtl_channel_check_reset_condition", "cdecl")
     sdtl_channel_check_reset_condition.argtypes = [POINTER(sdtl_channel_handle_t)]
     sdtl_channel_check_reset_condition.restype = sdtl_rv_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 124
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 130
 if _libs["eswb"].has("sdtl_channel_get_max_payload_size", "cdecl"):
     sdtl_channel_get_max_payload_size = _libs["eswb"].get("sdtl_channel_get_max_payload_size", "cdecl")
     sdtl_channel_get_max_payload_size.argtypes = [POINTER(sdtl_channel_handle_t)]
     sdtl_channel_get_max_payload_size.restype = uint32_t
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 125
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 131
 if _libs["eswb"].has("sdtl_lookup_media", "cdecl"):
     sdtl_lookup_media = _libs["eswb"].get("sdtl_lookup_media", "cdecl")
     sdtl_lookup_media.argtypes = [String]
     sdtl_lookup_media.restype = POINTER(sdtl_service_media_t)
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 127
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 133
 if _libs["eswb"].has("sdtl_strerror", "cdecl"):
     sdtl_strerror = _libs["eswb"].get("sdtl_strerror", "cdecl")
     sdtl_strerror.argtypes = [sdtl_rv_t]
     sdtl_strerror.restype = c_char_p
 
-u_long = c_ulong# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 88
+u_char = __u_char# /usr/include/x86_64-linux-gnu/sys/types.h: 33
 
-ushort = c_ushort# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 91
+u_short = __u_short# /usr/include/x86_64-linux-gnu/sys/types.h: 34
 
-uint = c_uint# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 92
+u_int = __u_int# /usr/include/x86_64-linux-gnu/sys/types.h: 35
 
-u_quad_t = u_int64_t# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 95
+u_long = __u_long# /usr/include/x86_64-linux-gnu/sys/types.h: 36
 
-quad_t = c_int64# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 96
+quad_t = __quad_t# /usr/include/x86_64-linux-gnu/sys/types.h: 37
 
-qaddr_t = POINTER(quad_t)# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 97
+u_quad_t = __u_quad_t# /usr/include/x86_64-linux-gnu/sys/types.h: 38
 
-daddr_t = c_int32# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 101
+fsid_t = __fsid_t# /usr/include/x86_64-linux-gnu/sys/types.h: 39
 
-dev_t = __darwin_dev_t# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_dev_t.h: 31
+loff_t = __loff_t# /usr/include/x86_64-linux-gnu/sys/types.h: 42
 
-fixpt_t = u_int32_t# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 105
+ino_t = __ino_t# /usr/include/x86_64-linux-gnu/sys/types.h: 47
 
-segsz_t = c_int32# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 125
+dev_t = __dev_t# /usr/include/x86_64-linux-gnu/sys/types.h: 59
 
-swblk_t = c_int32# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 126
+gid_t = __gid_t# /usr/include/x86_64-linux-gnu/sys/types.h: 64
 
-fd_mask = c_int32# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 189
+mode_t = __mode_t# /usr/include/x86_64-linux-gnu/sys/types.h: 69
+
+nlink_t = __nlink_t# /usr/include/x86_64-linux-gnu/sys/types.h: 74
+
+uid_t = __uid_t# /usr/include/x86_64-linux-gnu/sys/types.h: 79
+
+off_t = __off_t# /usr/include/x86_64-linux-gnu/sys/types.h: 85
+
+pid_t = __pid_t# /usr/include/x86_64-linux-gnu/sys/types.h: 97
+
+id_t = __id_t# /usr/include/x86_64-linux-gnu/sys/types.h: 103
+
+ssize_t = __ssize_t# /usr/include/x86_64-linux-gnu/sys/types.h: 108
+
+daddr_t = __daddr_t# /usr/include/x86_64-linux-gnu/sys/types.h: 114
+
+caddr_t = __caddr_t# /usr/include/x86_64-linux-gnu/sys/types.h: 115
+
+key_t = __key_t# /usr/include/x86_64-linux-gnu/sys/types.h: 121
+
+ulong = c_ulong# /usr/include/x86_64-linux-gnu/sys/types.h: 148
+
+ushort = c_ushort# /usr/include/x86_64-linux-gnu/sys/types.h: 149
+
+uint = c_uint# /usr/include/x86_64-linux-gnu/sys/types.h: 150
+
+u_int8_t = __uint8_t# /usr/include/x86_64-linux-gnu/sys/types.h: 158
+
+u_int16_t = __uint16_t# /usr/include/x86_64-linux-gnu/sys/types.h: 159
+
+u_int32_t = __uint32_t# /usr/include/x86_64-linux-gnu/sys/types.h: 160
+
+u_int64_t = __uint64_t# /usr/include/x86_64-linux-gnu/sys/types.h: 161
+
+register_t = c_int# /usr/include/x86_64-linux-gnu/sys/types.h: 166
+
+blksize_t = __blksize_t# /usr/include/x86_64-linux-gnu/sys/types.h: 185
+
+blkcnt_t = __blkcnt_t# /usr/include/x86_64-linux-gnu/sys/types.h: 192
+
+fsblkcnt_t = __fsblkcnt_t# /usr/include/x86_64-linux-gnu/sys/types.h: 196
+
+fsfilcnt_t = __fsfilcnt_t# /usr/include/x86_64-linux-gnu/sys/types.h: 200
 
 # eswb/src/lib/include/sync.h: 7
 class struct_sync_handle(Structure):
@@ -2090,23 +2279,47 @@ if _libs["eswb"].has("reg_print", "cdecl"):
     reg_print.argtypes = [POINTER(registry_t)]
     reg_print.restype = None
 
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 94
+# /usr/include/x86_64-linux-gnu/bits/types.h: 24
 try:
-    USER_ADDR_NULL = (user_addr_t (ord_if_char(0))).value
+    _BITS_TYPES_H = 1
 except:
     pass
 
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/arm/types.h: 95
-def CAST_USER_ADDR_T(a_ptr):
-    return (user_addr_t (ord_if_char((uintptr_t (ord_if_char(a_ptr))).value))).value
+__S16_TYPE = c_short# /usr/include/x86_64-linux-gnu/bits/types.h: 109
 
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/stdint.h: 108
+__U16_TYPE = c_ushort# /usr/include/x86_64-linux-gnu/bits/types.h: 110
+
+__S32_TYPE = c_int# /usr/include/x86_64-linux-gnu/bits/types.h: 111
+
+__U32_TYPE = c_uint# /usr/include/x86_64-linux-gnu/bits/types.h: 112
+
+__SLONGWORD_TYPE = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 113
+
+__ULONGWORD_TYPE = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 114
+
+__SQUAD_TYPE = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 128
+
+__UQUAD_TYPE = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 129
+
+__SWORD_TYPE = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 130
+
+__UWORD_TYPE = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 131
+
+__SLONG32_TYPE = c_int# /usr/include/x86_64-linux-gnu/bits/types.h: 132
+
+__ULONG32_TYPE = c_uint# /usr/include/x86_64-linux-gnu/bits/types.h: 133
+
+__S64_TYPE = c_long# /usr/include/x86_64-linux-gnu/bits/types.h: 134
+
+__U64_TYPE = c_ulong# /usr/include/x86_64-linux-gnu/bits/types.h: 135
+
+# /usr/include/stdint.h: 128
 try:
     UINT16_MAX = 65535
 except:
     pass
 
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/stdint.h: 109
+# /usr/include/stdint.h: 129
 try:
     UINT32_MAX = 4294967295
 except:
@@ -2148,11 +2361,11 @@ try:
 except:
     pass
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 37
+# eswb/src/lib/include/public/eswb/event_queue.h: 43
 def EVENT_QUEUE_TRANSFER_DATA(__etp):
     return cast((cast(__etp, POINTER(uint8_t)) + sizeof(event_queue_transfer_t)), POINTER(uint8_t))
 
-# eswb/src/lib/include/public/eswb/event_queue.h: 44
+# eswb/src/lib/include/public/eswb/event_queue.h: 50
 try:
     BUS_EVENT_QUEUE_NAME = '.bus_events_queue'
 except:
@@ -2164,61 +2377,29 @@ try:
 except:
     pass
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 117
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 123
 try:
     SDTL_PKT_CMD_CODE_CANCEL = 0x10
 except:
     pass
 
-# eswb/src/lib/include/public/eswb/services/sdtl.h: 118
+# eswb/src/lib/include/public/eswb/services/sdtl.h: 124
 try:
     SDTL_PKT_CMD_CODE_RESET = 0x11
 except:
     pass
 
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 158
-def major(x):
-    return (c_int32 (ord_if_char((((u_int32_t (ord_if_char(x))).value >> 24) & 0xff)))).value
-
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 159
-def minor(x):
-    return (c_int32 (ord_if_char((x & 0xffffff)))).value
-
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 160
-def makedev(x, y):
-    return (dev_t (ord_if_char(((x << 24) | y)))).value
-
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_fd_def.h: 45
+# /usr/include/x86_64-linux-gnu/sys/types.h: 23
 try:
-    __DARWIN_NBBY = 8
+    _SYS_TYPES_H = 1
 except:
     pass
 
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_fd_def.h: 46
+# /usr/include/x86_64-linux-gnu/sys/types.h: 171
 try:
-    __DARWIN_NFDBITS = (sizeof(c_int32) * __DARWIN_NBBY)
+    __BIT_TYPES_DEFINED__ = 1
 except:
     pass
-
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/_types/_fd_def.h: 47
-def __DARWIN_howmany(x, y):
-    return ((x % y) == 0) and (x / y) or ((x / y) + 1)
-
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 186
-try:
-    NBBY = __DARWIN_NBBY
-except:
-    pass
-
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 187
-try:
-    NFDBITS = __DARWIN_NFDBITS
-except:
-    pass
-
-# /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr/include/sys/types.h: 188
-def howmany(x, y):
-    return (__DARWIN_howmany (x, y))
 
 # eswb/src/lib/include/topic_mem.h: 33
 try:
@@ -2238,19 +2419,21 @@ try:
 except:
     pass
 
-event_queue_transfer = struct_event_queue_transfer# eswb/src/lib/include/public/eswb/event_queue.h: 35
+event_queue_transfer = struct_event_queue_transfer# eswb/src/lib/include/public/eswb/event_queue.h: 41
 
-topic_id_map = struct_topic_id_map# eswb/src/lib/include/public/eswb/event_queue.h: 59
+topic_id_map = struct_topic_id_map# eswb/src/lib/include/public/eswb/event_queue.h: 65
 
 sdtl_service_media = struct_sdtl_service_media# eswb/src/lib/include/public/eswb/services/sdtl.h: 62
 
-sdtl_channel_cfg = struct_sdtl_channel_cfg# eswb/src/lib/include/public/eswb/services/sdtl.h: 72
+sdtl_service = struct_sdtl_service# eswb/src/lib/include/public/eswb/services/sdtl.h: 64
 
-sdtl_service = struct_sdtl_service# eswb/src/lib/include/public/eswb/services/sdtl.h: 75
+sdtl_channel_cfg = struct_sdtl_channel_cfg# eswb/src/lib/include/public/eswb/services/sdtl.h: 69
 
-sdtl_channel_handle = struct_sdtl_channel_handle# eswb/src/lib/include/public/eswb/services/sdtl.h: 78
+sdtl_channel_handle = struct_sdtl_channel_handle# eswb/src/lib/include/public/eswb/services/sdtl.h: 67
 
-sdtl_media_serial_params = struct_sdtl_media_serial_params# eswb/src/lib/include/public/eswb/services/sdtl.h: 85
+sdtl_media_serial_params = struct_sdtl_media_serial_params# eswb/src/lib/include/public/eswb/services/sdtl.h: 83
+
+sdtl_media_udp_params = struct_sdtl_media_udp_params# eswb/src/lib/include/public/eswb/services/sdtl.h: 90
 
 registry = struct_registry# eswb/src/lib/include/registry.h: 8
 
