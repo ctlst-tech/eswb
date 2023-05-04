@@ -13,7 +13,7 @@ from .common import MyQtWidget, ColorInterp, rel_path
 
 
 class EwBasic:
-    def __init__(self):
+    def __init__(self, **kwargs):
         self.data_sources: List[DataSourceBasic] = []
         self.nested_widgets: List[EwBasic] = []
 
