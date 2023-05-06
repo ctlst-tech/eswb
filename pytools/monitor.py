@@ -164,4 +164,13 @@ class ArgParser:
 
         )
 
+        self.parser.add_argument(
+            '--ip',
+            action='store',
+            default='192.168.1.20',
+            type=str,
+            help='IP',
+
+        )
+
         self.args = self.parser.parse_args(sys.argv[1:])
