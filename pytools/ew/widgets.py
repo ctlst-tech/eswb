@@ -233,8 +233,10 @@ class EwChart(MyQtWidget, EwBasic):
         self.layout.addWidget(self.graph)
 
         # window = 600
-        # self.graph.setBackground(QtGui.QColor('white'))
-
+        # self.graph.setBackground(QColor('white'))
+        # self.graph.getAxis('bottom').setPen('black')
+        # self.graph.getAxis('left').setPen('black')
+        self.graph.showGrid(x=True, y=True, alpha=0.75)
         self.plots: List[EwChart.Plot] = []
 
         color_i = 0
