@@ -87,6 +87,10 @@ if (ESWB_EQRB_NO_SERIAL)
     target_compile_definitions(eswb-eqrb-static PUBLIC ESWB_NO_SERIAL=1)
 endif()
 
+if (ESWB_SDTL_NO_SOCKET)
+    target_compile_definitions(eswb-sdtl-static PUBLIC ESWB_NO_SOCKET=1)
+endif()
+
 add_library(eswb SHARED ${ESWB_LIB_SRC} ${ESWB_UTIL_EQRB_SRC} ${ESWB_SERVICE_SDTL_SRC} platformic/posix/posix_sync.c)
 target_link_libraries(eswb PUBLIC ${PL_SPECIFIC_LIBS})
 

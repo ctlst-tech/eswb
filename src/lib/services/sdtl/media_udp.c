@@ -12,6 +12,26 @@
 
 #include "sdtl_opaque.h"
 
+#ifdef ESWB_NO_SOCKET
+
+sdtl_rv_t sdtl_media_udp_open(const char *path, void *params, void **h_rv) {
+    return SDTL_SYS_ERR;
+}
+
+sdtl_rv_t sdtl_media_udp_read(void *h, void *data, size_t l, size_t *lr) {
+    return SDTL_SYS_ERR;
+}
+
+sdtl_rv_t sdtl_media_udp_write(void *h, void *data, size_t l) {
+    return SDTL_SYS_ERR;
+}
+
+sdtl_rv_t sdtl_media_udp_close(void *h) {
+    return SDTL_SYS_ERR;
+}
+
+#else
+
 typedef struct {
     int rx_sock;
     struct sockaddr_in rx_addr;
@@ -132,7 +152,10 @@ sdtl_rv_t sdtl_media_udp_close(void *h) {
     return rv == 0 ? SDTL_OK : SDTL_MEDIA_ERR;
 }
 
+#endif
+
 const sdtl_service_media_t sdtl_media_udp = {.open = sdtl_media_udp_open,
                                              .read = sdtl_media_udp_read,
                                              .write = sdtl_media_udp_write,
                                              .close = sdtl_media_udp_close};
+
