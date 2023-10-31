@@ -4,12 +4,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <time.h>
 
 #include "../eqrb_priv.h"
 
 #define EQRB_FILE_MAX_NAME_LEN 64
 #define EQRB_FILE_MAX_SEP_LEN 8
-#define EQRB_FILE_SYNC_SIZE 8192
+#define EQRB_FILE_SYNC_TIMEOUT 100
+#define EQRB_FILE_BUF_SIZE 512
 #define EQRB_FILE_MAX_FILES 32
 
 typedef struct {
@@ -18,7 +20,9 @@ typedef struct {
     char *dir;
     char *bus;
     char *sep;
-    uint16_t wbuf_offset;
+    uint16_t offset;
+    uint8_t *buf;
+    struct timespec ts;
 } eqrb_drv_file_params_t;
 
 eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh);
@@ -93,7 +97,9 @@ eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh) {
     }
 
     if (rv == eqrb_rv_ok) {
-        file_params[fd]->wbuf_offset = 0;
+        file_params[fd]->offset = 0;
+        clock_gettime(CLOCK_MONOTONIC, &file_params[fd]->ts);
+        file_params[fd]->buf = calloc(2 * EQRB_FILE_BUF_SIZE, 1);
     }
 
     return rv;
@@ -101,13 +107,31 @@ eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh) {
 
 size_t eqrb_drv_file_write(device_descr_t dh, void *data, size_t size) {
     int fd = (int)dh;
+    eqrb_drv_file_params_t *fp = file_params[fd];
+    ssize_t rv = 0;
 
-    if (file_params[fd]->wbuf_offset > EQRB_FILE_SYNC_SIZE) {
-        fsync(fd);
-        file_params[fd]->wbuf_offset = 0;
+    if (fp->offset >= EQRB_FILE_BUF_SIZE) {
+        rv = write(fd, fp->buf, EQRB_FILE_BUF_SIZE);
+        if (rv < 0) {
+            eqrb_dbg_msg("write failed");
+        }
+        rv = fsync(fd);
+        if (rv < 0) {
+            eqrb_dbg_msg("sync failed");
+        }
+        fp->offset -= EQRB_FILE_BUF_SIZE;
+        memcpy(fp->buf, fp->buf + EQRB_FILE_BUF_SIZE, fp->offset);
     }
-    size = write(fd, data, size);
-    file_params[fd]->wbuf_offset += size;
+    memcpy(fp->buf + fp->offset, data, size);
+    fp->offset += size;
+
+    // struct timespec ts;
+    // clock_gettime(CLOCK_MONOTONIC, &ts);
+    // long unsigned diff = (ts.tv_sec - fp->ts.tv_sec) * 1000 + (ts.tv_nsec - fp->ts.tv_nsec) / 1000000;
+    // if (diff > EQRB_FILE_SYNC_TIMEOUT) {
+    //     fsync(fd);
+    //     fp->ts = ts;
+    // }
 
     return size;
 }

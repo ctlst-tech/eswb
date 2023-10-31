@@ -177,8 +177,8 @@ bool ConverterToCsv::convert(void) {
             m_prev_time = m_time;
         } else {
             cout << "Offset: " << m_file_cur_ptr - m_file_start_ptr << endl;
-            cout << "Unhandled cmd code: " << event->header.msg_code << endl;
-            cout << "Unhandled event type: " << event->event.type << endl
+            cout << "Unhandled cmd code: " << to_string(event->header.msg_code) << endl;
+            cout << "Unhandled event type: " << to_string(event->event.type) << endl
                  << endl;
         }
     }
