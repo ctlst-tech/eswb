@@ -12,7 +12,7 @@
 #define EQRB_FILE_MAX_SEP_LEN 8
 #define EQRB_FILE_SYNC_TIMEOUT 100
 #define EQRB_FILE_BUF_SIZE 512
-#define EQRB_FILE_MAX_FILES 32
+#define EQRB_FILE_MAX_FILES 128
 
 typedef struct {
     char *file_prefix;
@@ -78,7 +78,7 @@ eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh) {
         fd = open(file_name, O_RDONLY);
     }
 
-    if (fd > 0 && fd < EQRB_FILE_MAX_FILES) {
+    if (fd > 0) {
         file_params[fd] = param;
         *(int *)dh = fd;
         // chmod(file_name,  S_IRWXO | S_IRWXG | S_IRWXU);
@@ -114,10 +114,12 @@ size_t eqrb_drv_file_write(device_descr_t dh, void *data, size_t size) {
         rv = write(fd, fp->buf, EQRB_FILE_BUF_SIZE);
         if (rv < 0) {
             eqrb_dbg_msg("write failed");
+            return -1;
         }
         rv = fsync(fd);
         if (rv < 0) {
             eqrb_dbg_msg("sync failed");
+            return -1;
         }
         fp->offset -= EQRB_FILE_BUF_SIZE;
         memcpy(fp->buf, fp->buf + EQRB_FILE_BUF_SIZE, fp->offset);
