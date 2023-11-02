@@ -86,7 +86,10 @@ eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh) {
         int len = snprintf(buf, sizeof(buf), "%s\n", p->bus);
         len += snprintf(buf + len, sizeof(buf), "%s\n", p->sep);
         size_t bw = write(fd, buf, len);
-        fsync(fd);
+        int sync_rv = fsync(fd);
+        if (sync_rv < 0) {
+            return eqrb_media_err;
+        }
         if (bw > 0) {
             rv = eqrb_rv_ok;
         } else {
