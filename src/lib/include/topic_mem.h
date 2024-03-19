@@ -1,6 +1,7 @@
 #ifndef ESWB_TOPIC_MEM_H
 #define ESWB_TOPIC_MEM_H
 
+#include <sys/types.h>
 #include "eswb/types.h"
 #include "eswb/errors.h"
 #include "eswb/event_queue.h"
@@ -10,39 +11,42 @@
 struct registry;
 
 
-typedef struct topic_state {
+typedef struct topic_array_state {
 
     eswb_fifo_index_t    head; // TODO actually points to a place where next push will be stored, rename it? or change convention
     eswb_fifo_index_t    lap_num;
 
-} topic_fifo_state_t;
+} topic_array_state_t;
 
 
 typedef struct fifo_ext {
-    eswb_size_t         fifo_size;
+    eswb_size_t         len; // max len for vector
     eswb_size_t         elem_step;
     eswb_size_t         elem_size;
-    topic_fifo_state_t  state;
+    topic_array_state_t  state;
 
-} fifo_ext_t;
+    // used by vector:
+    eswb_size_t         curr_len;
 
-#define TOPIC_FLAGS_TO_EVENT_QUEUE (1 << 0)
+} array_ext_t;
+
+#define TOPIC_FLAGS_MAPPED_TO_PARENT    (1UL << 0UL)
+#define TOPIC_FLAGS_USES_PARENT_SYNC    (1UL << 1UL)
+#define TOPIC_FLAGS_INITED              (1UL << 2UL)
 
 typedef struct topic {
     // credentials
     char name[ESWB_TOPIC_NAME_MAX_LEN + 1];
     topic_data_type_t type;
-    char* annotation;
     eswb_size_t data_size; // field size for regular topic; length of fifo for fifo; overall size for event_queue
 
     void* data;
-    fifo_ext_t *fifo_ext;
+    array_ext_t *array_ext;
     // sync and stat
     struct sync_handle* sync;
 
-    //state : state
     //last_update_time : time
-    //eswb_index_t me;
+    eswb_update_counter_t update_counter;
 
     uint32_t flags;
 
@@ -57,6 +61,8 @@ typedef struct topic {
     eswb_event_queue_mask_t evq_mask; // TODO this thing should be inherited by nested topics
 } topic_t;
 
+#define TOPIC_SYNCED(t__) (t__->sync != NULL)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -64,7 +70,9 @@ extern "C" {
 
 eswb_rv_t topic_mem_write(topic_t *t, void *data);
 eswb_rv_t topic_mem_simply_copy(topic_t *t, void *data);
+eswb_rv_t topic_mem_read_vector(topic_t *t, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv);
 eswb_rv_t topic_mem_write_fifo(topic_t *t, void *data);
+eswb_rv_t topic_mem_write_vector(topic_t *t, void *data, array_alter_t *params);
 void topic_mem_read_fifo(topic_t *t, eswb_index_t tail, void *data);
 eswb_rv_t topic_mem_get_params(topic_t *t, topic_params_t *params);
 

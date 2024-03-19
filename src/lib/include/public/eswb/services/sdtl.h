@@ -61,21 +61,19 @@ typedef struct sdtl_service_media {
     media_close_t close;
 } sdtl_service_media_t;
 
+typedef struct sdtl_service sdtl_service_t;
+typedef struct sdtl_channel_cfg sdtl_channel_cfg_t;
 
-typedef struct sdtl_channel_cfg {
+typedef struct sdtl_channel_handle sdtl_channel_handle_t;
+
+struct sdtl_channel_cfg {
     const char *name;
 
     uint8_t id;
     sdtl_channel_type_t type;
 
     uint32_t mtu_override;
-} sdtl_channel_cfg_t;
-
-
-typedef struct sdtl_service sdtl_service_t;
-typedef struct sdtl_channel_cfg sdtl_channel_cfg_t;
-
-typedef struct sdtl_channel_handle sdtl_channel_handle_t;
+};
 
 /**
  * Media drivers and theirs parameter structures:
@@ -84,7 +82,15 @@ typedef struct sdtl_media_serial_params {
     uint32_t baudrate;
 } sdtl_media_serial_params_t;
 
+typedef struct sdtl_media_udp_params {
+    char *ip_in;
+    char *port_in;
+    char *ip_out;
+    char *port_out;
+} sdtl_media_udp_params_t;
+
 extern const sdtl_service_media_t sdtl_media_serial;
+extern const sdtl_service_media_t sdtl_media_udp;
 /**
  *
  * @param s

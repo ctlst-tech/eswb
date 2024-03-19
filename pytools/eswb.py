@@ -1,8 +1,6 @@
 #!/usr/bin/env python3
 
 from ctypes import *
-import platform
-import os
 from typing import List, Union
 
 import c_eswb_wrappers as ce
@@ -17,7 +15,7 @@ def pstr(s):
     return s.decode("utf-8")
 
 
-def eswb_exception(text, errcode = 0):
+def eswb_exception(text, errcode=0):
     if errcode == 0:
         errcode_text = ''
     else:
@@ -32,7 +30,7 @@ def eswb_index(i: int):
 
 
 def get_value_from_buf(topic_type, data_ref):
-    def castNvalue(ref, p_c_type):
+    def cast_nvalue(ref, p_c_type):
         if p_c_type:
             return cast(ref, POINTER(p_c_type)).contents.value
             # return 'commented out'
@@ -44,25 +42,25 @@ def get_value_from_buf(topic_type, data_ref):
     if topic_type == ce.tt_none:
         return none_stub
     elif topic_type == ce.tt_float:
-        return castNvalue(data_ref, c_float)
+        return cast_nvalue(data_ref, c_float)
     elif topic_type == ce.tt_double:
-        return castNvalue(data_ref, c_double)
+        return cast_nvalue(data_ref, c_double)
     elif topic_type == ce.tt_uint64:
-        return castNvalue(data_ref, c_uint64)
+        return cast_nvalue(data_ref, c_uint64)
     elif topic_type == ce.tt_int64:
-        return castNvalue(data_ref, c_int64)
+        return cast_nvalue(data_ref, c_int64)
     elif topic_type == ce.tt_uint32:
-        return castNvalue(data_ref, c_uint32)
+        return cast_nvalue(data_ref, c_uint32)
     elif topic_type == ce.tt_int32:
-        return castNvalue(data_ref, c_int32)
+        return cast_nvalue(data_ref, c_int32)
     elif topic_type == ce.tt_uint16:
-        return castNvalue(data_ref, c_uint16)
+        return cast_nvalue(data_ref, c_uint16)
     elif topic_type == ce.tt_int16:
-        return castNvalue(data_ref, c_int16)
+        return cast_nvalue(data_ref, c_int16)
     elif topic_type == ce.tt_uint8:
-        return castNvalue(data_ref, c_uint8)
+        return cast_nvalue(data_ref, c_uint8)
     elif topic_type == ce.tt_int8:
-        return castNvalue(data_ref, c_int8)
+        return cast_nvalue(data_ref, c_int8)
     elif topic_type == ce.tt_string:
         return pstr(cast(data_ref, c_char_p).value)
     elif topic_type == ce.tt_struct:
@@ -83,7 +81,7 @@ class TopicHandle:
         self.path = path
         self.td = c_int(0)
         self.type = ce.tt_none
-        self.data_ref = pointer(c_int(20)) # FIXME
+        self.data_ref = pointer(c_int(20))  # FIXME
         self.connected = False
 
     def connect(self):
@@ -118,7 +116,7 @@ class Topic:
         self.type = topic.contents.type
         self.data_ref = topic.contents.data
         self.children: List[Topic] = []
-        self.parent: Topic = None
+        self.parent: Topic | None = None
 
     def find(self, path: Union[str, List[str]]):
         if isinstance(path, str):
@@ -181,7 +179,7 @@ class Topic:
             # if t.next_sibling is not None:
             #     print_node(t.next_sibling, indent)
             for t in t.children:
-                print_node(t, indent+1)
+                print_node(t, indent + 1)
 
         print_node(self, indent=indent)
 
@@ -270,12 +268,12 @@ class EQRB_SDTL:
         self.repl_map_size = 1024
 
     def start(self):
-
         rv = ce.eqrb_sdtl_client_connect(cstr(self.sdtl_service_name),
                                          self.c_ch1,
                                          self.c_ch2,
                                          self.c_replicate_to_path,
-                                         self.repl_map_size
+                                         self.repl_map_size,
+                                         0
                                          )
 
         if rv != 0:
@@ -302,23 +300,42 @@ class SDTLchannel:
         self.name = name
         self.id = ch_id
         self.type = ch_type
+        self.service = None
+
+        self.cfg = ce.sdtl_channel_cfg_t()
+        self.cfg.name = cstr(self.name)
+        self.cfg.id = self.id
+        self.cfg.mtu_override = 0
+        self.cfg.type = ce.SDTL_CHANNEL_RELIABLE if self.type == SDTLchannelType.rel else ce.SDTL_CHANNEL_UNRELIABLE
+
+        self.ch_descr = None
 
     def register(self, service):
-        cfg = ce.sdtl_channel_cfg_t()
-        cfg.name = cstr(self.name)
-        cfg.id = self.id
-        cfg.mtu_override = 0
-        cfg.type = ce.SDTL_CHANNEL_RELIABLE if self.type == SDTLchannelType.rel else ce.SDTL_CHANNEL_UNRELIABLE
+        self.service = service
 
-        rv = ce.sdtl_channel_create(service, byref(cfg))
+        rv = ce.sdtl_channel_create(self.service, byref(self.cfg))
         if rv != 0:
             raise SDTLexception(f'sdtl_channel_create failed', rv)
 
+    def open(self):
+        if self.ch_descr:
+            raise SDTLexception(f'Already open', 0)
+
+        self.ch_descr = POINTER(ce.sdtl_channel_handle_t)()
+
+        rv = ce.sdtl_channel_open(self.service, self.cfg.name, byref(self.ch_descr))
+        if rv != 0:
+            raise SDTLexception(f'sdtl_channel_open failed', rv)
+
+    def send(self, data, lng):
+        rv = ce.sdtl_channel_send_data(self.ch_descr, data, lng)
+        if rv != 0:
+            raise SDTLexception(f'sdtl_channel_send_data failed', rv)
+
 
 class SDTLserialService:
-
     def __init__(self, *, service_name: str, device_path: str,
-                 mtu: int, baudrate: int, channels: List[SDTLchannel],):
+                 mtu: int, baudrate: int, channels: List[SDTLchannel], ):
         self.service_name = service_name
         self.c_service_name = cstr(service_name)  # need to be persistent pointer
         self.device_path = device_path
@@ -352,13 +369,79 @@ class SDTLserialService:
         self.stat_topics_channels_trees = {}
         for c in self.channels:
             self.stat_topics_channels_trees[c.name] = {
-                    'rx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/rx_stat'),
-                    'tx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/tx_stat')
-                }
+                'rx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/rx_stat'),
+                'tx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/tx_stat')
+            }
 
     def start(self):
         media_params = ce.sdtl_media_serial_params_t()
         media_params.baudrate = self.baudrate
+
+        rv = ce.sdtl_service_start(self.service_ref,
+                                   cstr(self.device_path),
+                                   byref(media_params)
+                                   )
+
+        if rv != 0:
+            raise SDTLexception(f'sdtl_service_start failed', rv)
+
+    def print_stat(self):
+        for c in self.stat_topics_channel_trees.keys():
+            print(c)
+            self.stat_topics_channel_trees[c].print(indent=1)
+
+    def stop(self):
+        pass
+
+class SDTLudpService:
+    def __init__(self, *, service_name: str, device_path: str,
+                 mtu: int, ip_in: str, port_in: str, ip_out: str, port_out: str, channels: List[SDTLchannel], ):
+        self.service_name = service_name
+        self.c_service_name = cstr(service_name)  # need to be persistent pointer
+        self.device_path = device_path
+        self.channels: List[SDTLchannel] = channels
+        self.mtu = mtu
+        self.ip_in = cstr(ip_in)
+        self.port_in = cstr(port_in)
+        self.ip_out = cstr(ip_out)
+        self.port_out = cstr(port_out)
+
+        self.service_bus_name = 'sdtl'
+        self.service_bus = Bus(self.service_bus_name, bus_type=ce.eswb_inter_thread, topics_num=512)
+
+        self.service_ref = POINTER(ce.sdtl_service_t)()
+
+        rv = ce.sdtl_service_init_w(byref(self.service_ref),
+                                    self.c_service_name,
+                                    cstr(self.service_bus_name),
+                                    self.mtu,
+                                    8,  # max ch num
+                                    cstr('udp')
+                                    )
+        if rv != 0:
+            raise SDTLexception(f'sdtl_service_init failed', rv)
+
+        for c in self.channels:
+            c.register(self.service_ref)
+
+        self.service_bus.update_tree()
+
+        service_root_path = f'{self.service_bus_name}/{service_name}'
+
+        self.stat_topics_service_tree = self.service_bus.topic_tree.find(f'{service_root_path}/rx_stat')
+        self.stat_topics_channels_trees = {}
+        for c in self.channels:
+            self.stat_topics_channels_trees[c.name] = {
+                'rx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/rx_stat'),
+                'tx': self.service_bus.topic_tree.find(f'{service_root_path}/{c.name}/tx_stat')
+            }
+
+    def start(self):
+        media_params = ce.sdtl_media_udp_params_t()
+        media_params.ip_in = self.ip_in
+        media_params.port_in = self.port_in
+        media_params.ip_out = self.ip_out
+        media_params.port_out = self.port_out
 
         rv = ce.sdtl_service_start(self.service_ref,
                                    cstr(self.device_path),
@@ -472,4 +555,3 @@ def main(command_line=None):
 
 if __name__ == "__main__":
     main()
-

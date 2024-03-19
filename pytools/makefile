@@ -24,3 +24,12 @@ clean:
 
 update_wrappers: clean $(TARGET)
 	@echo Done!
+
+streamer:
+	sanic app_streamer.app --dev
+
+demo:
+	python3 app_demo.py
+
+graph:
+	python3 app_graph.py

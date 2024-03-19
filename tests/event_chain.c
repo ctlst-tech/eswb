@@ -504,7 +504,7 @@ int fifo_src_init_handler(struct test_thread_param *p) {
     TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 10);
     struct fifo_src fifo_elem;
     topic_proclaiming_tree_t *fifo_root = usr_topic_set_fifo(cntx, "event_queue", 10); // TODO confusing name, same as integrated service name
-    topic_proclaiming_tree_t *elem_root = usr_topic_add_child(cntx, fifo_root, "event", tt_struct, 0, sizeof(fifo_elem), TOPIC_FLAG_MAPPED_TO_PARENT);
+    topic_proclaiming_tree_t *elem_root = usr_topic_add_child(cntx, fifo_root, "event", tt_struct, 0, sizeof(fifo_elem), TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
 
             //usr_topic_add_struct_child(cntx, fifo_root, fifo_elem, "event", tt_struct);
     usr_topic_add_struct_child(cntx, elem_root, struct fifo_src, id, "id", tt_uint32);
@@ -597,7 +597,7 @@ int funcs_sum_init_handler(struct test_thread_param *p) {
     TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 3);
 
     topic_proclaiming_tree_t *fifo_root = usr_topic_set_fifo(cntx, "funcs_sum_msg", 10);
-    usr_topic_add_child(cntx, fifo_root, "msg", tt_string, 0, 100, TOPIC_FLAG_MAPPED_TO_PARENT);
+    usr_topic_add_child(cntx, fifo_root, "msg", tt_string, 0, 100, TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
 
     rv = eswb_proclaim_tree_by_path("itb:/conversions", fifo_root, cntx->t_num, &p->out_d);
     if (rv != eswb_e_ok) {

@@ -162,7 +162,7 @@ void replication_test(EqrbTestAgent::Basic &server, EqrbTestAgent::Basic &client
         TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 3);
 
         topic_proclaiming_tree_t *fifo_root = usr_topic_set_fifo(cntx, "fifo", 10);
-        usr_topic_add_child(cntx, fifo_root, "cnt", tt_uint32, 0, 4, TOPIC_FLAG_MAPPED_TO_PARENT);
+        usr_topic_add_child(cntx, fifo_root, "cnt", tt_uint32, 0, 4, TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
 
         rv = eswb_event_queue_order_topic(src_bus_td, src_bus.c_str(), 1 );
         thread_safe_failure_assert(rv == eswb_e_ok, "eswb_event_queue_order_topic");
@@ -257,7 +257,7 @@ public:
             TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, 3);
 
             topic_proclaiming_tree_t *fifo_root = usr_topic_set_fifo(cntx, "fifo", 10);
-            usr_topic_add_child(cntx, fifo_root, "cnt", tt_uint32, 0, 4, TOPIC_FLAG_MAPPED_TO_PARENT);
+            usr_topic_add_child(cntx, fifo_root, "cnt", tt_uint32, 0, 4, TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
 
             rv = eswb_event_queue_order_topic(src_bus_td, src_bus.c_str(), 16 );
             thread_safe_failure_assert(rv == eswb_e_ok, "eswb_event_queue_order_topic");
@@ -490,7 +490,7 @@ public:
     void start() {
         sdtl_start();
         eqrb_rv_t rv = eqrb_sdtl_client_connect(service_name.c_str(), EQRB_SDTL_TEST_CHANEL_REL, EQRB_SDTL_TEST_CHANEL_UNREL,
-                                                replicate_to_path.c_str(), 100);
+                                                replicate_to_path.c_str(), 100, 0);
         REQUIRE(rv == eqrb_rv_ok);
     }
 

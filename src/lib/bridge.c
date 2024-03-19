@@ -30,6 +30,8 @@ eswb_rv_t eswb_bridge_create(const char *name, eswb_size_t max_tds, eswb_bridge_
         return eswb_e_mem_data_na;
     }
 
+    br->type = bridge_default;
+
     strncpy(br->name, name, BRIDGE_NAME_MAX);
 
     *rv = br;
@@ -42,6 +44,11 @@ eswb_rv_t
 eswb_bridge_add_topic(eswb_bridge_t *b, eswb_topic_descr_t mnt_td, const char *src_path, const char *dest_name) {
     if (b->buffer2post != NULL) {
         return eswb_e_topic_exist; // TODO change error code;
+    }
+
+    if (b->tds_num >= 1 && b->type == bridge_vector) {
+        // only one vector per bridge is allowed
+        return eswb_e_bridge_vector;
     }
 
     if (b->tds_num >= b->max_tds) {
@@ -59,11 +66,18 @@ eswb_bridge_add_topic(eswb_bridge_t *b, eswb_topic_descr_t mnt_td, const char *s
         eswb_get_topic_params(b->topics[b->tds_num].td, &tp);
         b->topics[b->tds_num].size = tp.size;
         b->topics[b->tds_num].type = tp.type;
-
         b->buffer2post_size += tp.size;
 
         if (dest_name == NULL) {
             dest_name = tp.name;
+        }
+
+        if (tp.type == tt_vector) {
+            if (b->tds_num > 0) {
+                // only one vector per bridge is allowed
+                return eswb_e_bridge_vector;
+            }
+            b->type = bridge_vector;
         }
 
         strncpy(b->topics[b->tds_num].dest_name, dest_name, ESWB_TOPIC_NAME_MAX_LEN);
@@ -126,10 +140,10 @@ static eswb_rv_t add_nested_children_to_proclaiming_array(eswb_topic_descr_t fro
         rv = eswb_get_next_topic_info(from_td, &next2tid, &topic_info);
         if (rv == eswb_e_ok) {
             topic_proclaiming_tree_t *topic = usr_topic_add_child(to_cntx, to_root,
-                                            topic_info.info.name,
-                                            topic_info.info.type,
-                                            topic_info.info.data_offset,
-                                            topic_info.info.data_size, TOPIC_FLAG_MAPPED_TO_PARENT);
+                                                                  topic_info.info.name,
+                                                                  topic_info.info.type,
+                                                                  topic_info.info.data_offset,
+                                                                  topic_info.info.data_size, TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
             if (topic == NULL) {
                 return eswb_e_invargs;
             }
@@ -158,7 +172,9 @@ eswb_rv_t eswb_bridge_connect(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const
 
     TOPIC_TREE_CONTEXT_LOCAL_DEFINE(cntx, topics_num + 1);
 
-    if (b->tds_num > 1) {
+    int as_structure = b->tds_num > 1;
+
+    if (as_structure) {
         // several topics in bridge will deliver structure
         root = usr_topic_set_root(cntx, b->name, tt_struct, b->buffer2post_size);
 
@@ -171,8 +187,8 @@ eswb_rv_t eswb_bridge_connect(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const
             topic_proclaiming_tree_t *sub_topic;
 
             sub_topic = usr_topic_add_child(cntx, root,
-                                ts->dest_name,
-                                ts->type, offset, ts->size, TOPIC_FLAG_MAPPED_TO_PARENT);
+                                            ts->dest_name,
+                                            ts->type, offset, ts->size, TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
             if (ts->type == tt_struct) {
                 rv = add_nested_children_to_proclaiming_array(ts->td, cntx, sub_topic);
                 if (rv != eswb_e_ok) {
@@ -194,8 +210,8 @@ eswb_rv_t eswb_bridge_connect(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const
         }
 
         root = usr_topic_set_root(cntx, mtd_td == 0 ? topic_name : b->topics[0].dest_name,
-                                                          b->topics[0].type, b->topics[0].size);
-        if (b->topics[0].type == tt_struct) {
+                                  b->topics[0].type, b->topics[0].size);
+        if (b->topics[0].type == tt_struct || b->topics[0].type == tt_vector) {
             rv = add_nested_children_to_proclaiming_array(b->topics[0].td, cntx, root);
             if (rv != eswb_e_ok) {
                 return rv;
@@ -208,6 +224,27 @@ eswb_rv_t eswb_bridge_connect(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const
     } else {
         rv = eswb_proclaim_tree(mtd_td, root, cntx->t_num, &b->dest_td);
     }
+
+    if (rv == eswb_e_topic_exist) {
+        if (!as_structure) {
+            if (mtd_td != 0) {
+                rv = eswb_connect_nested(mtd_td, root->name, &b->dest_td);
+            } else {
+                strcpy(topic_path, dest_mnt);
+                strcat(topic_path, "/");
+                strcat(topic_path, root->name);
+                rv = eswb_connect(dest_mnt, &b->dest_td);
+            }
+            if (rv != eswb_e_ok) {
+                return rv;
+            }
+            rv = eswb_check_topic_type(b->dest_td, b->topics[0].type, b->topics[0].size);
+            if (rv != eswb_e_ok) {
+                return rv;
+            }
+        }
+    }
+
 
     return rv;
 }
@@ -229,7 +266,23 @@ eswb_rv_t eswb_bridge_update(eswb_bridge_t *b) {
         return eswb_e_invargs;
     }
 
-    eswb_bridge_read(b, b->buffer2post);
+    eswb_rv_t rv;
 
-    return eswb_update_topic(b->dest_td, b->buffer2post);
+    switch (b->type) {
+        default:
+        case bridge_default:
+            eswb_bridge_read(b, b->buffer2post);
+            return eswb_update_topic(b->dest_td, b->buffer2post);
+
+        case bridge_vector:
+            //  b->buffer2post_size is in bytes for a len arg, while vector may have other type,
+            //  but this humber must be larger than array size
+            ;eswb_index_t vs = 0;
+            rv = eswb_vector_read_check_update(b->topics[0].td, 0, b->buffer2post, b->buffer2post_size, &vs);
+            if (rv == eswb_e_ok) {
+                return eswb_vector_write(b->dest_td, 0, b->buffer2post, vs, ESWB_VECTOR_WRITE_OPT_FLAG_DEFINE_END);
+            } else {
+                return eswb_e_ok;
+            }
+    }
 }

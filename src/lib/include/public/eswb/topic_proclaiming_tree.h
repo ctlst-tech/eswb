@@ -15,9 +15,8 @@
 #include "eswb/types.h"
 
 
-#define TOPIC_FLAG_MAPPED_TO_PARENT (1UL << 0UL)
-#define TOPIC_FLAG_USES_PARENT_SYNC    (1UL << 1UL)
-//#define TOPIC_USER_PARENT_IS_FIFO (1UL << 0UL)
+#define TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT (1UL << 0UL)
+#define TOPIC_PROCLAIMING_FLAG_USES_PARENT_SYNC (1UL << 1UL)
 
 #define PR_TREE_NAME (ESWB_TOPIC_NAME_MAX_LEN+1)
 
@@ -43,7 +42,7 @@ typedef struct __attribute__((packed)) {
     int16_t            next_sibling_ind;
 } topic_proclaiming_tree_t;
 
-typedef struct topic_extract {
+typedef struct __attribute__((packed)) topic_extract {
     topic_proclaiming_tree_t info;
     eswb_topic_id_t          parent_id;
 } topic_extract_t;
@@ -88,6 +87,10 @@ topic_proclaiming_tree_t *usr_topic_add_child(topic_tree_context_t *context, top
                             tt_fifo,                        \
                             __fifo_size)
 
+
+topic_proclaiming_tree_t *usr_topic_set_vector(topic_tree_context_t *context, const char *name, size_t vector_max_len,
+                                               topic_data_type_t elem_type, eswb_size_t elem_size);
+
 #define OFFSETOF(__type, __member) ((size_t)&(((__type *)(void*)0)->__member) )
 #define SIZEOFMEMBER(__type, __member) (sizeof(((__type *)(void*)0)->__member))
 
@@ -97,7 +100,7 @@ topic_proclaiming_tree_t *usr_topic_add_child(topic_tree_context_t *context, top
                             __type,                                   \
                             OFFSETOF(__struct_type, __struct_var),                                    \
                             SIZEOFMEMBER(__struct_type, __struct_var),                                \
-                            TOPIC_FLAG_MAPPED_TO_PARENT)
+                            TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT)
 
 void print_topics_tree(topic_proclaiming_tree_t *current);
 

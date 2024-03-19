@@ -8,7 +8,7 @@
 static eswb_rv_t check_topic_naming(const char* name) {
     char nn[ESWB_TOPIC_NAME_MAX_LEN];
 
-    int rv = sscanf(name, "%[a-zA-Z0-9_-.]", nn);
+    int rv = sscanf(name, "%[.a-zA-Z0-9_]", nn);
 
     if (rv < 1) {
         return eswb_e_inv_naming;
@@ -103,6 +103,21 @@ topic_proclaiming_tree_t *usr_topic_add_child(topic_tree_context_t *context, top
     return added_topic;
 }
 
+topic_proclaiming_tree_t *usr_topic_set_vector(topic_tree_context_t *context, const char *name, size_t vector_max_len, topic_data_type_t elem_type, eswb_size_t elem_size) {
+    topic_proclaiming_tree_t *vector_root = usr_topic_set_root(context, name, tt_vector, vector_max_len);
+    if (vector_root == NULL) {
+        return NULL;
+    }
+
+    topic_proclaiming_tree_t *ch = usr_topic_add_child(context, vector_root, "_", elem_type, 0, elem_size, TOPIC_PROCLAIMING_FLAG_MAPPED_TO_PARENT);
+    if (ch == NULL) {
+        return NULL;
+    }
+
+    return vector_root;
+}
+
+
 /*
 eswb_rv_t usr_topic_add_child_to_last(topic_tree_context_t *context, const char *name) {
     //topic_structure_t *last_added;
@@ -147,6 +162,8 @@ const char *eswb_type_name(topic_data_type_t t) {
         case tt_string: return "string";
         case tt_struct: return "struct";
         case tt_fifo: return "fifo";
+        case tt_dir: return "dir";
+        case tt_vector: return "vector";
         default: return "unknown";
     }
 }

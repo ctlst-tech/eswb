@@ -706,7 +706,7 @@ static sdtl_rv_t channel_send_cmd(sdtl_channel_handle_t *chh, uint8_t cmd_code) 
 
     sdtl_seq_code_t seq_code = generate_seq_code(chh->tx_cmd_seq_num);
 
-    sdtl_dbg_msg("================= call ================= (cmd == 0x%02)", cmd_code);
+    sdtl_dbg_msg("================= call ================= (cmd == 0x%02X)", cmd_code);
 
     sdtl_ack_sub_header_t ack_sh;
     do {
@@ -1451,6 +1451,8 @@ const sdtl_service_media_t *sdtl_lookup_media(const char *mtype) {
 
     if (strcmp(mtype, "serial") == 0) {
         return &sdtl_media_serial;
+    } else if (strcmp(mtype, "udp") == 0) {
+        return &sdtl_media_udp;
     }
 
     return NULL;

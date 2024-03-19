@@ -1,136 +1,14 @@
 #include <string.h>
 #include <stdio.h>
-#include <ctype.h>
 
 #include "domain_switching.h"
 #include "local_buses.h"
 
-#define BUS_TYPE_MAX_LEN 10
+#include "public/eswb/api.h"
 
-
-static eswb_type_t bus_type(const char *bus_acr) {
-    if (strcmp(bus_acr, "nsb") == 0) return eswb_non_synced;
-    else if (strcmp(bus_acr, "itb") == 0) return eswb_inter_thread;
-    else if (strcmp(bus_acr, "ipb") == 0) return eswb_inter_process;
-    else return eswb_not_defined;
-}
-
-static eswb_rv_t normalize_path(const char *p, char *n) {
-    int got_slash = 0;
-    int cnt = ESWB_TOPIC_MAX_PATH_LEN;
-
-    while ((*p != 0) && (cnt > 0)) {
-        if (*p == '/') {
-            if (!got_slash) {
-                got_slash = -1;
-            } else {
-                p++;
-                continue;
-            }
-        } else {
-            got_slash = 0;
-        }
-
-        *n++ = *p++;
-        cnt--;
-    }
-
-    *n = 0;
-
-    if (cnt <= 0) {
-        return eswb_e_path_too_long;
-    }
-
-    return eswb_e_ok;
-}
-
-static int check_path (const char *p) {
-    int has_colon = 0;
-    int got_first_slash = 0;
-
-    if (!isalnum(p[0]) && (p[0] != '/')) {
-        return 1;
-    }
-
-    do {
-        switch (*p) {
-            case '.':
-            case '_':
-                break;
-
-            case '/':
-                got_first_slash = -1;
-                break;
-
-            case ':':
-                if (got_first_slash) {
-                    return 1;
-                }
-                if (has_colon) {
-                    return 1;
-                } else {
-                    has_colon = 1;
-                }
-                break;
-
-            default:
-                if (!isalnum(*p)) {
-                    return 1;
-                }
-        }
-        p++;
-    } while (*p != 0);
-
-    return 0;
-}
-
-static eswb_rv_t parse_path(const char *connection_point, eswb_type_t *t, char *bus_name, char *local_path) {
-    eswb_type_t bt;
-    char norm_cp[ESWB_TOPIC_MAX_PATH_LEN + 1];
-
-    eswb_rv_t rv = normalize_path(connection_point, norm_cp);
-    if (rv != eswb_e_ok) {
-        return rv;
-    }
-
-    if (check_path(norm_cp)) {
-        return eswb_e_inv_naming;
-    }
-
-    char *c = strstr(norm_cp, ":/");
-    char *bus_name_p;
-    if (c != NULL) {
-        *c = 0;
-        bt = bus_type(norm_cp);
-        if (bt == eswb_not_defined) {
-            return eswb_e_inv_bus_spec;
-        }
-        bus_name_p = &c[2];
-    } else {
-        bt = eswb_not_defined;
-        bus_name_p = norm_cp;
-    }
-
-    if (local_path != NULL) {
-        strcpy(local_path, bus_name_p);
-    }
-
-    if (bus_name != NULL) {
-        c = strchr(bus_name_p, '/');
-        size_t l = c != NULL ? c - bus_name_p : strlen(bus_name_p);
-        strncpy(bus_name, bus_name_p, l);
-        bus_name[l] = 0;
-    }
-
-    if (t != NULL) {
-        *t = bt;
-    }
-
-    return eswb_e_ok;
-}
 
 eswb_rv_t eswb_parse_path_test_handler(const char *connection_point, eswb_type_t *t, char *bus_name, char *local_path) {
-    return parse_path(connection_point, t, bus_name, local_path);
+    return eswb_parse_path(connection_point, t, bus_name, local_path);
 }
 
 eswb_rv_t eswb_lookup_in_domain(const char *bus_name, eswb_type_t type, eswb_bus_handle_t **b) {
@@ -162,7 +40,7 @@ bus_lookup(const char *connection_point, eswb_bus_handle_t **bh, eswb_type_t *bu
     eswb_type_t e_bus_type;
     char bus_name[ESWB_BUS_NAME_MAX_LEN + 1];
 
-    eswb_rv_t rv = parse_path(connection_point, &e_bus_type, bus_name, local_path);
+    eswb_rv_t rv = eswb_parse_path(connection_point, &e_bus_type, bus_name, local_path);
     if (rv != eswb_e_ok) {
         return rv;
     }
@@ -267,12 +145,12 @@ eswb_rv_t ds_disconnect(eswb_topic_descr_t td) {
 }
 
 
-eswb_rv_t ds_update(eswb_topic_descr_t td, eswb_update_t ut, void *data, eswb_size_t elem_num) {
+eswb_rv_t ds_update(eswb_topic_descr_t td, eswb_update_t ut, void *data, array_alter_t *array_params) {
     SWITCH_FLOW_TO_DOMAIN(td,
                           local_do_update,
                           not_supported_stub,
 
-                          ut, data, elem_num);
+                          ut, data, array_params);
 }
 
 eswb_rv_t ds_read (eswb_topic_descr_t td, void *data) {
@@ -283,12 +161,34 @@ eswb_rv_t ds_read (eswb_topic_descr_t td, void *data) {
                           data);
 }
 
-eswb_rv_t ds_get_update (eswb_topic_descr_t td, void *data) {
+eswb_rv_t ds_get_update(eswb_topic_descr_t td, void *data) {
     SWITCH_FLOW_TO_DOMAIN(td,
                           local_get_update,
                           not_supported_stub,
 
                           data);
+}
+
+eswb_rv_t ds_try_get_update(eswb_topic_descr_t td, void *data) {
+    SWITCH_FLOW_TO_DOMAIN(td,
+                          local_try_get_update,
+                          not_supported_stub,
+
+                          data);
+}
+
+
+eswb_rv_t ds_vector_read(eswb_topic_descr_t td, void *data, eswb_index_t pos, eswb_index_t num, eswb_index_t *num_rv, int do_wait,
+               int check_update) {
+    SWITCH_FLOW_TO_DOMAIN(td,
+                          local_vector_read,
+                          not_supported_stub,
+                          data,
+                          pos,
+                          num,
+                          num_rv,
+                          do_wait,
+                          check_update);
 }
 
 
