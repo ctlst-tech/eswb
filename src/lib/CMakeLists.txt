@@ -79,15 +79,21 @@ target_include_directories(eswb-sdtl-static PRIVATE include)
 
 target_link_libraries(eswb-sdtl-static PRIVATE eswb-static)
 
+message(STATUS "ESWB_EQRB_NO_SOCKET: ${ESWB_EQRB_NO_SOCKET}")
 if (ESWB_EQRB_NO_SOCKET)
+    message(STATUS "Defining ESWB_NO_SOCKET for eswb-eqrb-static")
     target_compile_definitions(eswb-eqrb-static PUBLIC ESWB_NO_SOCKET=1)
 endif()
 
+message(STATUS "ESWB_EQRB_NO_SERIAL: ${ESWB_EQRB_NO_SERIAL}")
 if (ESWB_EQRB_NO_SERIAL)
+    message(STATUS "Defining ESWB_NO_SERIAL for eswb-eqrb-static")
     target_compile_definitions(eswb-eqrb-static PUBLIC ESWB_NO_SERIAL=1)
 endif()
 
+message(STATUS "ESWB_SDTL_NO_SOCKET: ${ESWB_SDTL_NO_SOCKET}")
 if (ESWB_SDTL_NO_SOCKET)
+    message(STATUS "Defining ESWB_NO_SOCKET for eswb-sdtl-static")
     target_compile_definitions(eswb-sdtl-static PUBLIC ESWB_NO_SOCKET=1)
 endif()
 
