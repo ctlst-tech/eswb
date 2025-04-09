@@ -69,7 +69,7 @@ eqrb_rv_t eqrb_drv_file_connect(void *param, device_descr_t *dh) {
         do {
             snprintf(file_name, EQRB_FILE_MAX_NAME_LEN, "%s/%s_%d.eqrb", p->dir,
                      p->file_prefix, file_num);
-#ifdef PLATFORM_SITL
+#ifdef USE_OPEN_CREATE_WITH_PERMISSIONS
             fd = open(file_name, O_RDWR | O_CREAT | O_EXCL, S_IRUSR | S_IWUSR | S_IRGRP | S_IROTH);
 #else
             fd = open(file_name, O_RDWR | O_CREAT | O_EXCL);
