@@ -222,5 +222,5 @@ class EswbMonitor(Monitor):
     def get_small_widget(self):
         return SdtlTelemetrySmallWidget(sdtl_ref=self.sdtl_service)
 
-    def add_widget(self, w):
-        self.app_window.add_ew(w)
+    # def add_widget(self, w):
+    #     self.app_window.add_ew(w)
