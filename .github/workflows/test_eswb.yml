@@ -45,5 +45,8 @@ jobs:
           cd ..
           make all
       
+      - name: List build directory contents
+        run: ls -R ./build
+      
       - name: Run eswb_test_basic
         run: ./build/eswb_test_basic
