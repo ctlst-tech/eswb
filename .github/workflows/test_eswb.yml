@@ -40,7 +40,7 @@ jobs:
           git clone https://github.com/catchorg/Catch2.git
           cd Catch2
           git checkout v3.4.0
-          cmake -Bbuild -H. -DBUILD_TESTING=ON
+          cmake -Bbuild -H. -DBUILD_TESTING=ON -DESWB_TEST=YES
           sudo cmake --build build/ --target install
           cd ..
           make all
