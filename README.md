@@ -1,6 +1,7 @@
 # ESWB - Embedded Software Bus
 
 [![Build ESWB](https://github.com/ctlst-tech/eswb/actions/workflows/build_eswb.yml/badge.svg)](https://github.com/ctlst-tech/eswb/actions/workflows/build_eswb.yml)
+[![Test ESWB](https://github.com/ctlst-tech/eswb/actions/workflows/test_eswb.yml/badge.svg)](https://github.com/ctlst-tech/eswb/actions/workflows/test_eswb.yml)
 
 ESWB is a portable pub/sub middleware that creates a uniform way of functions to communicate between each other: 
 inside thread, between threads, between processes. ESWB is designed to be the major and the only candidate to do inter process 

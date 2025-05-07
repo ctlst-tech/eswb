@@ -41,9 +41,10 @@ jobs:
           cd Catch2
           git checkout v3.4.0
           cmake -Bbuild -H. -DBUILD_TESTING=ON
-          sudo cmake --build build/ --target install -DESWB_TEST=YES
+          sudo cmake --build build/ --target install
           cd ..
-          make all
+          cmake -Bbuild -H. -DESWB_TEST=YES
+          sudo cmake --build build/ --target install
       
       - name: List build directory contents
         run: ls -R ./build
