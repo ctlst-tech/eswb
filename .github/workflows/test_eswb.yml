@@ -1,0 +1,47 @@
+name: Build ESWB
+
+on:
+  push:
+    branches:
+      - '*'
+  pull_request:
+    branches:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      
+      - name: Set Up Python 3.10
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+      
+      - name: Install Build Tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            cmake \
+            build-essential \
+            git
+
+      - name: Install Python Dependencies
+        run: |
+          python3 -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Build and install ESWB
+        run: |
+          git clone https://github.com/catchorg/Catch2.git
+          cd Catch2
+          git checkout v3.4.0
+          cmake -Bbuild -H. -DBUILD_TESTING=ON
+          sudo cmake --build build/ --target install
+      
+      - name: Run eswb_test_basic
+        run: ./build/eswb_test_basic
