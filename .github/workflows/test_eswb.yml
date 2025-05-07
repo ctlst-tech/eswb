@@ -1,4 +1,4 @@
-name: Build ESWB
+name: Test ESWB
 
 on:
   push:
@@ -42,6 +42,8 @@ jobs:
           git checkout v3.4.0
           cmake -Bbuild -H. -DBUILD_TESTING=ON
           sudo cmake --build build/ --target install
+          cd ..
+          make all
       
       - name: Run eswb_test_basic
         run: ./build/eswb_test_basic

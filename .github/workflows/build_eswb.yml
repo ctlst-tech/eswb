@@ -42,3 +42,5 @@ jobs:
           git checkout v3.4.0
           cmake -Bbuild -H. -DBUILD_TESTING=ON
           sudo cmake --build build/ --target install
+          cd ..
+          make all
