@@ -6,7 +6,8 @@
 
 
 registry_t *alloc_registry(eswb_size_t topics_num) {
-    eswb_size_t alloc_size = sizeof(topic_t) * topics_num + sizeof(registry_t);
+    eswb_size_t ts = sizeof(topic_t);
+    eswb_size_t alloc_size = ts * topics_num + sizeof(registry_t);
 
     registry_t *nr = calloc(1, alloc_size);
     // TODO issues with struct allocation in array?
