@@ -573,6 +573,20 @@ int parent_has_child(topic_t *parent, topic_t *child) {
     return 0;
 }
 
+void fill_topic_extract(topic_extract_t *extract, topic_t *t) {
+    strncpy(extract->info.name, t->name, PR_TREE_NAME_ALIGNED - 1);
+    extract->parent_id = t->parent != NULL ? t->parent->id : 0;
+    extract->info.type = t->type;
+    extract->info.data_size = t->data_size;
+    extract->info.data_offset = t->flags & TOPIC_FLAGS_MAPPED_TO_PARENT ? t->data - t->parent->data : 0;
+    extract->info.flags = t->flags;
+    extract->info.topic_id = t->id;
+    extract->info.abs_ind = 0;
+    extract->info.parent_ind = PR_TREE_NO_REF_IND;
+    extract->info.next_sibling_ind = PR_TREE_NO_REF_IND;
+    extract->info.first_child_ind = PR_TREE_NO_REF_IND;
+}
+
 eswb_rv_t
 reg_get_next_topic_info(registry_t *reg, topic_t *parent, eswb_topic_id_t id, topic_extract_t *extract) {
     eswb_rv_t rv = eswb_e_ok;
@@ -594,17 +608,63 @@ reg_get_next_topic_info(registry_t *reg, topic_t *parent, eswb_topic_id_t id, to
             break;
         }
 
-        strncpy(extract->info.name, t->name, PR_TREE_NAME_ALIGNED - 1);
-        extract->parent_id = t->parent != NULL ? t->parent->id : 0;
-        extract->info.type = t->type;
-        extract->info.data_size = t->data_size;
-        extract->info.data_offset = t->flags & TOPIC_FLAGS_MAPPED_TO_PARENT ? t->data - t->parent->data : 0;
-        extract->info.flags = t->flags;
-        extract->info.topic_id = t->id;
-        extract->info.abs_ind = 0;
-        extract->info.parent_ind = PR_TREE_NO_REF_IND;
-        extract->info.next_sibling_ind = PR_TREE_NO_REF_IND;
-        extract->info.first_child_ind = PR_TREE_NO_REF_IND;
+        fill_topic_extract(extract, t);
+    } while (0);
+
+    if (synced) sync_give(reg->sync);
+
+    return rv;
+}
+
+static topic_t *
+topic_get_next_child(topic_t *parent, topic_t *current) {
+    if (parent == NULL) {
+        return NULL;
+    }
+
+    // If current is NULL, return first child
+    if (current == NULL) {
+        return parent->first_child;
+    }
+
+    // Otherwise return next sibling
+    return current->next_sibling;
+}
+
+eswb_rv_t
+reg_get_next_child_topic_info(registry_t *reg, topic_t *parent, eswb_topic_id_t id, topic_extract_t *extract) {
+    eswb_rv_t rv = eswb_e_ok;
+
+    if (reg == NULL || parent == NULL || extract == NULL) {
+        return eswb_e_invargs;
+    }
+
+    int synced = REG_SYNCED(reg);
+
+    if (synced) sync_take(reg->sync);
+
+    do {
+        topic_t *current = NULL;
+
+        // If id is 0, start from the beginning
+        if (id == 0) {
+            current = topic_get_next_child(parent, NULL);
+        } else {
+            // Find the current topic and get its next sibling
+            current = &reg->topics[id];
+            if (id != current->id || current->parent != parent) {
+                rv = eswb_e_invargs;
+                break;
+            }
+            current = topic_get_next_child(parent, current);
+        }
+
+        if (current == NULL) {
+            rv = eswb_e_no_topic;
+            break;
+        }
+
+        fill_topic_extract(extract, current);
     } while (0);
 
     if (synced) sync_give(reg->sync);

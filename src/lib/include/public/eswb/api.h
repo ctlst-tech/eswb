@@ -173,6 +173,24 @@ eswb_rv_t eswb_check_topic_type(eswb_topic_descr_t td, topic_data_type_t expecte
 
 eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next2tid, struct topic_extract *info);
 
+
+
+/**
+ * Retrieve child topics information for a specified topic descriptor
+ * @param td topic descriptor of the parent topic
+ * @param next2tid pointer to the id value for the topic, preceeding the
+ * desired. At the first call value at this ref (e.g. as local variable) must be
+ * zero. After successfull return it contains the id of just retrieved topic
+ * info
+ * @param info retrieved information on success must be pointer to
+ * topic_extract_t (might be NULL, for e.g. calc of nested topics)
+ * @return
+ * eswb_e_ok on success
+ * eswb_e_no_topic when there is no next topic (retrieve sequence is ended)
+ */
+eswb_rv_t eswb_get_next_child_info(eswb_topic_descr_t td, eswb_topic_id_t *next2tid, struct topic_extract *info);
+
+    
 /**
  * Retrieve full path of the topic by its descriptor
  * @param td topic descriptor

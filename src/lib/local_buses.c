@@ -529,6 +529,13 @@ eswb_rv_t local_bus_get_next_topic_info(topic_local_index_t *li, eswb_topic_id_t
     return reg_get_next_topic_info(li->bh->registry, li->t, tid, info);
 }
 
+eswb_rv_t local_bus_get_next_child_topic_info(topic_local_index_t *li, eswb_topic_id_t tid, topic_extract_t *info) {
+    if (tid == 0) {
+        tid = li->t->id;
+    }
+    return reg_get_next_child_topic_info(li->bh->registry, li->t, tid, info);
+}
+
 eswb_rv_t local_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int size) {
     topic_local_index_t *li = &local_td_index[td]; // TODO make all consequent calls use this struct insted of creating own
     eswb_bus_handle_t *bh = li->bh;
@@ -563,6 +570,9 @@ eswb_rv_t local_ctl(eswb_topic_descr_t td, eswb_ctl_t ctl_type, void *d, int siz
 
         case eswb_ctl_get_next_proclaiming_info:
             return local_bus_get_next_topic_info(li, *((eswb_topic_id_t *) d), (topic_extract_t *) d);
+
+        case eswb_ctl_get_next_child_proclaiming_info:
+            return local_bus_get_next_child_topic_info(li, *((eswb_topic_id_t *) d), (topic_extract_t *) d);
 
         case eswb_ctl_fifo_flush:
             return local_fifo_flush(li);

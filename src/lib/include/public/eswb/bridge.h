@@ -55,6 +55,18 @@ eswb_rv_t eswb_bridge_create(const char *name, eswb_size_t max_tds, eswb_bridge_
  */
 eswb_rv_t
 eswb_bridge_add_topic(eswb_bridge_t *b, eswb_topic_descr_t mnt_td, const char *src_path, const char *dest_name);
+
+
+/**
+ * Creates a bridge from a directory containing topic configuration
+ * @param name The name for the new bridge
+ * @param dir_path Path to the directory containing topic configuration
+ * @param rv Pointer to store the created bridge handle
+ * @return eswb_e_ok on success, error code otherwise
+ */
+eswb_rv_t eswb_bridge_create_from_directory(const char *name, const char *dir_path, eswb_bridge_t **new_bridge);
+
+    
 eswb_rv_t eswb_bridge_connect(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const char *dest_mnt);
 eswb_rv_t eswb_bridge_read(eswb_bridge_t *b, void *data);
 eswb_rv_t eswb_bridge_update(eswb_bridge_t *b);

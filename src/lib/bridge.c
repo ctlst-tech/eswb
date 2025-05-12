@@ -88,6 +88,118 @@ eswb_bridge_add_topic(eswb_bridge_t *b, eswb_topic_descr_t mnt_td, const char *s
     return rv;
 }
 
+
+int topic_type_is_supported_by_bridge(topic_data_type_t tt) {
+    switch (tt) {
+        // Scalar types
+        case tt_uint8:
+        case tt_int8:
+        case tt_uint16:
+        case tt_int16:
+        case tt_uint32:
+        case tt_int32:
+        case tt_uint64:
+        case tt_int64:
+        case tt_float:
+        case tt_double:
+            return 1;
+
+        // Data types
+        case tt_string:
+        case tt_plain_data:
+        case tt_byte_buffer:
+            return 1;
+
+        // Structures and arrays
+        case tt_struct:
+        case tt_vector:
+            return 1;
+
+        // Special types
+        case tt_event_queue:
+            return 0;
+
+        // Non-supported types
+        case tt_bitfield:
+        case tt_dir:
+        case tt_fifo:
+            return 0;
+
+        default:
+            return 0;
+    }
+}
+
+eswb_rv_t eswb_bridge_create_from_directory(const char *name,
+                                            const char *dir_path,
+                                            eswb_bridge_t **new_bridge) {
+    eswb_topic_descr_t dir_td;
+    eswb_rv_t rv;
+
+    // Connect to directory first
+    rv = eswb_connect(dir_path, &dir_td);
+    if (rv != eswb_e_ok) {
+        return rv;
+    }
+
+    // First pass - count scalar topics
+    eswb_topic_id_t next_tid = 0;
+    struct topic_extract info;
+    size_t scalar_topics_count = 0;
+
+    while ((rv = eswb_get_next_child_info(dir_td, &next_tid, &info)) == eswb_e_ok) {
+        // Check if topic is scalar (not a directory, vector, or fifo)
+        if (topic_type_is_supported_by_bridge(info.info.type)) {
+            scalar_topics_count++;
+        }
+    }
+
+    if (scalar_topics_count == 0) {
+        eswb_disconnect(dir_td);
+        return eswb_e_no_topic;
+    }
+
+    // Create bridge with counted topics
+    eswb_bridge_t *bridge;
+    rv = eswb_bridge_create(name, scalar_topics_count, &bridge);
+    if (rv != eswb_e_ok) {
+        eswb_disconnect(dir_td);
+        return rv;
+    }
+
+    // char topic_path[ESWB_TOPIC_MAX_PATH_LEN + 1];
+    // strncpy(topic_path, dir_path, ESWB_TOPIC_MAX_PATH_LEN);
+    // strcat(topic_path, "/");
+
+    // size_t base_path_len = strlen(topic_path);
+
+    // Second pass - add topics to bridge
+    next_tid = 0;
+    while ((rv = eswb_get_next_child_info(dir_td, &next_tid, &info)) ==
+           eswb_e_ok) {
+        if (topic_type_is_supported_by_bridge(info.info.type)) {
+
+            // strncpy(topic_path + base_path_len, info.info.name,
+            //         ESWB_TOPIC_MAX_PATH_LEN - base_path_len);
+
+            // Add topic to bridge using original name
+            rv = eswb_bridge_add_topic(bridge, dir_td, info.info.name, NULL);
+            if (rv != eswb_e_ok) {
+                // Cleanup on error
+                // TODO: implement bridge cleanup/deletion
+                eswb_disconnect(dir_td);
+                return rv;
+            }
+        }
+    }
+
+    eswb_disconnect(dir_td);
+    *new_bridge = bridge;
+
+    return eswb_e_ok;
+}
+
+
 static eswb_rv_t calc_nested_topics(eswb_topic_descr_t td, uint32_t *num_rv) {
     eswb_topic_id_t next2tid = 0;
     eswb_rv_t rv;
@@ -230,7 +342,7 @@ eswb_rv_t eswb_bridge_connect(eswb_bridge_t *b, eswb_topic_descr_t mtd_td, const
             if (mtd_td != 0) {
                 rv = eswb_connect_nested(mtd_td, root->name, &b->dest_td);
             } else {
-                strcpy(topic_path, dest_mnt);
+                // strcpy(topic_path, dest_mnt);  dest_mnt is already pointed to topic path
                 strcat(topic_path, "/");
                 strcat(topic_path, root->name);
                 rv = eswb_connect(dest_mnt, &b->dest_td);

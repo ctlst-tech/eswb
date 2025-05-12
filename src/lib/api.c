@@ -246,6 +246,26 @@ eswb_rv_t eswb_get_next_topic_info (eswb_topic_descr_t td, eswb_topic_id_t *next
 }
 
 
+eswb_rv_t eswb_get_next_child_info(eswb_topic_descr_t td, eswb_topic_id_t *next2tid, struct topic_extract *info) {
+    union {
+        eswb_topic_id_t             tid;
+        topic_extract_t             xtract;
+    } data = {
+        .tid = *next2tid
+    };
+    eswb_rv_t rv;
+    rv = eswb_ctl(td, eswb_ctl_get_next_child_proclaiming_info, &data, sizeof(data));
+    if (rv == eswb_e_ok) {
+        if (info != NULL) {
+            memcpy(info, &data.xtract, sizeof(data.xtract));
+        }
+        *next2tid = data.xtract.info.topic_id;
+    }
+
+    return rv;
+}
+
+
 eswb_rv_t eswb_get_topic_path (eswb_topic_descr_t td, char *path) {
     return eswb_ctl(td, eswb_ctl_get_topic_path, path, 0);
 }

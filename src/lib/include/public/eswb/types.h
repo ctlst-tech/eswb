@@ -33,7 +33,7 @@ typedef enum {
     tt_struct       = 0x02,
     tt_fifo         = 0x03,
     tt_vector       = 0x04,
-    tt_bitfield     = 0x04,
+    tt_bitfield     = 0x05,
 
     tt_uint8        = 0x10,
     tt_int8         = 0x11,
@@ -81,6 +81,7 @@ typedef enum {
     eswb_ctl_evq_get_params,
     eswb_ctl_get_topic_path,
     eswb_ctl_get_next_proclaiming_info,
+    eswb_ctl_get_next_child_proclaiming_info,
     eswb_ctl_fifo_flush,
     eswb_ctl_arm_timeout
 } eswb_ctl_t;
