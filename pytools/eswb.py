@@ -402,9 +402,9 @@ class SDTLudpService:
         self.channels: List[SDTLchannel] = channels
         self.mtu = mtu
         self.ip_in = cstr(ip_in)
-        self.port_in = cstr(port_in)
+        self.port_in = cstr(str(port_in))
         self.ip_out = cstr(ip_out)
-        self.port_out = cstr(port_out)
+        self.port_out = cstr(str(port_out))
 
         self.service_bus_name = 'sdtl'
         self.service_bus = Bus(self.service_bus_name, bus_type=ce.eswb_inter_thread, topics_num=512)
