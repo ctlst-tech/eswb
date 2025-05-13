@@ -150,7 +150,7 @@ class ArgParser:
         self.parser.add_argument(
             '--serdev',
             action='store',
-            default='/dev/ttyUSB0',
+            # default='/dev/ttyUSB0',
             type=str,
             help='Serial interface device path',
         )
@@ -167,10 +167,17 @@ class ArgParser:
         self.parser.add_argument(
             '--ip',
             action='store',
-            default='192.168.1.20',
+            # default='192.168.1.20',
             type=str,
             help='IP',
 
+        )
+        self.parser.add_argument(
+            '--port',
+            action='store',
+            default=4000,
+            type=int,
+            help='udp port',
         )
 
         self.args = self.parser.parse_args(sys.argv[1:])
