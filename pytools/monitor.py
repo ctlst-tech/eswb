@@ -1,6 +1,6 @@
 import sys
 import time
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Tuple
 
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtCore import QThread, QObject, pyqtSignal, QThreadPool, QRunnable, pyqtSlot
@@ -143,7 +143,7 @@ class Monitor:
 
 
 class ArgParser:
-    def __init__(self, additional_args: Optional[List[Dict]] = None):
+    def __init__(self, additional_args: Optional[List[Tuple[Tuple, Dict]]] = None):
         import argparse
 
         self.parser = argparse.ArgumentParser('ESWB monitor tool')
@@ -162,7 +162,6 @@ class ArgParser:
             default='115200',
             type=int,
             help='Serial interface baudrate',
-
         )
 
         self.parser.add_argument(
@@ -181,7 +180,7 @@ class ArgParser:
             help='udp port',
         )
 
-        for a in additional_args:
-            self.parser.add_argument(**a)
+        for optnames, params in additional_args:
+            self.parser.add_argument(*optnames, **params)
 
         self.args = self.parser.parse_args(sys.argv[1:])
