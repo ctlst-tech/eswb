@@ -179,6 +179,12 @@ class ArgParser:
             type=int,
             help='udp port',
         )
+        self.parser.add_argument(
+            '--port_out',
+            action='store',
+            type=int,
+            help='udp port',
+        )
 
         for optnames, params in additional_args:
             self.parser.add_argument(*optnames, **params)
