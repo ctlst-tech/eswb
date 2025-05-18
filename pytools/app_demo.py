@@ -21,6 +21,7 @@ ai = EwAttitudeIndicator([
 hi = EwHeadingIndicator([DataSourceSinus('s1', iphase=0.0, mult=360)])
 
 rp = EwRelativePosition([
+    DataSourceConst("icon3", value="aim-green"),
     DataSourceSinus('plane_phi', mult=360),
     DataSourceConst('plane_r', value=60),
     DataSourceSinus('plane_course', iphase=0.0, mult=360),
