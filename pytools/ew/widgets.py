@@ -191,7 +191,8 @@ class EwChart(MyQtWidget, EwBasic):
                 color = EwChart.colors_series[0]
 
             pen = pg.mkPen(color=color, width=4)
-            self.data_line = graph.plot(self.x, self.y, pen=pen)
+            self.data_line = graph.plot(self.x, self.y,
+                                        pen=pen, name=label)
 
             self.no_data_message_is_there = False
             self.no_data_message = pg.TextItem('', anchor=(0.5, 0.5), color=color)
@@ -219,23 +220,23 @@ class EwChart(MyQtWidget, EwBasic):
 
             self.data_line.setData(self.x, self.y)
 
-    def __init__(self, data_sources: List[DataSourceBasic], data_range=None, **kwargs):
+    def __init__(self, data_sources: List[DataSourceBasic], data_range=None, title=None, **kwargs):
         MyQtWidget.__init__(self, **kwargs)
         EwBasic.__init__(self)
 
         self.set_data_sources(data_sources)
 
         self.graph = pg.PlotWidget(**kwargs)
+        self.graph.setTitle(title, color="w", size="10pt")
+
+        if len(self.data_sources) > 1:
+            self.graph.addLegend(offset=0.1, verSpacing=-1, labelTextSize='8pt')
 
         if data_range:
             self.graph.setYRange(data_range[0], data_range[1])
 
         self.layout.addWidget(self.graph)
 
-        # window = 600
-        # self.graph.setBackground(QColor('white'))
-        # self.graph.getAxis('bottom').setPen('black')
-        # self.graph.getAxis('left').setPen('black')
         self.graph.showGrid(x=True, y=True, alpha=0.75)
         self.plots: List[EwChart.Plot] = []
 
