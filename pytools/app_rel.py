@@ -11,6 +11,7 @@ telemetry_dir_name = 'telemetry'
 mon = Monitor(monitor_bus_name=mon_bus_name, argv=sys.argv)
 
 rp = EwRelativePosition([
+    DataSourceConst("icon3", value="aim-green"),
     DataSourceSinus('plane_phi', mult=360),
     DataSourceConst('plane_r', value=60),
     DataSourceSinus('plane_course', iphase=0.0, mult=360),
