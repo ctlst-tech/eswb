@@ -90,7 +90,7 @@ eqrb_rv_t eqrb_drv_sdtl_command (device_descr_t dh, eqrb_cmd_t cmd) {
     }
 
     if (rv != SDTL_OK) {
-        eqrb_dbg_msg("failed: %d", rv);
+        eqrb_dbg_msg("cmd %d failed: %s", cmd, sdtl_strerror(rv));
     }
 
     return rv == SDTL_OK ? eqrb_rv_ok : eqrb_media_err;
