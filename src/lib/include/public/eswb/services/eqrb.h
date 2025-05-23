@@ -38,8 +38,8 @@ typedef enum {
 } eqrb_rv_t;
 
 typedef enum {
-    eqrb_cmd_reset_remote,
-    eqrb_cmd_reset_local_state,
+    eqrb_cmd_reset_remote = 0,
+    eqrb_cmd_reset_local_state = 1,
 } eqrb_cmd_t;
 
 #define EQRB_ERR_MSG_MAX_LEN 128
