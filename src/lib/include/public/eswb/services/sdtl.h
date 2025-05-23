@@ -9,38 +9,38 @@ extern "C" {
 
 typedef enum sdtl_rv {
     SDTL_OK = 0,
-    SDTL_TIMEDOUT,
-    SDTL_OK_FIRST_PACKET,
-    SDTL_OK_OMIT,
-    SDTL_OK_REPEATED,
-    SDTL_OK_MISSED_PKT_IN_SEQ,
-    SDTL_REMOTE_RX_CANCELED,
-    SDTL_REMOTE_RX_NO_CLIENT,
-    SDTL_RX_BUF_SMALL,
-    SDTL_TX_BUF_SMALL,
-    SDTL_NON_CONSIST_FRM_LEN,
-    SDTL_INVALID_FRAME_TYPE,
-    SDTL_NO_CHANNEL_REMOTE,
-    SDTL_NO_CHANNEL_LOCAL,
-    SDTL_ESWB_ERR,
-    SDTL_RX_FIFO_OVERFLOW,
-    SDTL_NO_MEM,
-    SDTL_CH_EXIST,
-    SDTL_SERVICE_EXIST,
-    SDTL_NO_SERVICE,
-    SDTL_INVALID_MTU,
-    SDTL_INVALID_MEDIA,
-    SDTL_NAMES_TOO_LONG,
-    SDTL_SYS_ERR,
-    SDTL_INVALID_CH_TYPE,
+    SDTL_TIMEDOUT = 1,
+    SDTL_OK_FIRST_PACKET = 2,
+    SDTL_OK_OMIT = 3,
+    SDTL_OK_REPEATED = 4,
+    SDTL_OK_MISSED_PKT_IN_SEQ = 5,
+    SDTL_REMOTE_RX_CANCELED = 6,
+    SDTL_REMOTE_RX_NO_CLIENT = 7,
+    SDTL_RX_BUF_SMALL = 8,
+    SDTL_TX_BUF_SMALL = 9,
+    SDTL_NON_CONSIST_FRM_LEN = 10,
+    SDTL_INVALID_FRAME_TYPE = 11,
+    SDTL_NO_CHANNEL_REMOTE = 12,
+    SDTL_NO_CHANNEL_LOCAL = 13,
+    SDTL_ESWB_ERR = 14,
+    SDTL_RX_FIFO_OVERFLOW = 15,
+    SDTL_NO_MEM = 16,
+    SDTL_CH_EXIST = 17,
+    SDTL_SERVICE_EXIST = 18,
+    SDTL_NO_SERVICE = 19,
+    SDTL_INVALID_MTU = 20,
+    SDTL_INVALID_MEDIA = 21,
+    SDTL_NAMES_TOO_LONG = 22,
+    SDTL_SYS_ERR = 23,
+    SDTL_INVALID_CH_TYPE = 24,
 
-    SDTL_MEDIA_NO_ENTITY,
-    SDTL_MEDIA_NOT_SUPPORTED, // not supported call
-    SDTL_MEDIA_ERR,
-    SDTL_MEDIA_EOF,
+    SDTL_MEDIA_NO_ENTITY = 25,
+    SDTL_MEDIA_NOT_SUPPORTED = 26, // not supported call
+    SDTL_MEDIA_ERR = 27,
+    SDTL_MEDIA_EOF = 28,
 
-    SDTL_APP_CANCEL,  // cancel current operation (out-of-band notification)
-    SDTL_APP_RESET,   // reset application state  (out-of-band notification)
+    SDTL_APP_CANCEL = 29,  // cancel current operation (out-of-band notification)
+    SDTL_APP_RESET = 30    // reset application state  (out-of-band notification)
 } sdtl_rv_t;
 
 typedef enum sdtl_channel_type {
