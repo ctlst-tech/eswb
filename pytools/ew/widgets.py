@@ -46,8 +46,8 @@ class EwGroup(MyQtWidget, EwBasic):
     def radraw_handler(self, vals: List[Union[float, int, str, NoDataStub]], vals_map: Dict):
         pass
 
-    def __init__(self, widgets: List[EwBasic | MyQtWidget]):
-        MyQtWidget.__init__(self, layout_vertical=False)
+    def __init__(self, widgets: List[EwBasic | MyQtWidget], *, layout_vertical : bool = False):
+        MyQtWidget.__init__(self, layout_vertical=layout_vertical)
         EwBasic.__init__(self)
 
         self.group_widgets = widgets
