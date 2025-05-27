@@ -102,6 +102,7 @@ int topic_type_is_supported_by_bridge(topic_data_type_t tt) {
         case tt_int64:
         case tt_float:
         case tt_double:
+        case tt_bool:
             return 1;
 
         // Data types

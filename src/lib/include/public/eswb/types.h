@@ -44,6 +44,8 @@ typedef enum {
     tt_uint64       = 0x16,
     tt_int64        = 0x17,
 
+    tt_bool         = 0x18,
+
     tt_float        = 0x20,
     tt_double       = 0x21,
 

@@ -159,6 +159,7 @@ const char *eswb_type_name(topic_data_type_t t) {
         case tt_int16: return "int16";
         case tt_uint8: return "uint8";
         case tt_int8: return "int8";
+        case tt_bool: return "bool";
         case tt_string: return "string";
         case tt_struct: return "struct";
         case tt_fifo: return "fifo";
