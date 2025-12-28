@@ -9,7 +9,6 @@
 
 #include "misc.h"
 
-
 static eqrb_rv_t
 send_msg(device_descr_t dd, const eqrb_media_driver_t *dr, eqrb_cmd_code_t msg_code, eqrb_interaction_header_t *hdr,
          event_queue_transfer_t *e) {
@@ -57,6 +56,44 @@ static eqrb_rv_t check_state(device_descr_t dd, const eqrb_media_driver_t *dr) {
 
 static void *eqrb_server_sidekick_thread(void *p);
 
+#define EQRB_CMD_SK_TOPIC_NAME "sk_cmd"
+#define CMD_SK_TOPIC_TRAIL "/" EQRB_CMD_SK_TOPIC_NAME
+
+// Allocates and initializes sidekick context. Caller owns the returned pointer.
+static eqrb_streaming_sideckick_t *sidekick_init(
+        const eqrb_media_driver_t *dev,
+        void *connectivity_params,
+        eswb_topic_descr_t eq_td,
+        const char *cmd_bus_name) {
+
+    eqrb_streaming_sideckick_t *sk = calloc(1, sizeof(*sk));
+    if (sk == NULL) {
+        return NULL;
+    }
+
+    sk->dev = dev;
+    sk->connectivity_params = connectivity_params;
+    sk->eq_td = eq_td;
+
+    sk->cmd_topic_path = malloc(strlen(cmd_bus_name) + strlen(CMD_SK_TOPIC_TRAIL) + 1);
+    if (sk->cmd_topic_path == NULL) {
+        free(sk);
+        return NULL;
+    }
+    strcpy(sk->cmd_topic_path, cmd_bus_name);
+    strcat(sk->cmd_topic_path, CMD_SK_TOPIC_TRAIL);
+
+    return sk;
+}
+
+// Frees sidekick context allocated by sidekick_init
+static void sidekick_deinit(eqrb_streaming_sideckick_t *sk) {
+    if (sk != NULL) {
+        free(sk->cmd_topic_path);
+        free(sk);
+    }
+}
+
 static eqrb_rv_t sidekick_thread_start(eqrb_streaming_sideckick_t *sk) {
     int prv;
     pthread_attr_t attr;
@@ -93,10 +130,9 @@ static eqrb_rv_t sidekick_run(eswb_topic_descr_t td) {
 
 static void *eqrb_server_sidekick_thread(void *p) {
     eqrb_rv_t rv;
+    eqrb_streaming_sideckick_t *sk = (eqrb_streaming_sideckick_t *)p;
 
-    eqrb_streaming_sideckick_t *sk = (eqrb_streaming_sideckick_t *) p;
     const eqrb_media_driver_t *dev = sk->dev;
-
     eswb_topic_descr_t cmd_td;
     eswb_topic_descr_t eq_td = sk->eq_td;
 
@@ -140,12 +176,9 @@ static void *eqrb_server_sidekick_thread(void *p) {
         if (erv != eswb_e_ok) {
             eqrb_dbg_msg("eswb_fifo_flush error: %s", eswb_strerror(erv));
         }
-        // unsigned events_cnt = 0;
 
         while (eswb_read(cmd_td, &cmd) == eswb_e_ok && cmd.code == SK_RUN) {
             erv = eswb_event_queue_pop(eq_td, event);
-
-            // printf("%s %d %08X event tid %lu size %lu\n", __func__, eq_td, events_cnt++, event->topic_id, event->size);
 
             switch (erv) {
                 case eswb_e_ok:
@@ -165,7 +198,7 @@ static void *eqrb_server_sidekick_thread(void *p) {
                     break;
 
                 default:
-                    eqrb_dbg_msg("eswb_event_queue_pop error: %d", eswb_strerror(erv));
+                    eqrb_dbg_msg("eswb_event_queue_pop error: %s", eswb_strerror(erv));
                     break;
             }
         }
@@ -319,8 +352,6 @@ static void *eqrb_server_thread(void *p) {
     int mode_do_stream = 0;
     int keep_sending = 0;
 
-    eqrb_streaming_sideckick_t sk;
-
 #define TRANSITION_TO_WAIT_CMD() mode_wait_cmd = -1; mode_do_initial_sync = 0; mode_do_stream = 0
 
     rv = dev->connect(h->h.connectivity_params, &dd);
@@ -337,23 +368,10 @@ static void *eqrb_server_thread(void *p) {
     }
 
     eswb_topic_descr_t sk_cmd_td = 0;
+    eqrb_streaming_sideckick_t *sk = NULL;
 
     if (h->evq_sk_td != 0) {
-#define EQRB_CMD_SK_TOPIC_NAME "sk_cmd"
-#define CMD_SK_TOPIC_TRAIL "/" EQRB_CMD_SK_TOPIC_NAME
-        memset(&sk, 0, (sizeof(sk)));
-        sk.dev = h->h.driver;
-
-        sk.cmd_topic_path = malloc(strlen(h->cmd_bus_name) +  strlen(CMD_SK_TOPIC_TRAIL) + 1);
-        if (sk.cmd_topic_path == NULL) {
-            return NULL;
-        }
-        strcpy(sk.cmd_topic_path, h->cmd_bus_name);
-        strcat(sk.cmd_topic_path, CMD_SK_TOPIC_TRAIL);
-
-        sk.connectivity_params = h->connectivity_params_sk;
-        sk.eq_td = h->evq_sk_td;
-
+        // Create command bus and topic for sidekick control
         erv = eswb_create(h->cmd_bus_name, eswb_inter_thread, 16);
         if (erv != eswb_e_ok) {
             eqrb_dbg_msg("eswb_create for sk failed: %s", eswb_strerror(erv));
@@ -366,9 +384,17 @@ static void *eqrb_server_thread(void *p) {
             return NULL;
         }
 
-        rv = sidekick_thread_start(&sk);
+        // Initialize sidekick context - we own this memory
+        sk = sidekick_init(h->h.driver, h->connectivity_params_sk, h->evq_sk_td, h->cmd_bus_name);
+        if (sk == NULL) {
+            eqrb_dbg_msg("sidekick_init failed");
+            return NULL;
+        }
+
+        rv = sidekick_thread_start(sk);
         if (rv != eqrb_rv_ok) {
-            eqrb_dbg_msg("sidekick_thread_start failed: %s", eswb_strerror(erv));
+            eqrb_dbg_msg("sidekick_thread_start failed");
+            sidekick_deinit(sk);
             return NULL;
         }
     }
@@ -513,6 +539,9 @@ static void *eqrb_server_thread(void *p) {
             } while (mode_do_stream);
         }
     } while (mode_wait_cmd);
+
+    // Cleanup sidekick context
+    sidekick_deinit(sk);
 
     return NULL;
 }
